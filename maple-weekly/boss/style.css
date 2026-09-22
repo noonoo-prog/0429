@@ -2357,3 +2357,23 @@ html,body{
     gap:7px;
   }
 }
+
+
+/* PC extra-large save button */
+@media(min-width:761px){
+  .save-board-btn{
+    min-width:174px!important;
+    width:174px!important;
+    height:72px!important;
+    padding:0 24px!important;
+    border-radius:16px!important;
+    font-size:22px!important;
+    font-weight:950!important;
+  }
+  .save-controls{
+    gap:12px!important;
+  }
+  .save-controls #saveText{
+    font-size:12px!important;
+  }
+}
