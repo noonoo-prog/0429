@@ -1206,3 +1206,184 @@ html,body{overflow-x:hidden}
     white-space:nowrap;
   }
 }
+
+
+/* FINAL mobile row containment — keep every column inside the card */
+@media(max-width:760px){
+  body,
+  .app-shell,
+  .content,
+  .mobile-board,
+  .mobile-compact-list{
+    max-width:100%;
+    overflow-x:hidden;
+  }
+
+  .mobile-compact-list .compact-boss-card{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    overflow:hidden;
+    padding:6px 7px;
+  }
+
+  /* difficulty | boss | party count | crystal */
+  .mobile-compact-list .compact-main{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    display:grid;
+    grid-template-columns:72px minmax(0,1fr) 38px 44px;
+    column-gap:6px;
+    align-items:center;
+  }
+
+  .mobile-compact-list .compact-main > *{
+    min-width:0;
+    max-width:100%;
+  }
+
+  .mobile-compact-list .compact-difficulty{
+    width:72px;
+    min-width:72px;
+    max-width:72px;
+    height:27px;
+    padding:0 3px;
+    overflow:hidden;
+    font-size:10px;
+  }
+
+  .mobile-compact-list .compact-name-wrap{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    align-items:flex-start;
+    text-align:left;
+  }
+
+  .mobile-compact-list .compact-boss-name{
+    display:block;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    text-align:left;
+    font-size:16px;
+    line-height:1.05;
+  }
+
+  .mobile-compact-list .compact-count-slot{
+    width:38px;
+    min-width:38px;
+    max-width:38px;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-count{
+    box-sizing:border-box;
+    width:38px;
+    min-width:38px;
+    max-width:38px;
+    height:28px;
+    margin:0;
+    padding:0 12px 0 1px;
+    overflow:hidden;
+    font-size:11.5px;
+    text-align:right;
+    text-align-last:right;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-count:disabled{
+    width:38px;
+    min-width:38px;
+    max-width:38px;
+    padding:0 1px;
+    text-align:right;
+    text-align-last:right;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-solo{
+    width:38px;
+    min-width:38px;
+    max-width:38px;
+    overflow:hidden;
+    text-align:right;
+  }
+
+  .mobile-compact-list .compact-income-slot{
+    box-sizing:border-box;
+    width:44px;
+    min-width:44px;
+    max-width:44px;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    text-align:right;
+  }
+
+  .mobile-compact-list .compact-income{
+    box-sizing:border-box;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:auto;
+    max-width:44px;
+    min-width:0;
+    margin:0;
+    padding:1px 3px;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:clip;
+    border-radius:999px;
+    font-size:9px;
+    line-height:1.15;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .mobile-compact-list .compact-income.missing{
+    max-width:44px;
+    padding:1px 2px;
+    font-size:7.5px;
+  }
+
+  /* secondary lines align with boss-name column and never widen the card */
+  .mobile-compact-list .compact-sync{
+    display:block;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    text-align:left;
+  }
+
+  .mobile-compact-list .compact-party-members{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    padding-left:78px;
+    padding-right:0;
+    margin-top:2px;
+    display:flex;
+    flex-wrap:nowrap;
+    justify-content:flex-start;
+    white-space:nowrap;
+  }
+
+  .mobile-compact-list .compact-member{
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+}
