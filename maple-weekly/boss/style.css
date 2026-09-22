@@ -1914,3 +1914,61 @@ html,body{overflow-x:hidden}
     text-align:right;
   }
 }
+
+
+/* explicit save button */
+.save-controls{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:7px;
+}
+.save-board-btn{
+  min-width:58px;
+  height:32px;
+  border:1px solid #d4d9df;
+  border-radius:9px;
+  background:#eef0f3;
+  color:#969ca5;
+  padding:0 11px;
+  font-size:11px;
+  font-weight:950;
+  line-height:1;
+}
+.save-board-btn.needs-save{
+  border-color:#5d55d8;
+  background:#5d55d8;
+  color:#fff;
+  box-shadow:0 3px 9px rgba(93,85,216,.18);
+}
+.save-board-btn:disabled{
+  cursor:default;
+  opacity:1;
+}
+.save-controls:has(.save-board-btn.needs-save) > span{
+  background:#ef9c3c;
+}
+.save-controls:has(.save-board-btn.needs-save) #saveText{
+  color:#b66b15;
+  font-weight:850;
+}
+
+@media(max-width:760px){
+  .save-controls{
+    gap:5px;
+  }
+  .save-controls #saveText{
+    max-width:72px;
+    font-size:8.5px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .save-board-btn{
+    min-width:54px;
+    height:34px;
+    padding:0 9px;
+    border-radius:9px;
+    font-size:11px;
+  }
+}
