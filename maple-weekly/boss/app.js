@@ -570,8 +570,8 @@ function renderDesktop(){
     root.innerHTML=h+'<div class="search-empty"><strong>일치하는 파티가 없어요.</strong><span>다른 닉네임으로 검색해 보세요.</span></div>';
     return;
   }
-  var cols=visible.length;
-  h+='<div class="character-columns '+(q?"is-searching":"")+'" style="--cols:'+cols+'">';
+  var cols=visible.length,rowCols=Math.max(1,Math.min(cols,6));
+  h+='<div class="character-columns '+(q?"is-searching":"")+'" style="--cols:'+cols+';--row-cols:'+rowCols+'">';
   visible.forEach(function(item){
     var p=item.p,pi=item.pi,w=weekly(pi),m=monthly(pi);
     var charIncome=characterWeeklyIncome(pi),missingPrices=characterMissingPriceCount(pi);
