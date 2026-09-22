@@ -25,6 +25,26 @@ const BOSS_DIFFICULTIES={
   "벨로나":["이지","노말","하드"],
   "검은 마법사":["하드","익스트림"]
 };
+const BOSS_CRYSTAL_PRICES={
+  "스우":{"노말":8350000,"하드":48900000,"익스트림":545000000},
+  "데미안":{"노말":8750000,"하드":46400000},
+  "가엔슬":{"노말":12700000,"카오스":71300000},
+  "루시드":{"이지":14900000,"노말":17800000,"하드":59700000},
+  "윌":{"이지":16100000,"노말":20500000,"하드":73200000},
+  "더스크":{"노말":22000000,"카오스":66300000},
+  "듄켈":{"노말":23700000,"하드":89600000},
+  "진힐라":{"노말":67600000,"하드":100000000},
+  "세렌":{"노말":167000000,"하드":302000000,"익스트림":1840000000},
+  "칼로스":{"이지":238000000,"노말":479000000,"카오스":1230000000},
+  "대적자":{"이지":261000000,"노말":532000000,"하드":1390000000},
+  "카링":{"이지":320000000,"노말":593000000,"하드":1560000000},
+  "흉성":{"노말":576000000},
+  "벨로나":{"이지":396000000,"노말":824000000},
+  "림보":{"노말":995000000},
+  "발드릭스":{"노말":1320000000},
+  "유피테르":{"노말":1560000000},
+  "검은 마법사":{"하드":465000000,"익스트림":5680000000}
+};
 const MONTHLY=new Set(["검은 마법사"]);
 const SOLO=new Set(["데미안","루시드","윌","더스크","진힐라","듄켈"]);
 const LIMIT=12,DIFFS=["","x","이지","노말","하드","카오스","익스트림"];
@@ -166,6 +186,43 @@ function ensureUnlocked(){
 }
 function weekly(pi,except){var st=state();if(!st)return 0;return BOSSES.reduce(function(n,b){return b===except||MONTHLY.has(b)?n:n+(planned(st.cells[b]&&st.cells[b][pi])?1:0)},0)}
 function monthly(pi){var st=state();if(!st)return 0;return BOSSES.reduce(function(n,b){return n+(MONTHLY.has(b)&&planned(st.cells[b]&&st.cells[b][pi])?1:0)},0)}
+function crystalBasePrice(boss,difficulty){
+  if(MONTHLY.has(boss))return 0;
+  return Number((BOSS_CRYSTAL_PRICES[boss]||{})[difficulty]||0);
+}
+function effectivePartyCount(boss,c){
+  if(!planned(c))return 0;
+  if(SOLO.has(boss))return 1;
+  return Math.max(1,Number(c.count)||1);
+}
+function bossWeeklyIncome(boss,c){
+  var base=crystalBasePrice(boss,c&&c.difficulty);
+  if(!base)return 0;
+  return base/effectivePartyCount(boss,c);
+}
+function formatEok(value){
+  return (Math.max(0,Number(value)||0)/100000000).toFixed(1)+"억";
+}
+function characterWeeklyIncome(pi){
+  var st=state();if(!st)return 0;
+  return BOSSES.reduce(function(sum,b){
+    if(MONTHLY.has(b))return sum;
+    var c=st.cells[b]&&st.cells[b][pi];
+    return sum+(planned(c)?bossWeeklyIncome(b,c):0);
+  },0);
+}
+function characterMissingPriceCount(pi){
+  var st=state();if(!st)return 0;
+  return BOSSES.reduce(function(n,b){
+    if(MONTHLY.has(b))return n;
+    var c=st.cells[b]&&st.cells[b][pi];
+    return n+(planned(c)&&!crystalBasePrice(b,c.difficulty)?1:0);
+  },0);
+}
+function ownerWeeklyIncome(){
+  var st=state();if(!st)return 0;
+  return st.players.reduce(function(sum,_,pi){return sum+characterWeeklyIncome(pi)},0);
+}
 
 function queueSave(delay){
   if(delay==null)delay=420;
@@ -324,10 +381,15 @@ function compactBossCard(b,bi,c,pi,unlocked){
     var sp=c._sync.sourcePlayer||"";
     sync='<span class="compact-sync">↔ '+esc(so)+(sp?' · '+esc(sp):'')+'</span>';
   }
+  var income="";
+  if(planned(c)&&!mon){
+    var price=crystalBasePrice(b,c.difficulty);
+    income=price?'<span class="compact-income">'+formatEok(bossWeeklyIncome(b,c))+'</span>':'<span class="compact-income missing">가격 미등록</span>';
+  }
   return '<article class="compact-boss-card '+(planned(c)?"is-set ":"is-empty ")+(auto?"is-sync ":"")+(mon?"is-monthly":"")+'">'+
     '<div class="compact-main">'+
       compactDifficultySelect(c,editable,bi,pi)+
-      '<div class="compact-name-wrap"><strong class="compact-boss-name">'+esc(b)+'</strong>'+sync+'</div>'+
+      '<div class="compact-name-wrap"><div class="compact-title-line"><strong class="compact-boss-name">'+esc(b)+'</strong>'+income+'</div>'+sync+'</div>'+
       compactCountSelect(c,editable,bi,pi)+
     '</div>'+
     compactPartyMembers(c,bi,pi,editable)+
@@ -349,7 +411,8 @@ function renderDesktop(){
     if(!q||bosses.length)visible.push({p:p,pi:pi,bosses:bosses});
   });
 
-  var h='<div class="desktop-board-meta"><div><strong>'+esc(o.name)+' 캐릭터 보드</strong><span>'+st.players.length+'명</span></div><div>'+(q?'검색 결과 '+searchResultCount()+'건':'주간 최대 '+LIMIT+'개 · 검은 마법사 월간')+'</div></div>';
+  var ownerIncome=ownerWeeklyIncome();
+  var h='<div class="desktop-board-meta"><div><strong>'+esc(o.name)+' 캐릭터 보드</strong><span>'+st.players.length+'명</span><b class="owner-weekly-total">총 주간 '+formatEok(ownerIncome)+'</b></div><div>'+(q?'검색 결과 '+searchResultCount()+'건':'주간 최대 '+LIMIT+'개 · 검은 마법사 월간')+'</div></div>';
   if(q&&!visible.length){
     root.innerHTML=h+'<div class="search-empty"><strong>일치하는 파티가 없어요.</strong><span>다른 닉네임으로 검색해 보세요.</span></div>';
     return;
@@ -358,15 +421,18 @@ function renderDesktop(){
   h+='<div class="character-columns '+(q?"is-searching":"")+'" style="--cols:'+cols+'">';
   visible.forEach(function(item){
     var p=item.p,pi=item.pi,w=weekly(pi),m=monthly(pi);
+    var charIncome=characterWeeklyIncome(pi),missingPrices=characterMissingPriceCount(pi);
     h+='<section class="character-column owner-themed" data-theme="'+theme+'">'+
       '<header class="character-column-head">'+
         '<div class="character-title-row">'+
           '<span class="drag-dots" aria-hidden="true">⠿</span>'+
           '<input class="column-player-name player-input" data-player="'+pi+'" value="'+esc(p)+'" '+(unlocked?"":"disabled")+'>'+
+          (pi===0?'<span class="representative-badge">대표</span>':'')+
+          (w>=LIMIT?'<span class="complete-badge">완료</span>':'')+
           '<strong class="column-count '+(w>=LIMIT?"full":"")+'">'+w+'/'+LIMIT+'</strong>'+
           '<button class="remove-player column-remove" data-remove="'+pi+'" '+(unlocked?"":"disabled")+' aria-label="캐릭터 삭제">×</button>'+
         '</div>'+
-        '<div class="column-sub">'+(q?item.bosses.length+'건 일치':'월간 '+m+'/1')+'</div>'+
+        '<div class="column-sub"><span>주간 '+formatEok(charIncome)+(missingPrices?' · 미등록 '+missingPrices+'건':'')+'</span>'+(pi===0?'<b class="representative-total">전체 '+formatEok(ownerIncome)+'</b>':'')+'</div>'+
       '</header>'+
       '<div class="character-boss-list">';
     item.bosses.forEach(function(b){
@@ -375,6 +441,7 @@ function renderDesktop(){
     });
     h+='</div></section>';
   });
+  if(unlocked)h+='<button class="add-character-column" data-add-character="1"><strong>＋ 캐릭터 추가</strong><span>새 캐릭터 열 만들기</span></button>';
   h+='</div>';
   root.innerHTML=h;
   bindCommon(root);
@@ -421,12 +488,17 @@ function renderMobile(){
 
   var pi=activeChar(),w=weekly(pi),m=monthly(pi);
   var strip='<div class="character-strip">'+st.players.map(function(p,i){
+    var wi=weekly(i);
     return '<button class="char-tab owner-themed '+(i===pi?"active":"")+'" data-theme="'+theme+'" data-char="'+i+'">'+
-      esc(p)+'<span class="mini-count">'+weekly(i)+'/'+LIMIT+'</span></button>';
-  }).join("")+'</div>';
+      esc(p)+(wi>=LIMIT?'<span class="tab-complete">완료</span>':'')+'<span class="mini-count">'+wi+'/'+LIMIT+'</span></button>';
+  }).join("")+(unlocked?'<button class="char-tab add-char-tab" data-add-character="1">＋ 캐릭터</button>':'')+'</div>';
 
+  var charIncome=characterWeeklyIncome(pi),ownerIncome=ownerWeeklyIncome(),missingPrices=characterMissingPriceCount(pi);
   var summary='<div class="mobile-character-head owner-themed" data-theme="'+theme+'">'+
-    '<div><strong>'+esc(st.players[pi])+'</strong><span>'+esc(o.name)+' 보유 캐릭터'+(w>=LIMIT?' · 미설정 숨김':'')+'</span></div>'+
+    '<div><div class="mobile-character-name-line"><strong>'+esc(st.players[pi])+'</strong>'+(pi===0?'<span class="representative-badge">대표</span>':'')+(w>=LIMIT?'<span class="complete-badge">완료</span>':'')+'</div>'+
+      '<span>주간 수익 <b class="mobile-income">'+formatEok(charIncome)+'</b>'+(missingPrices?' · 가격 미등록 '+missingPrices+'건':'')+(w>=LIMIT?' · 미설정 숨김':'')+'</span>'+
+      (pi===0?'<span class="mobile-owner-total">전체 주간 '+formatEok(ownerIncome)+'</span>':'')+
+    '</div>'+
     '<div class="mobile-char-count"><b>'+w+'/'+LIMIT+'</b><small>월간 '+m+'/1</small></div>'+
   '</div>';
 
@@ -458,6 +530,7 @@ function bindCommon(root){
   Array.prototype.forEach.call(root.querySelectorAll("[data-count]:not(:disabled)"),function(e){e.onchange=function(){if(!e.checked)return;changeCount(+e.dataset.b,+e.dataset.p,+e.dataset.count)}});
   Array.prototype.forEach.call(root.querySelectorAll("[data-mobile-count]:not(:disabled)"),function(e){e.onchange=function(){changeCount(+e.dataset.b,+e.dataset.p,+e.value)}});
   Array.prototype.forEach.call(root.querySelectorAll(".party-picker-trigger:not(:disabled)"),function(e){e.onclick=function(){openPartyPicker(+e.dataset.b,+e.dataset.p,+e.dataset.m)}});
+  Array.prototype.forEach.call(root.querySelectorAll("[data-add-character]"),function(e){e.onclick=addCharacter});
   Array.prototype.forEach.call(root.querySelectorAll("[data-remove]:not(:disabled)"),function(e){e.onclick=function(){
     var i=+e.dataset.remove;if(st.players.length<=1){toast("캐릭터는 1명 이상 있어야 해요.");return}
     if(!confirm("“"+(st.players[i]||"캐릭터")+"” 열을 삭제할까요?"))return;
@@ -531,7 +604,15 @@ document.getElementById("removeOwner").onclick=function(){
     toast(e.message||"보스판을 삭제하지 못했습니다.");
   });
 };
-document.getElementById("addPlayer").onclick=function(){var o=owner();if(!o||!isUnlocked(o.id))return;var st=state();st.players.push("새 닉네임");BOSSES.forEach(function(b){st.cells[b].push(emptyCell())});activeCharByOwner[o.id]=st.players.length-1;render();queueSave(120)};
+function addCharacter(){
+  var o=owner();if(!o||!isUnlocked(o.id))return;
+  var st=state();
+  st.players.push("새 닉네임");
+  BOSSES.forEach(function(b){st.cells[b].push(emptyCell())});
+  activeCharByOwner[o.id]=st.players.length-1;
+  render();queueSave(120);
+}
+document.getElementById("addPlayer").onclick=addCharacter;
 document.getElementById("reloadBtn").onclick=function(){if(dirty&&!confirm("아직 저장 중인 변경사항이 있습니다. DB 내용을 다시 불러올까요?"))return;loadRemote(true)};
 document.getElementById("shareBtn").onclick=function(){var url=location.origin+location.pathname;if(navigator.share){navigator.share({title:"보스 현황판",url:url}).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){toast("홈페이지 주소를 복사했어요.")})}else{prompt("주소를 복사해 주세요.",url)}};
 
