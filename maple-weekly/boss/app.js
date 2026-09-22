@@ -153,8 +153,13 @@ function renderDesktop(){
     st.players.forEach(function(_,pi){var c=st.cells[b][pi]||emptyCell(),auto=!!c._sync,editable=unlocked&&!auto,party="";
       if(SOLO.has(b))party='<div class="solo">'+(planned(c)?"1인 고정":"난이도 선택 시 1인")+'</div>';
       else{var counts=[1,2,3,4,5,6].map(function(n){return'<label class="count"><input type="radio" name="c-'+bi+'-'+pi+'" data-count="'+n+'" data-b="'+bi+'" data-p="'+pi+'" '+(c.count===n?"checked ":"")+(editable?"":"disabled")+'><span>'+n+'인</span></label>'}).join("");party='<div class="counts">'+counts+'</div>'+desktopMembers(c,bi,pi,editable)}
-      if(auto)party+='<div class="sync-note">↔ '+esc(c._sync.sourcePlayer||c._sync.sourceOwnerName||"다른 보스판")+'에서 자동 연동</div>';
-      h+='<td class="slot"><div class="slot-grid">'+diffOptions(c,editable,bi,pi,false)+'<div class="party">'+party+'</div></div></td>';
+      if(auto){
+        var syncOwner=c._sync.sourceOwnerName||"다른 주인";
+        var syncPlayer=c._sync.sourcePlayer||syncOwner;
+        party+='<div class="sync-note">↔ '+esc(syncOwner)+' · '+esc(syncPlayer)+' 원본</div>';
+      }
+      var syncTheme=auto?ownerTheme(c._sync.sourceOwnerName):"";
+      h+='<td class="slot '+(auto?"sync-themed":"")+'" '+(auto?'data-sync-theme="'+syncTheme+'"':"")+'><div class="slot-grid">'+diffOptions(c,editable,bi,pi,false)+'<div class="party">'+party+'</div></div></td>';
     });h+="</tr>";
   });h+="</tbody>";board.innerHTML=h;bindCommon(board);
 }
@@ -180,8 +185,14 @@ function renderMobile(){
         [1,2,3,4,5,6].map(function(n){return'<option value="'+n+'" '+(c.count===n?"selected":"")+'>'+n+'인</option>'}).join("")+'</select>'+
         mobileMemberInputs(c,bi,pi,editable);
     }
-    if(auto)party+='<div class="sync-note">↔ '+esc(c._sync.sourcePlayer||c._sync.sourceOwnerName||"다른 보스판")+'에서 자동 연동</div>';
-    cards+='<article class="mobile-boss-card '+(mon?"monthly ":"")+(auto?"synced":"")+'"><div class="mobile-boss-head"><div class="mobile-boss-name">'+esc(b)+' <span class="badge '+(mon?"monthly":"")+'">'+(mon?"월간":"주간")+'</span></div><div class="mobile-boss-state">'+(auto?"자동연동":(unlocked?"수정 가능":"보기 전용"))+'</div></div><div class="mobile-controls">'+diffOptions(c,editable,bi,pi,true)+'<div class="mobile-party">'+party+'</div></div></article>';
+    if(auto){
+      var syncOwner=c._sync.sourceOwnerName||"다른 주인";
+      var syncPlayer=c._sync.sourcePlayer||syncOwner;
+      party+='<div class="sync-note">↔ 원본 캐릭터: '+esc(syncPlayer)+'</div>';
+    }
+    var syncTheme=auto?ownerTheme(c._sync.sourceOwnerName):"";
+    var syncState=auto?'<span class="sync-source-pill">'+esc(c._sync.sourceOwnerName||"자동")+' 연동</span>':(unlocked?"수정 가능":"보기 전용");
+    cards+='<article class="mobile-boss-card '+(mon?"monthly ":"")+(auto?"synced sync-themed":"")+'" '+(auto?'data-sync-theme="'+syncTheme+'"':"")+'><div class="mobile-boss-head"><div class="mobile-boss-name">'+esc(b)+' <span class="badge '+(mon?"monthly":"")+'">'+(mon?"월간":"주간")+'</span></div><div class="mobile-boss-state">'+syncState+'</div></div><div class="mobile-controls">'+diffOptions(c,editable,bi,pi,true)+'<div class="mobile-party">'+party+'</div></div></article>';
   });
   cards+="</div>";box.innerHTML=strip+summary+cards;
   Array.prototype.forEach.call(box.querySelectorAll("[data-char]"),function(b){b.onclick=function(){setActiveChar(+b.dataset.char)}});
