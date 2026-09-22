@@ -357,3 +357,90 @@ body.picker-open{overflow:hidden}
   }
   .mobile-search-title{margin-top:2px}
 }
+
+
+/* readability + full-week visibility */
+.character-columns{
+  grid-template-columns:repeat(var(--cols),minmax(205px,1fr));
+  min-width:calc(var(--cols) * 205px);
+}
+.column-player-name{font-size:14px}
+.column-count{font-size:12px}
+.column-sub{font-size:10px}
+.compact-main{
+  grid-template-columns:62px minmax(0,1fr) 62px;
+  min-height:29px;
+  gap:7px;
+}
+.compact-boss-card{padding:7px 8px}
+.compact-boss-name{font-size:12.5px}
+.compact-difficulty{
+  width:62px;height:25px;
+  font-size:9px;
+}
+.compact-count{
+  width:62px;min-width:62px;height:28px;
+  padding:0 18px 0 6px;
+  font-size:11px;
+  font-weight:900;
+  text-align:left;
+  color:#343941;
+}
+.compact-count:disabled{
+  width:62px;min-width:62px;
+  padding:0 5px;
+  text-align:right;
+  text-align-last:right;
+}
+.compact-solo{
+  min-width:40px;
+  text-align:right;
+  font-size:10px;
+}
+.compact-party-members{
+  padding-left:69px;
+  margin-top:4px;
+}
+.compact-member{font-size:9px}
+
+@media(max-width:760px){
+  .mobile-character-head strong{font-size:16px}
+  .mobile-character-head span{font-size:10px}
+  .mobile-char-count b{font-size:15px}
+  .mobile-char-count small{font-size:9px}
+
+  .mobile-compact-list .compact-boss-card{
+    padding:9px 9px;
+    border-radius:11px;
+  }
+  .mobile-compact-list .compact-main{
+    grid-template-columns:70px minmax(0,1fr) 68px;
+    min-height:32px;
+    gap:8px;
+  }
+  .mobile-compact-list .compact-difficulty{
+    width:70px;height:28px;
+    font-size:10px;
+  }
+  .mobile-compact-list .compact-boss-name{
+    font-size:14px;
+  }
+  .mobile-compact-list .compact-count{
+    width:68px;min-width:68px;height:31px;
+    padding:0 20px 0 7px;
+    font-size:12px;
+  }
+  .mobile-compact-list .compact-count:disabled{
+    width:68px;min-width:68px;
+    padding:0 6px;
+  }
+  .mobile-compact-list .compact-solo{
+    min-width:42px;
+    font-size:11px;
+  }
+  .mobile-compact-list .compact-party-members{
+    padding-left:78px;
+    margin-top:4px;
+  }
+  .mobile-compact-list .compact-member{font-size:11px}
+}
