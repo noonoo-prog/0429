@@ -1689,3 +1689,111 @@ html,body{overflow-x:hidden}
     text-align:left;
   }
 }
+
+
+/* FIX party-count native select readability */
+.compact-count{
+  box-sizing:border-box;
+}
+.compact-count option{
+  color:#222;
+  background:#fff;
+  font-size:12px;
+  text-align:left;
+}
+
+@media(min-width:761px){
+  .character-columns,
+  .character-columns.is-searching{
+    grid-template-columns:repeat(var(--cols),248px);
+  }
+  .character-column{
+    width:248px;
+    min-width:248px;
+    max-width:248px;
+  }
+
+  .character-boss-list .compact-main{
+    grid-template-columns:58px minmax(0,1fr) 48px 44px;
+    column-gap:5px;
+  }
+
+  .character-boss-list .compact-count-slot{
+    width:48px;
+    min-width:48px;
+    max-width:48px;
+    overflow:visible;
+  }
+
+  .character-boss-list .compact-count-slot .compact-count{
+    box-sizing:border-box;
+    width:48px;
+    min-width:48px;
+    max-width:48px;
+    height:27px;
+    padding:0 16px 0 4px;
+    overflow:visible;
+    font-size:11px;
+    font-weight:900;
+    text-align:center;
+    text-align-last:center;
+  }
+
+  .character-boss-list .compact-count-slot .compact-count:disabled{
+    width:48px;
+    min-width:48px;
+    max-width:48px;
+    padding:0 3px;
+    text-align:right;
+    text-align-last:right;
+  }
+
+  .character-boss-list .compact-count-slot .compact-solo{
+    width:48px;
+    min-width:48px;
+    max-width:48px;
+  }
+}
+
+@media(max-width:760px){
+  .mobile-compact-list .compact-main{
+    grid-template-columns:68px minmax(0,1fr) 44px 54px;
+    column-gap:5px;
+  }
+
+  .mobile-compact-list .compact-count-slot{
+    width:44px;
+    min-width:44px;
+    max-width:44px;
+    overflow:visible;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-count{
+    box-sizing:border-box;
+    width:44px;
+    min-width:44px;
+    max-width:44px;
+    height:28px;
+    padding:0 15px 0 3px;
+    overflow:visible;
+    font-size:11px;
+    font-weight:900;
+    text-align:center;
+    text-align-last:center;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-count:disabled{
+    width:44px;
+    min-width:44px;
+    max-width:44px;
+    padding:0 2px;
+    text-align:right;
+    text-align-last:right;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-solo{
+    width:44px;
+    min-width:44px;
+    max-width:44px;
+  }
+}
