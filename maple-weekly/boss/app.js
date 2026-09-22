@@ -1147,13 +1147,26 @@ function renderDesktop(){
           '<strong class="column-count '+(w>=LIMIT?"full":"")+'">'+w+'/'+LIMIT+'</strong>'+
           '<button class="remove-player column-remove" data-remove="'+pi+'" '+(unlocked?"":"disabled")+' aria-label="캐릭터 삭제">×</button>'+
         '</div>'+
-        '<div class="column-sub"><span>주간 '+formatEok(charIncome)+(missingPrices?' · 미등록 '+missingPrices+'건':'')+'</span>'+(pi===0?'<b class="representative-total">전체 '+formatEok(ownerIncome)+(ownerMissing?' +미등록 '+ownerMissing:'')+'</b>':'')+'</div>'+
+        '<div class="column-sub"><span>주간 수익 '+formatEok(charIncome)+(missingPrices?' · 미등록 '+missingPrices+'건':'')+'</span></div>'+
       '</header>'+
       '<div class="character-boss-list">';
-    item.bosses.forEach(function(b){
-      var bi=BOSSES.indexOf(b),c=st.cells[b][pi]||emptyCell();
-      h+=compactBossCard(b,bi,c,pi,unlocked);
-    });
+    var weeklyBosses=item.bosses.filter(function(b){return !MONTHLY.has(b)});
+    var monthlyBosses=item.bosses.filter(function(b){return MONTHLY.has(b)});
+
+    if(weeklyBosses.length){
+      h+='<div class="boss-section-label boss-section-weekly"><strong>주간 보스</strong><span>'+w+'/'+LIMIT+'</span></div>';
+      weeklyBosses.forEach(function(b){
+        var bi=BOSSES.indexOf(b),c=st.cells[b][pi]||emptyCell();
+        h+=compactBossCard(b,bi,c,pi,unlocked);
+      });
+    }
+    if(monthlyBosses.length){
+      h+='<div class="boss-section-label boss-section-monthly"><strong>월간 보스</strong><span>'+m+'/1</span></div>';
+      monthlyBosses.forEach(function(b){
+        var bi=BOSSES.indexOf(b),c=st.cells[b][pi]||emptyCell();
+        h+=compactBossCard(b,bi,c,pi,unlocked);
+      });
+    }
     h+='</div></section>';
   });
   if(unlocked)h+='<button class="add-character-column" data-add-character="1"><strong>＋ 캐릭터 추가</strong><span>새 캐릭터 열 만들기</span></button>';
@@ -1213,7 +1226,6 @@ function renderMobile(){
   var summary='<div class="mobile-character-head owner-themed" data-theme="'+theme+'">'+
     '<div><div class="mobile-character-name-line"><strong>'+esc(st.players[pi])+'</strong>'+(pi===0?'<span class="representative-badge">대표</span>':'')+(w>=LIMIT?'<span class="complete-badge">완료</span>':'')+'</div>'+
       '<span>주간 수익 <b class="mobile-income">'+formatEok(charIncome)+'</b>'+(missingPrices?' · 가격 미등록 '+missingPrices+'건':'')+(w>=LIMIT?' · 미설정 숨김':'')+'</span>'+
-      (pi===0?'<span class="mobile-owner-total">전체 주간 '+formatEok(ownerIncome)+(ownerMissing?' · 미등록 '+ownerMissing+'건':'')+'</span>':'')+
     '</div>'+
     '<div class="mobile-char-actions">'+
       (unlocked?'<div class="mobile-order-actions">'+
@@ -1226,11 +1238,28 @@ function renderMobile(){
   '</div>';
 
   var list='<div class="mobile-compact-list">';
-  BOSSES.forEach(function(b,bi){
+  var weeklyList=BOSSES.filter(function(b){
+    if(MONTHLY.has(b))return false;
     var c=st.cells[b][pi]||emptyCell();
-    if(w>=LIMIT && !MONTHLY.has(b) && !planned(c))return;
-    list+=compactBossCard(b,bi,c,pi,unlocked);
+    if(w>=LIMIT&&!planned(c))return false;
+    return true;
   });
+  var monthlyList=BOSSES.filter(function(b){return MONTHLY.has(b)});
+
+  if(weeklyList.length){
+    list+='<div class="boss-section-label boss-section-weekly"><strong>주간 보스</strong><span>'+w+'/'+LIMIT+'</span></div>';
+    weeklyList.forEach(function(b){
+      var bi=BOSSES.indexOf(b),c=st.cells[b][pi]||emptyCell();
+      list+=compactBossCard(b,bi,c,pi,unlocked);
+    });
+  }
+  if(monthlyList.length){
+    list+='<div class="boss-section-label boss-section-monthly"><strong>월간 보스</strong><span>'+m+'/1</span></div>';
+    monthlyList.forEach(function(b){
+      var bi=BOSSES.indexOf(b),c=st.cells[b][pi]||emptyCell();
+      list+=compactBossCard(b,bi,c,pi,unlocked);
+    });
+  }
   list+='</div>';
 
   box.innerHTML=strip+summary+list;
