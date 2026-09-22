@@ -3376,3 +3376,243 @@ html,body{
     font-size:8.5px;
   }
 }
+
+
+/* dark mode — preserve all owner/accent/difficulty colors */
+.theme-toggle{
+  margin-left:auto;
+  flex:none;
+  min-height:34px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:0 10px;
+  border:1px solid var(--line-strong);
+  border-radius:9px;
+  background:var(--surface);
+  color:var(--text);
+  font-size:10px;
+  font-weight:900;
+}
+.theme-toggle-icon{
+  font-size:14px;
+  line-height:1;
+}
+.theme-toggle:hover{
+  border-color:var(--muted2);
+}
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#111318;
+  --surface:#191c22;
+  --surface-soft:#15181d;
+  --line:#2b3038;
+  --line-strong:#3b424c;
+  --text:#f0f2f5;
+  --muted:#a5acb6;
+  --muted2:#7f8792;
+  --shadow:0 4px 18px rgba(0,0,0,.22);
+}
+html[data-theme="dark"],
+html[data-theme="dark"] body{
+  background:var(--bg);
+  color:var(--text);
+}
+html[data-theme="dark"] .theme-toggle,
+html[data-theme="dark"] .owner-tab,
+html[data-theme="dark"] .manage-menu>summary,
+html[data-theme="dark"] .manage-popover,
+html[data-theme="dark"] .btn,
+html[data-theme="dark"] .desktop-board-meta,
+html[data-theme="dark"] .character-column-head,
+html[data-theme="dark"] .compact-boss-card,
+html[data-theme="dark"] .party-picker-sheet,
+html[data-theme="dark"] .picker-character,
+html[data-theme="dark"] .checklist-loading,
+html[data-theme="dark"] .checklist-empty,
+html[data-theme="dark"] .checklist-card,
+html[data-theme="dark"] .calendar-week-row,
+html[data-theme="dark"] .character-run-card,
+html[data-theme="dark"] .character-run-head,
+html[data-theme="dark"] .boss-run-row,
+html[data-theme="dark"] .month-calendar-grid,
+html[data-theme="dark"] .month-day,
+html[data-theme="dark"] .boss-toggle-all{
+  background:var(--surface);
+}
+html[data-theme="dark"] .compact-boss-card.is-empty,
+html[data-theme="dark"] .compact-boss-card.is-sync,
+html[data-theme="dark"] .picker-footer,
+html[data-theme="dark"] .week-run-head,
+html[data-theme="dark"] .calendar-week-summary{
+  background:var(--surface-soft);
+}
+html[data-theme="dark"] .compact-boss-card.is-monthly{
+  background:#211e18;
+}
+html[data-theme="dark"] .page-switch{
+  background:#20242b;
+  border-color:var(--line-strong);
+}
+html[data-theme="dark"] .page-switch-btn{
+  color:var(--muted);
+}
+html[data-theme="dark"] .page-switch-btn.active{
+  background:var(--surface);
+  color:var(--text);
+  box-shadow:0 1px 5px rgba(0,0,0,.24);
+}
+html[data-theme="dark"] .lock-state{
+  background:#242932;
+  color:#aeb5bf;
+}
+html[data-theme="dark"] .lock-state.open{
+  background:#173322;
+  color:#77c58f;
+}
+html[data-theme="dark"] .desktop-board-meta span,
+html[data-theme="dark"] .checklist-status{
+  background:#242932;
+  color:#abb2bc;
+}
+html[data-theme="dark"] .column-count,
+html[data-theme="dark"] .compact-boss-name,
+html[data-theme="dark"] .compact-solo,
+html[data-theme="dark"] .compact-count,
+html[data-theme="dark"] .compact-count:disabled,
+html[data-theme="dark"] .checklist-month-title strong,
+html[data-theme="dark"] .checklist-week-text strong,
+html[data-theme="dark"] .calendar-summary-copy b,
+html[data-theme="dark"] .week-run-head>div:first-child strong,
+html[data-theme="dark"] .character-run-head b,
+html[data-theme="dark"] .boss-run-name strong,
+html[data-theme="dark"] .month-day-date{
+  color:var(--text);
+}
+html[data-theme="dark"] .column-sub,
+html[data-theme="dark"] .compact-sync,
+html[data-theme="dark"] .picker-head p,
+html[data-theme="dark"] .picker-owner-count,
+html[data-theme="dark"] .checklist-month-title span,
+html[data-theme="dark"] .checklist-owner-note,
+html[data-theme="dark"] .calendar-summary-copy small,
+html[data-theme="dark"] .week-run-head>div:first-child span,
+html[data-theme="dark"] .week-run-money small,
+html[data-theme="dark"] .week-run-money em,
+html[data-theme="dark"] .character-run-head span,
+html[data-theme="dark"] .character-run-head small,
+html[data-theme="dark"] .character-run-head em,
+html[data-theme="dark"] .boss-run-name small,
+html[data-theme="dark"] .boss-run-meso small,
+html[data-theme="dark"] .month-day-runs em,
+html[data-theme="dark"] .month-day-runs em i{
+  color:var(--muted);
+}
+html[data-theme="dark"] .picker-search,
+html[data-theme="dark"] .party-search-box,
+html[data-theme="dark"] .party-search-box input{
+  background:#14171c;
+  color:var(--text);
+  border-color:var(--line-strong);
+}
+html[data-theme="dark"] .picker-close{
+  background:#242932;
+  color:#c7ccd3;
+}
+html[data-theme="dark"] .picker-owner-group,
+html[data-theme="dark"] .picker-head,
+html[data-theme="dark"] .picker-footer,
+html[data-theme="dark"] .character-run-head,
+html[data-theme="dark"] .selected-day-head{
+  border-color:var(--line);
+}
+html[data-theme="dark"] .calendar-weekdays{
+  background:#20242b;
+  border-color:var(--line);
+}
+html[data-theme="dark"] .calendar-weekdays span{
+  border-color:var(--line);
+  color:var(--muted);
+}
+html[data-theme="dark"] .month-calendar-grid,
+html[data-theme="dark"] .month-day,
+html[data-theme="dark"] .calendar-week-row,
+html[data-theme="dark"] .calendar-day,
+html[data-theme="dark"] .selected-day-panel,
+html[data-theme="dark"] .character-run-card,
+html[data-theme="dark"] .boss-run-check{
+  border-color:var(--line);
+}
+html[data-theme="dark"] .month-day.outside,
+html[data-theme="dark"] .calendar-day.outside{
+  background:#14171b;
+}
+html[data-theme="dark"] .month-day:hover,
+html[data-theme="dark"] .calendar-day:hover{
+  background:color-mix(in srgb,var(--owner-accent,#626a76) 12%,var(--surface));
+}
+html[data-theme="dark"] .month-day.selected,
+html[data-theme="dark"] .calendar-day.selected{
+  background:color-mix(in srgb,var(--owner-accent,#626a76) 16%,var(--surface));
+}
+html[data-theme="dark"] .checklist-month-meso,
+html[data-theme="dark"] .calendar-day b{
+  background:color-mix(in srgb,var(--owner-accent,#626a76) 18%,var(--surface));
+}
+html[data-theme="dark"] .character-run-grid{
+  background:#12151a;
+}
+html[data-theme="dark"] .boss-run-list{
+  background:var(--line);
+}
+html[data-theme="dark"] .boss-run-row.done,
+html[data-theme="dark"] .calendar-week-row.done .calendar-week-summary,
+html[data-theme="dark"] .checklist-week.done{
+  background:color-mix(in srgb,var(--owner-accent,#626a76) 12%,var(--surface));
+}
+html[data-theme="dark"] .boss-run-check,
+html[data-theme="dark"] .checklist-checkmark{
+  background:#15181d;
+}
+html[data-theme="dark"] .boss-run-row.done .boss-run-check,
+html[data-theme="dark"] .checklist-week.done .checklist-checkmark{
+  background:var(--owner-accent,#626a76);
+}
+html[data-theme="dark"] .month-day-total,
+html[data-theme="dark"] .calendar-day-total{
+  border-color:var(--line);
+}
+html[data-theme="dark"] .save-board-btn{
+  border-color:var(--line-strong);
+  background:#242932;
+  color:#aeb5bf;
+}
+html[data-theme="dark"] .save-board-btn.needs-save{
+  border-color:#5d55d8;
+  background:#5d55d8;
+  color:#fff;
+}
+html[data-theme="dark"] .add-character-column,
+html[data-theme="dark"] .mobile-empty,
+html[data-theme="dark"] .mobile-loading{
+  background:var(--surface-soft)!important;
+  border-color:var(--line-strong)!important;
+  color:var(--muted)!important;
+}
+html[data-theme="dark"] .column-remove:not(:disabled):hover{
+  background:#252a32;
+}
+html[data-theme="dark"] select:not(.compact-difficulty),
+html[data-theme="dark"] input{
+  color-scheme:dark;
+}
+@media(max-width:760px){
+  .theme-toggle{
+    min-height:32px;
+    padding:0 9px;
+  }
+  .theme-toggle-text{
+    display:none;
+  }
+}
