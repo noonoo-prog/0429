@@ -95,7 +95,7 @@ function updateSaveUI(){
   var btn=document.getElementById("saveBoardBtn");
   var text=document.getElementById("saveText");
   var o=owner();
-  var unlocked=!!o;
+  var unlocked=!!(o&&isUnlocked(o.id));
   if(btn){
     btn.disabled=!unlocked||!dirty||saving;
     btn.classList.toggle("needs-save",!!(unlocked&&dirty&&!saving));
@@ -217,9 +217,8 @@ function monthGridDates(monthKey){
   var p=monthKey.split("-").map(Number),y=p[0],m=p[1]-1;
   var first=new Date(Date.UTC(y,m,1));
   var last=new Date(Date.UTC(y,m+1,0));
-  var startDelta=(first.getUTCDay()-4+7)%7;
-  var start=addDaysUTC(first,-startDelta);
-  var endDelta=(3-last.getUTCDay()+7)%7;
+  var start=addDaysUTC(first,-first.getUTCDay());
+  var endDelta=(6-last.getUTCDay()+7)%7;
   var end=addDaysUTC(last,endDelta);
   var out=[];
   for(var d=new Date(start.getTime());d<=end;d=addDaysUTC(d,1))out.push(dateKeyUTC(d));
@@ -412,35 +411,36 @@ function weekRunProgress(ownerId,weekStart){
   });
   return{done:done,total:total};
 }
-function allBossRunsChecked(ownerId,weekStart){
-  var x=weekRunProgress(ownerId,weekStart);
-  return x.total>0&&x.done===x.total;
+function characterBossRunsChecked(ownerId,weekStart,characterName,pi){
+  var bosses=plannedWeeklyBossesForCharacter(pi);
+  return bosses.length>0&&bosses.every(function(b){
+    return !!bossRunItem(ownerId,weekStart,characterName,b).completed;
+  });
 }
-function toggleAllBossRuns(weekStart,runDate){
+function toggleCharacterBossRuns(weekStart,runDate,characterName,pi){
   var o=owner(),st=state();if(!o||!st||CHECKLIST_SAVING)return;
-  var completed=!allBossRunsChecked(o.id,weekStart);
-  var items=[],before=[];
+  var bosses=plannedWeeklyBossesForCharacter(pi);
+  if(!bosses.length){toast("이 캐릭터에 등록된 주간 보스가 없어요.");return}
 
-  st.players.forEach(function(characterName,pi){
-    plannedWeeklyBossesForCharacter(pi).forEach(function(b){
-      var c=st.cells[b]&&st.cells[b][pi];
-      var payout=completed?Math.round(bossWeeklyIncome(b,c)):0;
-      before.push({
-        characterName:characterName,
-        bossName:b,
-        item:JSON.parse(JSON.stringify(bossRunItem(o.id,weekStart,characterName,b)))
-      });
-      items.push({characterName:characterName,bossName:b,completed:completed,mesoEarned:payout});
-      setBossRunItem(o.id,weekStart,characterName,b,{
-        completed:completed,
-        meso:payout,
-        runDate:runDate
-      });
+  var completed=!characterBossRunsChecked(o.id,weekStart,characterName,pi);
+  var items=[],before=[];
+  bosses.forEach(function(b){
+    var c=st.cells[b]&&st.cells[b][pi];
+    var payout=completed?Math.round(bossWeeklyIncome(b,c)):0;
+    before.push({
+      bossName:b,
+      item:JSON.parse(JSON.stringify(bossRunItem(o.id,weekStart,characterName,b)))
+    });
+    items.push({characterName:characterName,bossName:b,completed:completed,mesoEarned:payout});
+    setBossRunItem(o.id,weekStart,characterName,b,{
+      completed:completed,
+      meso:payout,
+      runDate:runDate
     });
   });
 
-  if(!items.length){toast("선택할 주간 보스가 없어요.");return}
-  CHECKLIST_SAVING="bulk|"+weekStart;
+  var savingKey="charbulk|"+weekStart+"|"+characterName;
+  CHECKLIST_SAVING=savingKey;
   renderChecklist();
 
   callApi("save_boss_run_bulk",{
@@ -462,12 +462,12 @@ function toggleAllBossRuns(weekStart,runDate){
         }
       );
     });
-    toast(completed?"등록된 보스를 모두 선택했어요.":"등록된 보스를 모두 해제했어요.");
+    toast(completed?characterName+"의 보스를 모두 체크했어요.":characterName+"의 보스를 모두 해제했어요.");
   }).catch(function(e){
     before.forEach(function(x){
-      setBossRunItem(o.id,weekStart,x.characterName,x.bossName,x.item);
+      setBossRunItem(o.id,weekStart,characterName,x.bossName,x.item);
     });
-    toast(e.message||"전체 보스 체크를 저장하지 못했습니다.");
+    toast(e.message||"캐릭터 전체 체크를 저장하지 못했습니다.");
   }).finally(function(){
     CHECKLIST_SAVING="";
     renderChecklist();
@@ -504,7 +504,7 @@ function renderChecklist(){
       '<button class="checklist-month-btn" data-month-move="1" aria-label="다음 달">›</button>'+
     '</div>'+
     '<div class="calendar-weekdays month-weekdays">'+
-      '<span>목</span><span>금</span><span class="weekday-sat">토</span><span class="weekday-sun">일</span><span>월</span><span>화</span><span>수</span>'+
+      '<span class="weekday-sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="weekday-sat">토</span>'+
     '</div>'+
     '<div class="month-calendar-grid">';
 
@@ -514,8 +514,8 @@ function renderChecklist(){
     var dayData=dayRunData(o.id,weekStart,dateKey);
     var outside=dateKey.slice(0,7)!==CHECKLIST_MONTH;
     var disabled=dateKey<CHECKLIST_START;
-    var column=index%7;
-    var weekendClass=column===2?" saturday":(column===3?" sunday":"");
+    var day=d.getUTCDay();
+    var weekendClass=day===6?" saturday":(day===0?" sunday":"");
     var selected=dateKey===pickedDate;
 
     h+='<button type="button" class="month-day'+weekendClass+(outside?" outside":"")+(disabled?" disabled":"")+(selected?" selected":"")+'" data-month-date="'+dateKey+'" '+(disabled?"disabled":"")+'>'+
@@ -538,7 +538,6 @@ function renderChecklist(){
         '<div><strong>'+formatShortDate(parseDateUTC(pickedDate))+'에 잡은 보스 체크</strong>'+
         '<span>'+formatShortDate(parseDateUTC(pickedWeek))+' 목 ~ '+formatShortDate(parseDateUTC(pickedWeekEnd))+' 수 · '+progress.done+'/'+progress.total+' 보스 완료</span></div>'+
         '<div class="selected-day-actions">'+
-          '<button class="boss-toggle-all '+(allBossRunsChecked(o.id,pickedWeek)?"all-checked":"")+'" type="button" data-toggle-all="1" '+(CHECKLIST_SAVING?"disabled":"")+'>'+(allBossRunsChecked(o.id,pickedWeek)?"모두 해제":"보스 모두 선택")+'</button>'+
           '<div class="week-run-money"><small>주간 획득</small><b>'+formatEok(weekMeso)+'</b><em>예상 '+formatEok(weekEstimate)+'</em></div>'+
         '</div>'+
       '</div>'+
@@ -550,10 +549,15 @@ function renderChecklist(){
     var charEstimate=Math.round(characterWeeklyIncome(pi));
     var charDone=bosses.filter(function(b){return bossRunItem(o.id,pickedWeek,characterName,b).completed}).length;
 
+    var charAllChecked=characterBossRunsChecked(o.id,pickedWeek,characterName,pi);
+    var charBulkSaving=CHECKLIST_SAVING==="charbulk|"+pickedWeek+"|"+characterName;
     h+='<section class="character-run-card">'+
       '<header class="character-run-head">'+
-        '<div><strong>'+esc(characterName)+'</strong><span>'+charDone+'/'+bosses.length+' 완료</span></div>'+
-        '<div><small>획득</small><b>'+formatEok(charEarned)+'</b><em>/ '+formatEok(charEstimate)+'</em></div>'+
+        '<div class="character-run-title"><strong>'+esc(characterName)+'</strong><span>'+charDone+'/'+bosses.length+' 완료</span></div>'+
+        '<div class="character-run-tools">'+
+          '<button type="button" class="character-toggle-all '+(charAllChecked?"all-checked":"")+'" data-char-toggle="1" data-week="'+pickedWeek+'" data-run-date="'+pickedDate+'" data-character="'+esc(characterName)+'" data-pi="'+pi+'" '+((CHECKLIST_SAVING||!bosses.length)?"disabled":"")+'>'+(charBulkSaving?"저장 중…":(charAllChecked?"전체 해제":"전체 체크"))+'</button>'+
+          '<div class="character-run-income"><small>획득</small><b>'+formatEok(charEarned)+'</b><em>/ '+formatEok(charEstimate)+'</em></div>'+
+        '</div>'+
       '</header>'+
       '<div class="boss-run-list">';
 
@@ -566,7 +570,7 @@ function renderChecklist(){
         var checked=!!item.completed;
         var payout=checked?Math.max(0,Number(item.meso)||0):Math.round(bossWeeklyIncome(b,c));
         var saveKey=o.id+"|"+pickedWeek+"|"+characterName+"|"+b;
-        var saving=CHECKLIST_SAVING===saveKey||CHECKLIST_SAVING==="bulk|"+pickedWeek;
+        var saving=CHECKLIST_SAVING===saveKey||CHECKLIST_SAVING==="charbulk|"+pickedWeek+"|"+characterName;
         var runLabel=checked&&item.runDate?formatShortDate(parseDateUTC(item.runDate))+" 완료":formatShortDate(parseDateUTC(pickedDate))+"에 체크";
 
         h+='<label class="boss-run-row '+(checked?"done":"")+'">'+
@@ -590,8 +594,16 @@ function renderChecklist(){
   Array.prototype.forEach.call(panel.querySelectorAll(".month-day[data-month-date]"),function(btn){
     btn.onclick=function(){setSelectedCalendarDate(btn.dataset.monthDate)};
   });
-  var toggleAll=panel.querySelector("[data-toggle-all]");
-  if(toggleAll)toggleAll.onclick=function(){toggleAllBossRuns(pickedWeek,pickedDate)};
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-char-toggle]"),function(btn){
+    btn.onclick=function(){
+      toggleCharacterBossRuns(
+        btn.dataset.week,
+        btn.dataset.runDate,
+        btn.dataset.character,
+        Number(btn.dataset.pi)
+      );
+    };
+  });
   Array.prototype.forEach.call(panel.querySelectorAll(".boss-run-checkbox"),function(input){
     input.onchange=function(){
       saveBossRunCheck(
@@ -622,7 +634,7 @@ function updatePageView(){
 
   var pageTitle=document.getElementById("pageTitle"),pageSub=document.getElementById("pageSub");
   if(pageTitle)pageTitle.textContent=checklist?"보스 체크리스트":"보스 현황판";
-  if(pageSub)pageSub.textContent=checklist?"목요일~수요일 · 주간 완료 체크":"주간 최대 12개 · 검은 마법사는 월간";
+  if(pageSub)pageSub.textContent=checklist?"달력은 일~토 · 보스 초기화는 목요일~수요일":"주간 최대 12개 · 검은 마법사는 월간";
 
   Array.prototype.forEach.call(document.querySelectorAll("[data-page-view]"),function(btn){
     btn.classList.toggle("active",btn.dataset.pageView===PAGE_VIEW);
@@ -767,7 +779,7 @@ function ownerMissingPriceCount(){
 }
 
 function queueSave(){
-  var o=owner();if(!o)return;
+  var o=owner();if(!o||!isUnlocked(o.id))return;
   EDIT_VERSION++;
   dirty=true;
   clearTimeout(saveTimer);
@@ -777,12 +789,14 @@ function saveBoardNow(){
   var o=owner(),st=state();
   if(!o||!st||saving)return Promise.resolve();
   if(!dirty){toast("저장할 변경사항이 없어요.");updateSaveUI();return Promise.resolve();}
+  var pin=getPin(o.id);
+  if(!pin&&!ADMIN_UNLOCKED)return Promise.resolve();
   var saveVersion=EDIT_VERSION;
   var snapshot=JSON.parse(JSON.stringify(st));
   saving=true;
   updateSaveUI();
   var baseSnapshot=BASE_BOARDS[o.id]?JSON.parse(JSON.stringify(BASE_BOARDS[o.id])):JSON.parse(JSON.stringify(snapshot));
-  return callApi("save_board",{ownerId:o.id,baseBoard:baseSnapshot,board:snapshot}).then(function(data){
+  return callApi("save_board",{ownerId:o.id,pin:pin,adminCode:ADMIN_UNLOCKED?ADMIN_CODE:"",baseBoard:baseSnapshot,board:snapshot}).then(function(data){
     if(saveVersion===EDIT_VERSION){
       dirty=false;
       applyPayload(data);
@@ -793,6 +807,13 @@ function saveBoardNow(){
       toast("저장 중 새 수정이 생겼어요. 저장 버튼을 한 번 더 눌러 주세요.");
     }
   }).catch(function(e){
+    if(e.status===401){
+      if(ADMIN_UNLOCKED){ADMIN_UNLOCKED=false;ADMIN_CODE="";}
+      else clearPin(o.id);
+      toast("수정 권한이 풀렸어요. 다시 인증해 주세요.");
+      render();
+      return loadRemote(false);
+    }
     toast(e.message||"저장하지 못했습니다.");
   }).finally(function(){
     saving=false;
@@ -811,9 +832,12 @@ function renderOwners(){
     var mb=document.getElementById("mobileBoard");if(mb)mb.scrollLeft=0;
   }});
   var o=owner(),unlocked=o&&isUnlocked(o.id),title=document.getElementById("boardTitle");
-  title.className="board-title owner-themed"; if(o)title.setAttribute("data-theme",ownerTheme(o.name)); else title.removeAttribute("data-theme"); title.innerHTML=o?esc(o.name)+(PAGE_VIEW==="checklist"?'의 보스 체크리스트':'의 보스 현황')+' <span class="lock-state open">'+(PAGE_VIEW==="checklist"?"체크 가능":"바로 수정 가능")+'</span>':"";
+  title.className="board-title owner-themed"; if(o)title.setAttribute("data-theme",ownerTheme(o.name)); else title.removeAttribute("data-theme");
+  title.innerHTML=o?esc(o.name)+(PAGE_VIEW==="checklist"?'의 보스 체크리스트':'의 보스 현황')+
+    ' <span class="lock-state '+((PAGE_VIEW==="checklist"||unlocked)?"open":"")+'">'+
+    (PAGE_VIEW==="checklist"?"비밀번호 없이 체크":(unlocked?"수정 가능":"보기 전용"))+'</span>':"";
   var ownerUnlock=document.getElementById("unlockOwner");
-  ownerUnlock.textContent=ADMIN_UNLOCKED?"관리자 모드 중":(unlocked?"관리 기능 잠그기":"관리 기능 잠금 해제");
+  ownerUnlock.textContent=ADMIN_UNLOCKED?"관리자 모드 중":(unlocked?"수정 잠그기":"수정 잠금 해제");
   ownerUnlock.disabled=ADMIN_UNLOCKED;
   var adminBtn=document.getElementById("adminUnlock");
   adminBtn.textContent=ADMIN_UNLOCKED?"관리자 수정 종료":"관리자 전체 수정";
@@ -821,7 +845,7 @@ function renderOwners(){
   document.getElementById("renameOwner").disabled=!unlocked;
   document.getElementById("changePinOwner").disabled=!unlocked;
   document.getElementById("removeOwner").disabled=!unlocked;
-  document.getElementById("addPlayer").disabled=false;
+  document.getElementById("addPlayer").disabled=!unlocked;
   updateSaveUI();
 }
 
@@ -994,7 +1018,7 @@ function compactBossCard(b,bi,c,pi,unlocked){
 }
 function reorderCharacter(fromIndex,toIndex){
   var st=state(),o=owner();
-  if(!st||!o)return;
+  if(!st||!o||!isUnlocked(o.id))return;
   fromIndex=Number(fromIndex);toIndex=Number(toIndex);
   if(!Number.isInteger(fromIndex)||!Number.isInteger(toIndex))return;
   if(fromIndex<0||toIndex<0||fromIndex>=st.players.length||toIndex>=st.players.length||fromIndex===toIndex)return;
@@ -1064,7 +1088,7 @@ function desktopRowColumns(total){
 function renderDesktop(){
   var st=state(),root=document.getElementById("desktopBoard");
   if(!st){root.innerHTML="";return}
-  var o=owner(),unlocked=true,theme=ownerTheme(o.name),q=normalizeSearch(SEARCH_QUERY);
+  var o=owner(),unlocked=isUnlocked(o.id),theme=ownerTheme(o.name),q=normalizeSearch(SEARCH_QUERY);
   var visible=[];
   st.players.forEach(function(p,pi){
     var full=weekly(pi)>=LIMIT;
@@ -1122,7 +1146,7 @@ function mobileMemberInputs(c,bi,pi,editable){
 function renderMobile(){
   var box=document.getElementById("mobileBoard"),st=state(),o=owner();
   if(!st||!o){box.innerHTML='<div class="mobile-loading">보스판이 없습니다.</div>';return}
-  var unlocked=true,theme=ownerTheme(o.name),q=normalizeSearch(SEARCH_QUERY);
+  var unlocked=isUnlocked(o.id),theme=ownerTheme(o.name),q=normalizeSearch(SEARCH_QUERY);
 
   if(q){
     var groups=[];
@@ -1331,7 +1355,7 @@ document.getElementById("removeOwner").onclick=function(){
   });
 };
 function addCharacter(){
-  var o=owner();if(!o)return;
+  var o=owner();if(!o||!isUnlocked(o.id))return;
   var st=state();
   st.players.push("새 닉네임");
   BOSSES.forEach(function(b){st.cells[b].push(emptyCell())});
