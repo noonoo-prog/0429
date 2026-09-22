@@ -49,6 +49,7 @@ const MONTHLY=new Set(["검은 마법사"]);
 const SOLO=new Set(["데미안","루시드","윌","더스크","진힐라","듄켈"]);
 const LIMIT=12,DIFFS=["","x","이지","노말","하드","카오스","익스트림"];
 const ACTIVE_KEY="boss-board-active-owner-v6",PIN_PREFIX="boss-board-pin-",CHAR_PREFIX="boss-board-active-char-",MOBILE_VIEW_KEY="boss-board-mobile-view-v1";
+const THEME_KEY="boss-board-theme-v1";
 const FIXED_OWNER_ORDER=["오똑","츠죠","피콕","꿈품은","달하늘의별을","띵스"];
 
 let APP={owners:[]};
@@ -61,6 +62,7 @@ let ADMIN_UNLOCKED=false,ADMIN_CODE="";
 let PICKER=null;
 let MOBILE_VIEW=localStorage.getItem(MOBILE_VIEW_KEY)==="all"?"all":"active";
 let SEARCH_QUERY="";
+let THEME_MODE=localStorage.getItem(THEME_KEY)==="dark"?"dark":"light";
 const CHECKLIST_START="2026-09-24";
 const PAGE_VIEW_KEY="boss-board-page-view-v1";
 let PAGE_VIEW=localStorage.getItem(PAGE_VIEW_KEY)==="checklist"?"checklist":"board";
@@ -78,6 +80,27 @@ let CHECKLIST_LOADING=false;
 let CHECKLIST_SAVING="";
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(m){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})}
+function applyTheme(mode){
+  THEME_MODE=mode==="dark"?"dark":"light";
+  if(THEME_MODE==="dark")document.documentElement.setAttribute("data-theme","dark");
+  else document.documentElement.removeAttribute("data-theme");
+  localStorage.setItem(THEME_KEY,THEME_MODE);
+
+  var meta=document.querySelector('meta[name="theme-color"]');
+  if(meta)meta.setAttribute("content",THEME_MODE==="dark"?"#111318":"#f4f5f7");
+
+  var btn=document.getElementById("themeToggle");
+  if(btn){
+    var dark=THEME_MODE==="dark";
+    var icon=btn.querySelector(".theme-toggle-icon");
+    var label=btn.querySelector(".theme-toggle-text");
+    if(icon)icon.textContent=dark?"☀":"☾";
+    if(label)label.textContent=dark?"라이트":"다크";
+    btn.setAttribute("aria-label",dark?"라이트모드 켜기":"다크모드 켜기");
+    btn.classList.toggle("is-dark",dark);
+  }
+}
+function toggleTheme(){applyTheme(THEME_MODE==="dark"?"light":"dark")}
 function toast(m){var e=document.getElementById("toast");e.textContent=m;e.classList.add("show");setTimeout(function(){e.classList.remove("show")},1900)}
 function beginSelectInteraction(){SELECT_ACTIVE=true}
 function endSelectInteraction(){
@@ -1396,6 +1419,10 @@ window.addEventListener("beforeunload",function(e){
   e.preventDefault();
   e.returnValue="";
 });
+
+var themeToggle=document.getElementById("themeToggle");
+if(themeToggle)themeToggle.onclick=toggleTheme;
+applyTheme(THEME_MODE);
 
 function startPolling(){
   clearInterval(pollTimer);
