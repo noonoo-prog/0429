@@ -204,8 +204,16 @@ function changeChecklistMonth(delta){
   CHECKLIST_MONTH=next;
   renderChecklist();
 }
+function checklistItem(ownerId,weekStart){
+  var raw=CHECKLISTS[ownerId]&&CHECKLISTS[ownerId][weekStart];
+  if(raw&&typeof raw==="object")return raw;
+  return {completed:!!raw,meso:0};
+}
 function checklistValue(ownerId,weekStart){
-  return !!(CHECKLISTS[ownerId]&&CHECKLISTS[ownerId][weekStart]);
+  return !!checklistItem(ownerId,weekStart).completed;
+}
+function checklistMeso(ownerId,weekStart){
+  return Math.max(0,Number(checklistItem(ownerId,weekStart).meso)||0);
 }
 function loadChecklist(show){
   if(CHECKLIST_LOADING)return Promise.resolve();
@@ -215,7 +223,10 @@ function loadChecklist(show){
     CHECKLISTS={};
     (data.checklists||[]).forEach(function(x){
       if(!CHECKLISTS[x.owner_id])CHECKLISTS[x.owner_id]={};
-      CHECKLISTS[x.owner_id][x.week_start]=!!x.completed;
+      CHECKLISTS[x.owner_id][x.week_start]={
+        completed:!!x.completed,
+        meso:Math.max(0,Number(x.meso_earned)||0)
+      };
     });
     CHECKLIST_LOADED=true;
     if(PAGE_VIEW==="checklist")renderChecklist();
@@ -227,8 +238,9 @@ function saveChecklistWeek(weekStart,completed){
   var o=owner();if(!o)return;
   function doSave(){
     if(!CHECKLISTS[o.id])CHECKLISTS[o.id]={};
-    var before=!!CHECKLISTS[o.id][weekStart];
-    CHECKLISTS[o.id][weekStart]=completed;
+    var before=JSON.parse(JSON.stringify(checklistItem(o.id,weekStart)));
+    var mesoEarned=completed?Math.round(ownerWeeklyIncome()):0;
+    CHECKLISTS[o.id][weekStart]={completed:completed,meso:mesoEarned};
     CHECKLIST_SAVING=o.id+"|"+weekStart;
     renderChecklist();
     callApi("save_checklist",{
@@ -236,11 +248,15 @@ function saveChecklistWeek(weekStart,completed){
       pin:getPin(o.id),
       adminCode:ADMIN_UNLOCKED?ADMIN_CODE:"",
       weekStart:weekStart,
-      completed:completed
+      completed:completed,
+      mesoEarned:mesoEarned
     }).then(function(data){
       if(!CHECKLISTS[o.id])CHECKLISTS[o.id]={};
-      CHECKLISTS[o.id][weekStart]=!!(data.item&&data.item.completed);
-      toast(completed?"이번 주 보스 완료로 체크했어요.":"완료 체크를 해제했어요.");
+      CHECKLISTS[o.id][weekStart]={
+        completed:!!(data.item&&data.item.completed),
+        meso:Math.max(0,Number(data.item&&data.item.meso_earned)||0)
+      };
+      toast(completed?"완료 · "+formatEok(mesoEarned)+" 저장했어요.":"완료 체크를 해제했어요.");
     }).catch(function(e){
       if(!CHECKLISTS[o.id])CHECKLISTS[o.id]={};
       CHECKLISTS[o.id][weekStart]=before;
@@ -262,32 +278,63 @@ function renderChecklist(){
     panel.innerHTML='<div class="checklist-loading">'+(CHECKLIST_LOADING?"체크리스트를 불러오는 중…":"체크리스트를 불러와 주세요.")+'</div>';
     return;
   }
+
   var weeks=monthWeeks(CHECKLIST_MONTH);
-  var p=CHECKLIST_MONTH.split("-"),title=Number(p[0])+"년 "+Number(p[1])+"월";
-  var unlocked=isUnlocked(o.id),theme=ownerTheme(o.name);
+  var p=CHECKLIST_MONTH.split("-"),monthNum=Number(p[1]),title=Number(p[0])+"년 "+monthNum+"월";
+  var theme=ownerTheme(o.name);
   var completedCount=weeks.filter(function(w){return checklistValue(o.id,w.start)}).length;
-  var h='<div class="checklist-card owner-themed" data-theme="'+theme+'">'+
+  var monthMeso=weeks.reduce(function(sum,w){
+    return sum+(checklistValue(o.id,w.start)?checklistMeso(o.id,w.start):0);
+  },0);
+  var currentEstimate=Math.round(ownerWeeklyIncome());
+
+  var h='<div class="checklist-card calendar-checklist owner-themed" data-theme="'+theme+'">'+
     '<div class="checklist-toolbar">'+
       '<button class="checklist-month-btn" data-month-move="-1" '+(CHECKLIST_MONTH==="2026-09"?"disabled":"")+' aria-label="이전 달">‹</button>'+
-      '<div class="checklist-month-title"><strong>'+title+'</strong><span>'+esc(o.name)+' · '+completedCount+'/'+weeks.length+'주 완료</span></div>'+
+      '<div class="checklist-month-title"><strong>'+title+'</strong>'+
+        '<span>'+esc(o.name)+' · '+completedCount+'/'+weeks.length+'주 완료</span>'+
+        '<b class="checklist-month-meso">누적 획득 '+formatEok(monthMeso)+'</b>'+
+      '</div>'+
       '<button class="checklist-month-btn" data-month-move="1" aria-label="다음 달">›</button>'+
     '</div>'+
-    '<div class="checklist-owner-note">목요일 시작 · 수요일 종료</div>'+
-    '<div class="checklist-weeks">';
+    '<div class="calendar-weekdays">'+
+      '<span>목</span><span>금</span><span>토</span><span>일</span><span>월</span><span>화</span><span>수</span>'+
+    '</div>'+
+    '<div class="calendar-weeks">';
+
   if(!weeks.length){
     h+='<div class="checklist-empty">2026년 9월 24일부터 체크리스트가 시작됩니다.</div>';
   }else{
     weeks.forEach(function(w,i){
-      var checked=checklistValue(o.id,w.start);
+      var item=checklistItem(o.id,w.start),checked=!!item.completed;
+      var savedMeso=Math.max(0,Number(item.meso)||0);
+      var displayMeso=checked?savedMeso:currentEstimate;
       var saving=CHECKLIST_SAVING===o.id+"|"+w.start;
-      h+='<label class="checklist-week '+(checked?"done":"")+'">'+
-        '<input class="checklist-checkbox" type="checkbox" data-week="'+w.start+'" '+(checked?"checked":"")+' '+(saving?"disabled":"")+'>'+
-        '<span class="checklist-checkmark">'+(checked?"✓":"")+'</span>'+
-        '<span class="checklist-week-text"><b>'+(i+1)+'주차</b><strong>'+formatShortDate(parseDateUTC(w.start))+' 목 ~ '+formatShortDate(parseDateUTC(w.end))+' 수</strong></span>'+
-        '<span class="checklist-status">'+(saving?"저장 중…":(checked?"완료":"미완료"))+'</span>'+
-      '</label>';
+      h+='<section class="calendar-week-row '+(checked?"done":"")+'">'+
+        '<div class="calendar-days">';
+      for(var di=0;di<7;di++){
+        var d=addDaysUTC(parseDateUTC(w.start),di);
+        var outside=(d.getUTCMonth()+1)!==monthNum;
+        h+='<div class="calendar-day '+(outside?"outside":"")+'">'+
+          '<small>'+formatShortDate(d)+'</small>'+
+          (di===0?'<b>'+(i+1)+'주차</b>':'')+
+        '</div>';
+      }
+      h+='</div>'+
+        '<label class="calendar-week-summary">'+
+          '<input class="checklist-checkbox" type="checkbox" data-week="'+w.start+'" '+(checked?"checked":"")+' '+(saving?"disabled":"")+'>'+
+          '<span class="checklist-checkmark">'+(checked?"✓":"")+'</span>'+
+          '<span class="calendar-summary-copy">'+
+            '<b>'+formatShortDate(parseDateUTC(w.start))+' ~ '+formatShortDate(parseDateUTC(w.end))+'</b>'+
+            '<small>'+(checked?"획득 메소":"예상 수익")+'</small>'+
+          '</span>'+
+          '<strong class="calendar-meso">'+formatEok(displayMeso)+'</strong>'+
+          '<span class="checklist-status">'+(saving?"저장 중…":(checked?"완료":"미완료"))+'</span>'+
+        '</label>'+
+      '</section>';
     });
   }
+
   h+='</div></div>';
   panel.innerHTML=h;
   Array.prototype.forEach.call(panel.querySelectorAll("[data-month-move]"),function(btn){
