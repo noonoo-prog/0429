@@ -2176,3 +2176,37 @@ html,body{overflow-x:hidden}
     font-size:14px;
   }
 }
+
+
+/* desktop character grid: max 6 characters per row */
+@media(min-width:761px){
+  .desktop-grid-scroll{
+    width:100%;
+    max-width:100%;
+    overflow-x:auto;
+    overflow-y:visible;
+  }
+
+  .character-columns,
+  .character-columns.is-searching{
+    display:grid;
+    grid-template-columns:repeat(var(--row-cols),256px);
+    grid-auto-flow:row;
+    gap:10px 7px;
+    width:max-content;
+    min-width:max-content;
+    align-items:start;
+  }
+
+  .character-column{
+    width:256px;
+    min-width:256px;
+    max-width:256px;
+  }
+
+  .add-character-column{
+    width:256px;
+    min-width:256px;
+    max-width:256px;
+  }
+}
