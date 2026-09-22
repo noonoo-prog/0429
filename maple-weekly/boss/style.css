@@ -2377,3 +2377,217 @@ html,body{
     font-size:12px!important;
   }
 }
+
+
+/* board / checklist view switch */
+.brand-mainline{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.brand-mainline h1{margin:0}
+.page-switch{
+  display:inline-flex;
+  gap:3px;
+  padding:3px;
+  border:1px solid #dde1e6;
+  border-radius:11px;
+  background:#eceff2;
+}
+.page-switch-btn{
+  min-height:30px;
+  padding:0 10px;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:#7a818b;
+  font-size:10px;
+  font-weight:900;
+  white-space:nowrap;
+}
+.page-switch-btn.active{
+  background:#fff;
+  color:#20252c;
+  box-shadow:0 1px 4px rgba(20,25,32,.08);
+}
+
+.checklist-panel{
+  width:100%;
+  max-width:760px;
+  margin:8px auto 28px;
+}
+.checklist-loading,
+.checklist-empty{
+  padding:34px 18px;
+  border:1px dashed #d6dbe1;
+  border-radius:14px;
+  background:#fff;
+  color:#858c96;
+  text-align:center;
+  font-size:12px;
+  font-weight:750;
+}
+.checklist-card{
+  overflow:hidden;
+  border:1px solid var(--owner-line,#d9dde3);
+  border-top:4px solid var(--owner-accent,#626a76);
+  border-radius:16px;
+  background:#fff;
+  box-shadow:0 4px 16px rgba(20,25,32,.04);
+}
+.checklist-toolbar{
+  display:grid;
+  grid-template-columns:44px 1fr 44px;
+  align-items:center;
+  gap:8px;
+  padding:16px 18px 10px;
+}
+.checklist-month-btn{
+  width:40px;
+  height:40px;
+  border:1px solid #dde1e6;
+  border-radius:10px;
+  background:#f7f8f9;
+  color:#333a43;
+  font-size:25px;
+  line-height:1;
+  font-weight:800;
+}
+.checklist-month-btn:disabled{opacity:.3}
+.checklist-month-title{text-align:center}
+.checklist-month-title strong{
+  display:block;
+  color:#20252c;
+  font-size:20px;
+  font-weight:950;
+}
+.checklist-month-title span{
+  display:block;
+  margin-top:3px;
+  color:#858c96;
+  font-size:10px;
+  font-weight:800;
+}
+.checklist-owner-note{
+  padding:0 18px 12px;
+  color:#8a919b;
+  font-size:10px;
+  font-weight:750;
+  text-align:center;
+}
+.checklist-weeks{
+  display:grid;
+  gap:8px;
+  padding:0 14px 14px;
+}
+.checklist-week{
+  display:grid;
+  grid-template-columns:38px 1fr auto;
+  align-items:center;
+  gap:10px;
+  min-height:68px;
+  padding:9px 13px;
+  border:1px solid #e0e4e9;
+  border-radius:12px;
+  background:#fafbfc;
+  cursor:pointer;
+  transition:.15s ease;
+}
+.checklist-week:hover{border-color:var(--owner-line,#c9ced5);background:#fff}
+.checklist-week.done{
+  border-color:var(--owner-line,#a9d0b3);
+  background:color-mix(in srgb,var(--owner-accent,#5b9b6a) 7%,#fff);
+}
+.checklist-checkbox{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+.checklist-checkmark{
+  display:grid;
+  place-items:center;
+  width:32px;
+  height:32px;
+  border:2px solid #cbd0d7;
+  border-radius:9px;
+  background:#fff;
+  color:#fff;
+  font-size:19px;
+  font-weight:950;
+}
+.checklist-week.done .checklist-checkmark{
+  border-color:var(--owner-accent,#626a76);
+  background:var(--owner-accent,#626a76);
+}
+.checklist-week-text{min-width:0}
+.checklist-week-text b{
+  display:block;
+  margin-bottom:3px;
+  color:var(--owner-accent,#626a76);
+  font-size:10px;
+  font-weight:950;
+}
+.checklist-week-text strong{
+  color:#252b32;
+  font-size:14px;
+  font-weight:900;
+}
+.checklist-status{
+  min-width:52px;
+  padding:5px 8px;
+  border-radius:999px;
+  background:#eceff2;
+  color:#8a919a;
+  font-size:9px;
+  font-weight:900;
+  text-align:center;
+}
+.checklist-week.done .checklist-status{
+  background:var(--owner-accent,#626a76);
+  color:#fff;
+}
+
+@media(max-width:760px){
+  .brand-mainline{
+    gap:7px;
+  }
+  .page-switch{
+    order:2;
+    width:100%;
+  }
+  .page-switch-btn{
+    flex:1;
+    min-height:32px;
+    font-size:10px;
+  }
+  .checklist-panel{
+    margin-top:4px;
+  }
+  .checklist-toolbar{
+    grid-template-columns:38px 1fr 38px;
+    padding:13px 10px 8px;
+  }
+  .checklist-month-btn{
+    width:36px;
+    height:36px;
+  }
+  .checklist-month-title strong{font-size:18px}
+  .checklist-weeks{
+    gap:7px;
+    padding:0 8px 10px;
+  }
+  .checklist-week{
+    grid-template-columns:34px 1fr auto;
+    gap:8px;
+    min-height:64px;
+    padding:8px 10px;
+  }
+  .checklist-checkmark{
+    width:30px;
+    height:30px;
+  }
+  .checklist-week-text strong{
+    font-size:12px;
+  }
+}
