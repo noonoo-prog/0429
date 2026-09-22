@@ -103,7 +103,11 @@ function cellMatchesSearch(c,playerName,query){
   var q=normalizeSearch(query);
   if(!q)return true;
   if(!planned(c))return false;
-  var values=[playerName].concat(c.names||[]);
+
+  var names=Array.isArray(c.names)?c.names:[];
+  if(q==="미정"&&names.some(function(v){return normalizeSearch(v)==="미정"}))return true;
+
+  var values=[playerName].concat(names);
   if(c._sync){
     values.push(c._sync.sourcePlayer||"",c._sync.targetPlayer||"",c._sync.sourceOwnerName||"");
   }
