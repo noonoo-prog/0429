@@ -7,15 +7,21 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
 <title>보스 현황판</title>
-<link rel="stylesheet" href="./style.css?v=pc-save-3x-20260922-1">
+<link rel="stylesheet" href="./style.css?v=weekly-checklist-20260922-1">
 </head>
 <body>
 <div class="app-shell">
   <header class="app-header">
     <div class="brand-row">
       <div class="brand">
-        <h1>보스 현황판</h1>
-        <p>주간 최대 12개 · 검은 마법사는 월간</p>
+        <div class="brand-mainline">
+          <h1 id="pageTitle">보스 현황판</h1>
+          <div class="page-switch" role="tablist" aria-label="화면 선택">
+            <button class="page-switch-btn active" id="boardViewBtn" type="button" data-page-view="board">보스 현황판</button>
+            <button class="page-switch-btn" id="checklistViewBtn" type="button" data-page-view="checklist">보스 체크리스트</button>
+          </div>
+        </div>
+        <p id="pageSub">주간 최대 12개 · 검은 마법사는 월간</p>
       </div>
       <div class="save save-controls" aria-live="polite">
         <span></span>
@@ -67,9 +73,13 @@
       <div class="mobile-loading">보스판을 불러오는 중…</div>
     </section>
 
-    <p class="hint">
+    <p class="hint" id="boardHint">
       파티원은 등록된 캐릭터에서 선택할 수 있고, 자동 연동된 보스는 원본 파티에서만 수정됩니다.
     </p>
+
+    <section class="checklist-panel" id="checklistPanel" hidden aria-label="주간 보스 체크리스트">
+      <div class="checklist-loading">체크리스트를 불러오는 중…</div>
+    </section>
   </main>
 </div>
 
@@ -95,6 +105,6 @@
 
 <div class="toast" id="toast"></div>
 <noscript><div style="padding:24px;font-family:sans-serif">JavaScript를 켜야 보스 현황판을 사용할 수 있어요.</div></noscript>
-<script defer src="./app.js?v=pc-save-3x-20260922-1"></script>
+<script defer src="./app.js?v=weekly-checklist-20260922-1"></script>
 </body>
 </html>
