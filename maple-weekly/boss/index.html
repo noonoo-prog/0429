@@ -18,7 +18,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
 <title>보스 현황판</title>
-<link rel="stylesheet" href="./style.css?v=character-row-divider-20260923-1">
+<link rel="stylesheet" href="./style.css?v=party-only-filter-20260923-1">
 </head>
 <body>
 <div class="app-shell">
@@ -69,13 +69,11 @@
       </details>
     </div>
 
-    <div class="party-search" id="partySearch" hidden>
-      <div class="party-search-box">
-        <span class="party-search-icon" aria-hidden="true">⌕</span>
-        <input id="partySearchInput" type="search" placeholder="파티원 닉네임 검색 · 예: 츠죠" autocomplete="off" spellcheck="false">
-        <button id="partySearchClear" class="party-search-clear" type="button" hidden>지우기</button>
-      </div>
-      <div class="party-search-status" id="partySearchStatus">닉네임을 입력하면 그 캐릭터가 포함된 파티만 표시됩니다.</div>
+    <div class="party-filter-row" id="partyFilterRow">
+      <button class="party-filter-btn" id="partyOnlyBtn" type="button" aria-pressed="false">
+        <span class="party-filter-check" aria-hidden="true">✓</span>
+        <span>2인 이상 파티만 보기</span>
+      </button>
     </div>
   </header>
 
@@ -120,6 +118,6 @@
 
 <div class="toast" id="toast"></div>
 <noscript><div style="padding:24px;font-family:sans-serif">JavaScript를 켜야 보스 현황판을 사용할 수 있어요.</div></noscript>
-<script defer src="./app.js?v=character-row-divider-20260923-1"></script>
+<script defer src="./app.js?v=party-only-filter-20260923-1"></script>
 </body>
 </html>
