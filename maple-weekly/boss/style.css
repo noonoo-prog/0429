@@ -2126,3 +2126,53 @@ html,body{overflow-x:hidden}
   color:#8a9099!important;
   font-weight:900;
 }
+
+
+/* character reorder */
+.drag-dots.order-enabled{
+  cursor:grab;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:none;
+  color:#7f8792;
+}
+.drag-dots.order-enabled:active{cursor:grabbing}
+.character-column.is-dragging{opacity:.48}
+.character-column.drag-over .character-column-head{
+  outline:2px solid var(--owner-accent);
+  outline-offset:2px;
+}
+.mobile-order-actions{
+  display:flex;
+  align-items:center;
+  gap:3px;
+}
+.mobile-order-btn{
+  width:30px;
+  height:30px;
+  border:1px solid #d7dce2;
+  border-radius:8px;
+  background:#fff;
+  color:#555d68;
+  padding:0;
+  font-size:14px;
+  font-weight:950;
+  line-height:28px;
+  text-align:center;
+}
+.mobile-order-btn:not(:disabled):active{
+  transform:translateY(1px);
+  background:#f2f4f6;
+}
+.mobile-order-btn:disabled{
+  color:#c5c9cf;
+  background:#f5f6f7;
+}
+@media(max-width:760px){
+  .mobile-char-actions{gap:5px}
+  .mobile-order-btn{
+    width:29px;
+    height:30px;
+    font-size:14px;
+  }
+}
