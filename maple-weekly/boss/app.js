@@ -74,6 +74,22 @@ function guardedRender(){
   if(SELECT_ACTIVE){PENDING_RENDER=true;return}
   render();
 }
+function updateSaveUI(){
+  var btn=document.getElementById("saveBoardBtn");
+  var text=document.getElementById("saveText");
+  var o=owner();
+  var unlocked=!!(o&&isUnlocked(o.id));
+  if(btn){
+    btn.disabled=!unlocked||!dirty||saving;
+    btn.classList.toggle("needs-save",!!(unlocked&&dirty&&!saving));
+    btn.textContent=saving?"저장 중…":"저장";
+  }
+  if(text){
+    if(saving)text.textContent="저장 중…";
+    else if(dirty)text.textContent="저장 필요";
+    else text.textContent="공용 DB 저장됨";
+  }
+}
 function pinKey(id){return PIN_PREFIX+id}
 function getPin(id){return sessionStorage.getItem(pinKey(id))||""}
 function setPin(id,pin){sessionStorage.setItem(pinKey(id),pin)}
@@ -243,39 +259,42 @@ function ownerMissingPriceCount(){
   return st.players.reduce(function(sum,_,pi){return sum+characterMissingPriceCount(pi)},0);
 }
 
-function queueSave(delay){
-  if(delay==null)delay=420;
+function queueSave(){
   var o=owner();if(!o||!isUnlocked(o.id))return;
   EDIT_VERSION++;
-  dirty=true;clearTimeout(saveTimer);document.getElementById("saveText").textContent="변경사항 저장 중…";
-  saveTimer=setTimeout(saveBoardNow,delay);
+  dirty=true;
+  clearTimeout(saveTimer);
+  updateSaveUI();
 }
 function saveBoardNow(){
-  var o=owner(),st=state();if(!o||!st||saving||!dirty)return Promise.resolve();
+  var o=owner(),st=state();
+  if(!o||!st||saving)return Promise.resolve();
+  if(!dirty){toast("저장할 변경사항이 없어요.");updateSaveUI();return Promise.resolve();}
   var pin=getPin(o.id);if(!pin)return Promise.resolve();
   var saveVersion=EDIT_VERSION;
   var snapshot=JSON.parse(JSON.stringify(st));
   saving=true;
+  updateSaveUI();
   return callApi("save_board",{ownerId:o.id,pin:pin,board:snapshot}).then(function(data){
-    if(saveVersion!==EDIT_VERSION){
-      document.getElementById("saveText").textContent="변경사항 저장 중…";
-      return;
-    }
-    dirty=false;
-    document.getElementById("saveText").textContent="공용 DB에 저장됨";
-    if(!SELECT_ACTIVE){
+    if(saveVersion===EDIT_VERSION){
+      dirty=false;
       applyPayload(data);
+      toast("저장했어요.");
       render();
+    }else{
+      dirty=true;
+      toast("저장 중 새 수정이 생겼어요. 저장 버튼을 한 번 더 눌러 주세요.");
     }
   }).catch(function(e){
-    if(e.status===401){clearPin(o.id);toast("수정 잠금이 풀렸어요. 다시 비밀번호를 입력해 주세요.");return loadRemote(false)}
-    toast(e.message||"저장하지 못했습니다.");document.getElementById("saveText").textContent="저장 실패";
+    if(e.status===401){
+      clearPin(o.id);
+      toast("수정 잠금이 풀렸어요. 다시 비밀번호를 입력해 주세요.");
+      return loadRemote(false);
+    }
+    toast(e.message||"저장하지 못했습니다.");
   }).finally(function(){
     saving=false;
-    if(dirty){
-      clearTimeout(saveTimer);
-      saveTimer=setTimeout(saveBoardNow,160);
-    }
+    updateSaveUI();
   });
 }
 
@@ -283,7 +302,7 @@ function renderOwners(){
   var el=document.getElementById("ownerTabs");
   el.innerHTML=APP.owners.map(function(o){return'<button class="owner-tab '+(o.id===activeOwnerId?"active ":"")+(isUnlocked(o.id)?"unlocked":"locked")+'" data-theme="'+ownerTheme(o.name)+'" data-owner="'+esc(o.id)+'">'+esc(o.name)+'</button>'}).join("");
   Array.prototype.forEach.call(el.querySelectorAll("[data-owner]"),function(b){b.onclick=function(){
-    if(dirty){toast("저장 중인 변경사항이 있어요.");return}
+    if(dirty){toast("저장 버튼을 눌러 변경사항을 먼저 저장해 주세요.");return}
     activeOwnerId=b.dataset.owner;localStorage.setItem(ACTIVE_KEY,activeOwnerId);render();
     document.documentElement.scrollLeft=0;document.body.scrollLeft=0;
     var mb=document.getElementById("mobileBoard");if(mb)mb.scrollLeft=0;
@@ -295,6 +314,7 @@ function renderOwners(){
   document.getElementById("changePinOwner").disabled=!unlocked;
   document.getElementById("removeOwner").disabled=!unlocked;
   document.getElementById("addPlayer").disabled=!unlocked;
+  updateSaveUI();
 }
 
 function characterOwner(charName){
@@ -620,8 +640,10 @@ document.addEventListener("keydown",function(e){if(e.key==="Escape"&&PICKER)clos
 
 document.getElementById("unlockOwner").onclick=function(){
   var o=owner();if(!o)return;
-  if(isUnlocked(o.id)){Promise.resolve(dirty?saveBoardNow():null).then(function(){clearPin(o.id);render();toast("수정을 잠갔어요.")})}
-  else ensureUnlocked();
+  if(isUnlocked(o.id)){
+    if(dirty){toast("저장 버튼을 눌러 변경사항을 먼저 저장해 주세요.");return}
+    clearPin(o.id);render();toast("수정을 잠갔어요.");
+  }else ensureUnlocked();
 };
 document.getElementById("addOwner").onclick=function(){
   var current=owner();if(!current)return;
@@ -678,7 +700,11 @@ function addCharacter(){
   render();queueSave(120);
 }
 document.getElementById("addPlayer").onclick=addCharacter;
-document.getElementById("reloadBtn").onclick=function(){if(dirty&&!confirm("아직 저장 중인 변경사항이 있습니다. DB 내용을 다시 불러올까요?"))return;loadRemote(true)};
+document.getElementById("saveBoardBtn").onclick=function(){
+  if(saving)return;
+  saveBoardNow();
+};
+document.getElementById("reloadBtn").onclick=function(){if(dirty&&!confirm("저장하지 않은 변경사항이 있습니다. 저장하지 않고 DB 내용을 다시 불러올까요?"))return;dirty=false;updateSaveUI();loadRemote(true)};
 document.getElementById("shareBtn").onclick=function(){var url=location.origin+location.pathname;if(navigator.share){navigator.share({title:"보스 현황판",url:url}).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){toast("홈페이지 주소를 복사했어요.")})}else{prompt("주소를 복사해 주세요.",url)}};
 
 var partySearchInput=document.getElementById("partySearchInput");
@@ -696,6 +722,11 @@ partySearchClear.addEventListener("click",function(){
 
 window.addEventListener("resize",function(){clearTimeout(window.__bossResize);window.__bossResize=setTimeout(guardedRender,120)});
 window.addEventListener("pageshow",function(e){if(e.persisted)loadRemote(false)});
+window.addEventListener("beforeunload",function(e){
+  if(!dirty)return;
+  e.preventDefault();
+  e.returnValue="";
+});
 
 function startPolling(){
   clearInterval(pollTimer);
