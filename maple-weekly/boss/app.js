@@ -579,9 +579,15 @@ document.getElementById("unlockOwner").onclick=function(){
 };
 document.getElementById("addOwner").onclick=function(){
   var current=owner();if(!current)return;
-  ensureUnlocked().then(function(ok){if(!ok)return;var name=(prompt("새 보스판의 주인 이름을 입력해 주세요. 예: 웃토")||"").trim();if(!name)return;
-    var newPin=(prompt("“"+name+"”의 수정 비밀번호를 숫자 4~12자리로 입력해 주세요.")||"").trim();if(!/^\d{4,12}$/.test(newPin)){toast("비밀번호는 숫자 4~12자리로 입력해 주세요.");return}
-    return callApi("create_owner",{authorizingOwnerId:current.id,pin:getPin(current.id),name:name,newPin:newPin}).then(function(data){
+  ensureUnlocked().then(function(ok){
+    if(!ok)return;
+    var adminCode=(prompt("새 주인을 추가하려면 관리자 번호를 입력해 주세요.")||"").trim();
+    if(!adminCode)return;
+    var name=(prompt("새 보스판의 주인 이름을 입력해 주세요. 예: 웃토")||"").trim();
+    if(!name)return;
+    var newPin=(prompt("“"+name+"”의 수정 비밀번호를 숫자 4~12자리로 입력해 주세요.")||"").trim();
+    if(!/^\d{4,12}$/.test(newPin)){toast("비밀번호는 숫자 4~12자리로 입력해 주세요.");return}
+    return callApi("create_owner",{authorizingOwnerId:current.id,pin:getPin(current.id),adminCode:adminCode,name:name,newPin:newPin}).then(function(data){
       applyPayload(data);activeOwnerId=data.newOwnerId;localStorage.setItem(ACTIVE_KEY,activeOwnerId);setPin(activeOwnerId,newPin);render();toast(name+" 보스판을 만들었어요.")
     }).catch(function(e){toast(e.message||"새 보스판을 만들지 못했습니다.")});
   });
