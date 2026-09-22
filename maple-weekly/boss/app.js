@@ -29,6 +29,7 @@ const MONTHLY=new Set(["검은 마법사"]);
 const SOLO=new Set(["데미안","루시드","윌","더스크","진힐라","듄켈"]);
 const LIMIT=12,DIFFS=["","x","이지","노말","하드","카오스","익스트림"];
 const ACTIVE_KEY="boss-board-active-owner-v6",PIN_PREFIX="boss-board-pin-",CHAR_PREFIX="boss-board-active-char-",MOBILE_VIEW_KEY="boss-board-mobile-view-v1";
+const FIXED_OWNER_ORDER=["오똑","츠죠","피콕","꿈품은","달하늘의별을"];
 
 let APP={owners:[]};
 let activeOwnerId=localStorage.getItem(ACTIVE_KEY)||"";
@@ -36,6 +37,7 @@ let activeCharByOwner={};
 let saveTimer=null,dirty=false,saving=false,pollTimer=null;
 let PICKER=null;
 let MOBILE_VIEW=localStorage.getItem(MOBILE_VIEW_KEY)==="all"?"all":"active";
+let SEARCH_QUERY="";
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(m){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})}
 function toast(m){var e=document.getElementById("toast");e.textContent=m;e.classList.add("show");setTimeout(function(){e.classList.remove("show")},1900)}
@@ -47,6 +49,42 @@ function isUnlocked(id){return !!getPin(id)}
 function owner(){return APP.owners.find(function(o){return o.id===activeOwnerId})||APP.owners[0]||null}
 function state(){var o=owner();return o?o.board:null}
 function planned(c){return !!c&&c.difficulty!==""&&c.difficulty!=="x"}
+function normalizeSearch(v){return String(v||"").trim().toLowerCase()}
+function cellMatchesSearch(c,playerName,query){
+  var q=normalizeSearch(query);
+  if(!q)return true;
+  if(!planned(c))return false;
+  var values=[playerName].concat(c.names||[]);
+  if(c._sync){
+    values.push(c._sync.sourcePlayer||"",c._sync.targetPlayer||"",c._sync.sourceOwnerName||"");
+  }
+  return values.some(function(v){return normalizeSearch(v).indexOf(q)>=0});
+}
+function searchResultCount(){
+  var st=state(),q=normalizeSearch(SEARCH_QUERY),n=0;
+  if(!st||!q)return 0;
+  st.players.forEach(function(p,pi){
+    BOSSES.forEach(function(b){
+      var c=st.cells[b][pi]||emptyCell();
+      if(cellMatchesSearch(c,p,q))n++;
+    });
+  });
+  return n;
+}
+function updateSearchUI(){
+  var input=document.getElementById("partySearchInput");
+  var clear=document.getElementById("partySearchClear");
+  var status=document.getElementById("partySearchStatus");
+  if(!input||!clear||!status)return;
+  if(input.value!==SEARCH_QUERY)input.value=SEARCH_QUERY;
+  clear.hidden=!SEARCH_QUERY;
+  if(!SEARCH_QUERY){
+    status.textContent="닉네임을 입력하면 그 캐릭터가 포함된 파티만 표시됩니다.";
+  }else{
+    var n=searchResultCount();
+    status.innerHTML='<strong>“'+esc(SEARCH_QUERY)+'”</strong> 포함 파티 <b>'+n+'건</b>';
+  }
+}
 
 function ownerTheme(name){
   if(name==="오똑")return"ottok";
@@ -97,6 +135,12 @@ function callApi(action,payload){
 
 function applyPayload(data){
   APP.owners=(data.owners||[]).map(function(o){return Object.assign({},o,{board:normalizeBoard(o.board,o.name)})});
+  APP.owners.sort(function(a,b){
+    var ai=FIXED_OWNER_ORDER.indexOf(a.name),bi=FIXED_OWNER_ORDER.indexOf(b.name);
+    if(ai<0)ai=999;if(bi<0)bi=999;
+    if(ai!==bi)return ai-bi;
+    return String(a.created_at||"").localeCompare(String(b.created_at||""));
+  });
   if(!APP.owners.some(function(o){return o.id===activeOwnerId})){activeOwnerId=APP.owners[0]?APP.owners[0].id:"";if(activeOwnerId)localStorage.setItem(ACTIVE_KEY,activeOwnerId)}
 }
 
@@ -292,12 +336,25 @@ function compactBossCard(b,bi,c,pi,unlocked){
 function renderDesktop(){
   var st=state(),root=document.getElementById("desktopBoard");
   if(!st){root.innerHTML="";return}
-  var o=owner(),unlocked=isUnlocked(o.id),theme=ownerTheme(o.name);
-  var cols=st.players.length;
-  var h='<div class="desktop-board-meta"><div><strong>'+esc(o.name)+' 캐릭터 보드</strong><span>'+cols+'명</span></div><div>주간 최대 '+LIMIT+'개 · 검은 마법사 월간</div></div>';
-  h+='<div class="character-columns" style="--cols:'+cols+'">';
+  var o=owner(),unlocked=isUnlocked(o.id),theme=ownerTheme(o.name),q=normalizeSearch(SEARCH_QUERY);
+  var visible=[];
   st.players.forEach(function(p,pi){
-    var w=weekly(pi),m=monthly(pi);
+    var bosses=BOSSES.filter(function(b){
+      var c=st.cells[b][pi]||emptyCell();
+      return !q||cellMatchesSearch(c,p,q);
+    });
+    if(!q||bosses.length)visible.push({p:p,pi:pi,bosses:bosses});
+  });
+
+  var h='<div class="desktop-board-meta"><div><strong>'+esc(o.name)+' 캐릭터 보드</strong><span>'+st.players.length+'명</span></div><div>'+(q?'검색 결과 '+searchResultCount()+'건':'주간 최대 '+LIMIT+'개 · 검은 마법사 월간')+'</div></div>';
+  if(q&&!visible.length){
+    root.innerHTML=h+'<div class="search-empty"><strong>일치하는 파티가 없어요.</strong><span>다른 닉네임으로 검색해 보세요.</span></div>';
+    return;
+  }
+  var cols=visible.length;
+  h+='<div class="character-columns '+(q?"is-searching":"")+'" style="--cols:'+cols+'">';
+  visible.forEach(function(item){
+    var p=item.p,pi=item.pi,w=weekly(pi),m=monthly(pi);
     h+='<section class="character-column owner-themed" data-theme="'+theme+'">'+
       '<header class="character-column-head">'+
         '<div class="character-title-row">'+
@@ -306,11 +363,11 @@ function renderDesktop(){
           '<strong class="column-count '+(w>=LIMIT?"full":"")+'">'+w+'/'+LIMIT+'</strong>'+
           '<button class="remove-player column-remove" data-remove="'+pi+'" '+(unlocked?"":"disabled")+' aria-label="캐릭터 삭제">×</button>'+
         '</div>'+
-        '<div class="column-sub">월간 '+m+'/1</div>'+
+        '<div class="column-sub">'+(q?item.bosses.length+'건 일치':'월간 '+m+'/1')+'</div>'+
       '</header>'+
       '<div class="character-boss-list">';
-    BOSSES.forEach(function(b,bi){
-      var c=st.cells[b][pi]||emptyCell();
+    item.bosses.forEach(function(b){
+      var bi=BOSSES.indexOf(b),c=st.cells[b][pi]||emptyCell();
       h+=compactBossCard(b,bi,c,pi,unlocked);
     });
     h+='</div></section>';
@@ -328,9 +385,38 @@ function mobileMemberInputs(c,bi,pi,editable){
 function renderMobile(){
   var box=document.getElementById("mobileBoard"),st=state(),o=owner();
   if(!st||!o){box.innerHTML='<div class="mobile-loading">보스판이 없습니다.</div>';return}
-  var pi=activeChar(),unlocked=isUnlocked(o.id),theme=ownerTheme(o.name);
-  var w=weekly(pi),m=monthly(pi);
+  var unlocked=isUnlocked(o.id),theme=ownerTheme(o.name),q=normalizeSearch(SEARCH_QUERY);
 
+  if(q){
+    var groups=[];
+    st.players.forEach(function(p,pi){
+      var matches=BOSSES.filter(function(b){
+        return cellMatchesSearch(st.cells[b][pi]||emptyCell(),p,q);
+      });
+      if(matches.length)groups.push({p:p,pi:pi,matches:matches});
+    });
+    if(!groups.length){
+      box.innerHTML='<div class="mobile-search-title"><strong>“'+esc(SEARCH_QUERY)+'” 검색</strong><span>0건</span></div>'+
+        '<div class="search-empty"><strong>일치하는 파티가 없어요.</strong><span>닉네임 철자를 확인해 주세요.</span></div>';
+      return;
+    }
+    var result='<div class="mobile-search-title"><strong>“'+esc(SEARCH_QUERY)+'” 포함 파티</strong><span>'+searchResultCount()+'건</span></div>';
+    groups.forEach(function(g){
+      result+='<section class="mobile-search-group owner-themed" data-theme="'+theme+'">'+
+        '<header><strong>'+esc(g.p)+'</strong><span>'+g.matches.length+'건</span></header>'+
+        '<div class="mobile-compact-list">';
+      g.matches.forEach(function(b){
+        var bi=BOSSES.indexOf(b),c=st.cells[b][g.pi]||emptyCell();
+        result+=compactBossCard(b,bi,c,g.pi,unlocked);
+      });
+      result+='</div></section>';
+    });
+    box.innerHTML=result;
+    bindCommon(box);
+    return;
+  }
+
+  var pi=activeChar(),w=weekly(pi),m=monthly(pi);
   var strip='<div class="character-strip">'+st.players.map(function(p,i){
     return '<button class="char-tab owner-themed '+(i===pi?"active":"")+'" data-theme="'+theme+'" data-char="'+i+'">'+
       esc(p)+'<span class="mini-count">'+weekly(i)+'/'+LIMIT+'</span></button>';
@@ -354,7 +440,7 @@ function renderMobile(){
   });
   bindCommon(box);
 }
-function render(){renderOwners();renderDesktop();renderMobile()}
+function render(){renderOwners();renderDesktop();renderMobile();updateSearchUI()}
 
 function bindCommon(root){
   var st=state();if(!st)return;
@@ -429,6 +515,19 @@ document.getElementById("removeOwner").onclick=function(){var o=owner();if(!o||!
 document.getElementById("addPlayer").onclick=function(){var o=owner();if(!o||!isUnlocked(o.id))return;var st=state();st.players.push("새 닉네임");BOSSES.forEach(function(b){st.cells[b].push(emptyCell())});activeCharByOwner[o.id]=st.players.length-1;render();queueSave(120)};
 document.getElementById("reloadBtn").onclick=function(){if(dirty&&!confirm("아직 저장 중인 변경사항이 있습니다. DB 내용을 다시 불러올까요?"))return;loadRemote(true)};
 document.getElementById("shareBtn").onclick=function(){var url=location.origin+location.pathname;if(navigator.share){navigator.share({title:"보스 현황판",url:url}).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){toast("홈페이지 주소를 복사했어요.")})}else{prompt("주소를 복사해 주세요.",url)}};
+
+var partySearchInput=document.getElementById("partySearchInput");
+var partySearchClear=document.getElementById("partySearchClear");
+partySearchInput.addEventListener("input",function(){
+  SEARCH_QUERY=this.value.trim();
+  renderDesktop();renderMobile();updateSearchUI();
+});
+partySearchClear.addEventListener("click",function(){
+  SEARCH_QUERY="";
+  partySearchInput.value="";
+  renderDesktop();renderMobile();updateSearchUI();
+  partySearchInput.focus();
+});
 
 window.addEventListener("resize",function(){clearTimeout(window.__bossResize);window.__bossResize=setTimeout(render,120)});
 window.addEventListener("pageshow",function(e){if(e.persisted)loadRemote(false)});
