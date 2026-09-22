@@ -95,7 +95,7 @@ function updateSaveUI(){
   var btn=document.getElementById("saveBoardBtn");
   var text=document.getElementById("saveText");
   var o=owner();
-  var unlocked=!!(o&&isUnlocked(o.id));
+  var unlocked=!!o;
   if(btn){
     btn.disabled=!unlocked||!dirty||saving;
     btn.classList.toggle("needs-save",!!(unlocked&&dirty&&!saving));
@@ -392,8 +392,7 @@ function saveBossRunCheck(weekStart,runDate,characterName,bossName,pi,completed)
     });
   }
 
-  if(isUnlocked(o.id))doSave();
-  else ensureUnlocked().then(function(ok){if(ok)doSave();else renderChecklist()});
+  doSave();
 }
 function plannedWeeklyBossesForCharacter(pi){
   var st=state();if(!st)return[];
@@ -412,6 +411,67 @@ function weekRunProgress(ownerId,weekStart){
     });
   });
   return{done:done,total:total};
+}
+function allBossRunsChecked(ownerId,weekStart){
+  var x=weekRunProgress(ownerId,weekStart);
+  return x.total>0&&x.done===x.total;
+}
+function toggleAllBossRuns(weekStart,runDate){
+  var o=owner(),st=state();if(!o||!st||CHECKLIST_SAVING)return;
+  var completed=!allBossRunsChecked(o.id,weekStart);
+  var items=[],before=[];
+
+  st.players.forEach(function(characterName,pi){
+    plannedWeeklyBossesForCharacter(pi).forEach(function(b){
+      var c=st.cells[b]&&st.cells[b][pi];
+      var payout=completed?Math.round(bossWeeklyIncome(b,c)):0;
+      before.push({
+        characterName:characterName,
+        bossName:b,
+        item:JSON.parse(JSON.stringify(bossRunItem(o.id,weekStart,characterName,b)))
+      });
+      items.push({characterName:characterName,bossName:b,completed:completed,mesoEarned:payout});
+      setBossRunItem(o.id,weekStart,characterName,b,{
+        completed:completed,
+        meso:payout,
+        runDate:runDate
+      });
+    });
+  });
+
+  if(!items.length){toast("선택할 주간 보스가 없어요.");return}
+  CHECKLIST_SAVING="bulk|"+weekStart;
+  renderChecklist();
+
+  callApi("save_boss_run_bulk",{
+    ownerId:o.id,
+    weekStart:weekStart,
+    runDate:runDate,
+    items:items
+  }).then(function(data){
+    (data.items||[]).forEach(function(item){
+      setBossRunItem(
+        item.owner_id,
+        item.week_start,
+        String(item.character_name||""),
+        String(item.boss_name||""),
+        {
+          completed:!!item.completed,
+          meso:Math.max(0,Number(item.meso_earned)||0),
+          runDate:String(item.run_date||runDate)
+        }
+      );
+    });
+    toast(completed?"등록된 보스를 모두 선택했어요.":"등록된 보스를 모두 해제했어요.");
+  }).catch(function(e){
+    before.forEach(function(x){
+      setBossRunItem(o.id,weekStart,x.characterName,x.bossName,x.item);
+    });
+    toast(e.message||"전체 보스 체크를 저장하지 못했습니다.");
+  }).finally(function(){
+    CHECKLIST_SAVING="";
+    renderChecklist();
+  });
 }
 function renderChecklist(){
   var panel=document.getElementById("checklistPanel");
@@ -477,7 +537,10 @@ function renderChecklist(){
       '<div class="week-run-head selected-day-head">'+
         '<div><strong>'+formatShortDate(parseDateUTC(pickedDate))+'에 잡은 보스 체크</strong>'+
         '<span>'+formatShortDate(parseDateUTC(pickedWeek))+' 목 ~ '+formatShortDate(parseDateUTC(pickedWeekEnd))+' 수 · '+progress.done+'/'+progress.total+' 보스 완료</span></div>'+
-        '<div class="week-run-money"><small>주간 획득</small><b>'+formatEok(weekMeso)+'</b><em>예상 '+formatEok(weekEstimate)+'</em></div>'+
+        '<div class="selected-day-actions">'+
+          '<button class="boss-toggle-all '+(allBossRunsChecked(o.id,pickedWeek)?"all-checked":"")+'" type="button" data-toggle-all="1" '+(CHECKLIST_SAVING?"disabled":"")+'>'+(allBossRunsChecked(o.id,pickedWeek)?"모두 해제":"보스 모두 선택")+'</button>'+
+          '<div class="week-run-money"><small>주간 획득</small><b>'+formatEok(weekMeso)+'</b><em>예상 '+formatEok(weekEstimate)+'</em></div>'+
+        '</div>'+
       '</div>'+
       '<div class="character-run-grid">';
 
@@ -503,7 +566,7 @@ function renderChecklist(){
         var checked=!!item.completed;
         var payout=checked?Math.max(0,Number(item.meso)||0):Math.round(bossWeeklyIncome(b,c));
         var saveKey=o.id+"|"+pickedWeek+"|"+characterName+"|"+b;
-        var saving=CHECKLIST_SAVING===saveKey;
+        var saving=CHECKLIST_SAVING===saveKey||CHECKLIST_SAVING==="bulk|"+pickedWeek;
         var runLabel=checked&&item.runDate?formatShortDate(parseDateUTC(item.runDate))+" 완료":formatShortDate(parseDateUTC(pickedDate))+"에 체크";
 
         h+='<label class="boss-run-row '+(checked?"done":"")+'">'+
@@ -527,6 +590,8 @@ function renderChecklist(){
   Array.prototype.forEach.call(panel.querySelectorAll(".month-day[data-month-date]"),function(btn){
     btn.onclick=function(){setSelectedCalendarDate(btn.dataset.monthDate)};
   });
+  var toggleAll=panel.querySelector("[data-toggle-all]");
+  if(toggleAll)toggleAll.onclick=function(){toggleAllBossRuns(pickedWeek,pickedDate)};
   Array.prototype.forEach.call(panel.querySelectorAll(".boss-run-checkbox"),function(input){
     input.onchange=function(){
       saveBossRunCheck(
@@ -702,7 +767,7 @@ function ownerMissingPriceCount(){
 }
 
 function queueSave(){
-  var o=owner();if(!o||!isUnlocked(o.id))return;
+  var o=owner();if(!o)return;
   EDIT_VERSION++;
   dirty=true;
   clearTimeout(saveTimer);
@@ -712,14 +777,12 @@ function saveBoardNow(){
   var o=owner(),st=state();
   if(!o||!st||saving)return Promise.resolve();
   if(!dirty){toast("저장할 변경사항이 없어요.");updateSaveUI();return Promise.resolve();}
-  var pin=getPin(o.id);
-  if(!pin&&!ADMIN_UNLOCKED)return Promise.resolve();
   var saveVersion=EDIT_VERSION;
   var snapshot=JSON.parse(JSON.stringify(st));
   saving=true;
   updateSaveUI();
   var baseSnapshot=BASE_BOARDS[o.id]?JSON.parse(JSON.stringify(BASE_BOARDS[o.id])):JSON.parse(JSON.stringify(snapshot));
-  return callApi("save_board",{ownerId:o.id,pin:pin,adminCode:ADMIN_UNLOCKED?ADMIN_CODE:"",baseBoard:baseSnapshot,board:snapshot}).then(function(data){
+  return callApi("save_board",{ownerId:o.id,baseBoard:baseSnapshot,board:snapshot}).then(function(data){
     if(saveVersion===EDIT_VERSION){
       dirty=false;
       applyPayload(data);
@@ -730,13 +793,6 @@ function saveBoardNow(){
       toast("저장 중 새 수정이 생겼어요. 저장 버튼을 한 번 더 눌러 주세요.");
     }
   }).catch(function(e){
-    if(e.status===401){
-      if(ADMIN_UNLOCKED){ADMIN_UNLOCKED=false;ADMIN_CODE="";}
-      else clearPin(o.id);
-      toast("수정 권한이 풀렸어요. 다시 인증해 주세요.");
-      render();
-      return loadRemote(false);
-    }
     toast(e.message||"저장하지 못했습니다.");
   }).finally(function(){
     saving=false;
@@ -755,9 +811,9 @@ function renderOwners(){
     var mb=document.getElementById("mobileBoard");if(mb)mb.scrollLeft=0;
   }});
   var o=owner(),unlocked=o&&isUnlocked(o.id),title=document.getElementById("boardTitle");
-  title.className="board-title owner-themed"; if(o)title.setAttribute("data-theme",ownerTheme(o.name)); else title.removeAttribute("data-theme"); title.innerHTML=o?esc(o.name)+(PAGE_VIEW==="checklist"?'의 보스 체크리스트':'의 보스 현황')+' <span class="lock-state '+(unlocked?"open":"")+'">'+(unlocked?"수정 가능":"보기 전용")+'</span>':"";
+  title.className="board-title owner-themed"; if(o)title.setAttribute("data-theme",ownerTheme(o.name)); else title.removeAttribute("data-theme"); title.innerHTML=o?esc(o.name)+(PAGE_VIEW==="checklist"?'의 보스 체크리스트':'의 보스 현황')+' <span class="lock-state open">'+(PAGE_VIEW==="checklist"?"체크 가능":"바로 수정 가능")+'</span>':"";
   var ownerUnlock=document.getElementById("unlockOwner");
-  ownerUnlock.textContent=ADMIN_UNLOCKED?"관리자 모드 중":(unlocked?"수정 잠그기":"수정 잠금 해제");
+  ownerUnlock.textContent=ADMIN_UNLOCKED?"관리자 모드 중":(unlocked?"관리 기능 잠그기":"관리 기능 잠금 해제");
   ownerUnlock.disabled=ADMIN_UNLOCKED;
   var adminBtn=document.getElementById("adminUnlock");
   adminBtn.textContent=ADMIN_UNLOCKED?"관리자 수정 종료":"관리자 전체 수정";
@@ -765,7 +821,7 @@ function renderOwners(){
   document.getElementById("renameOwner").disabled=!unlocked;
   document.getElementById("changePinOwner").disabled=!unlocked;
   document.getElementById("removeOwner").disabled=!unlocked;
-  document.getElementById("addPlayer").disabled=!unlocked;
+  document.getElementById("addPlayer").disabled=false;
   updateSaveUI();
 }
 
@@ -938,7 +994,7 @@ function compactBossCard(b,bi,c,pi,unlocked){
 }
 function reorderCharacter(fromIndex,toIndex){
   var st=state(),o=owner();
-  if(!st||!o||!isUnlocked(o.id))return;
+  if(!st||!o)return;
   fromIndex=Number(fromIndex);toIndex=Number(toIndex);
   if(!Number.isInteger(fromIndex)||!Number.isInteger(toIndex))return;
   if(fromIndex<0||toIndex<0||fromIndex>=st.players.length||toIndex>=st.players.length||fromIndex===toIndex)return;
@@ -1008,7 +1064,7 @@ function desktopRowColumns(total){
 function renderDesktop(){
   var st=state(),root=document.getElementById("desktopBoard");
   if(!st){root.innerHTML="";return}
-  var o=owner(),unlocked=isUnlocked(o.id),theme=ownerTheme(o.name),q=normalizeSearch(SEARCH_QUERY);
+  var o=owner(),unlocked=true,theme=ownerTheme(o.name),q=normalizeSearch(SEARCH_QUERY);
   var visible=[];
   st.players.forEach(function(p,pi){
     var full=weekly(pi)>=LIMIT;
@@ -1066,7 +1122,7 @@ function mobileMemberInputs(c,bi,pi,editable){
 function renderMobile(){
   var box=document.getElementById("mobileBoard"),st=state(),o=owner();
   if(!st||!o){box.innerHTML='<div class="mobile-loading">보스판이 없습니다.</div>';return}
-  var unlocked=isUnlocked(o.id),theme=ownerTheme(o.name),q=normalizeSearch(SEARCH_QUERY);
+  var unlocked=true,theme=ownerTheme(o.name),q=normalizeSearch(SEARCH_QUERY);
 
   if(q){
     var groups=[];
@@ -1275,7 +1331,7 @@ document.getElementById("removeOwner").onclick=function(){
   });
 };
 function addCharacter(){
-  var o=owner();if(!o||!isUnlocked(o.id))return;
+  var o=owner();if(!o)return;
   var st=state();
   st.players.push("새 닉네임");
   BOSSES.forEach(function(b){st.cells[b].push(emptyCell())});
