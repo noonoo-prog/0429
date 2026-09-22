@@ -52,6 +52,7 @@ const ACTIVE_KEY="boss-board-active-owner-v6",PIN_PREFIX="boss-board-pin-",CHAR_
 const FIXED_OWNER_ORDER=["오똑","츠죠","피콕","꿈품은","달하늘의별을","띵스"];
 
 let APP={owners:[]};
+let BASE_BOARDS={};
 let activeOwnerId=localStorage.getItem(ACTIVE_KEY)||"";
 let activeCharByOwner={};
 let saveTimer=null,dirty=false,saving=false,pollTimer=null;
@@ -216,6 +217,8 @@ function callApi(action,payload){
 
 function applyPayload(data){
   APP.owners=(data.owners||[]).map(function(o){return Object.assign({},o,{board:normalizeBoard(o.board,o.name)})});
+  BASE_BOARDS={};
+  APP.owners.forEach(function(o){BASE_BOARDS[o.id]=JSON.parse(JSON.stringify(o.board))});
   APP.owners.sort(function(a,b){
     var ai=FIXED_OWNER_ORDER.indexOf(a.name),bi=FIXED_OWNER_ORDER.indexOf(b.name);
     if(ai<0)ai=999;if(bi<0)bi=999;
@@ -308,7 +311,8 @@ function saveBoardNow(){
   var snapshot=JSON.parse(JSON.stringify(st));
   saving=true;
   updateSaveUI();
-  return callApi("save_board",{ownerId:o.id,pin:pin,adminCode:ADMIN_UNLOCKED?ADMIN_CODE:"",board:snapshot}).then(function(data){
+  var baseSnapshot=BASE_BOARDS[o.id]?JSON.parse(JSON.stringify(BASE_BOARDS[o.id])):JSON.parse(JSON.stringify(snapshot));
+  return callApi("save_board",{ownerId:o.id,pin:pin,adminCode:ADMIN_UNLOCKED?ADMIN_CODE:"",baseBoard:baseSnapshot,board:snapshot}).then(function(data){
     if(saveVersion===EDIT_VERSION){
       dirty=false;
       applyPayload(data);
