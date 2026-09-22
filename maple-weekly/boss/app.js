@@ -676,7 +676,10 @@ function normalizeBoard(board,name){
       var count=Math.max(0,Math.min(6,Number(v.count)||0));
       if(!d||d==="x")count=0;if(SOLO.has(b)&&d&&d!=="x")count=1;
       var names=Array.isArray(v.names)?v.names.map(function(x){return String(x).trim()}).filter(Boolean).slice(0,Math.max(0,count-1)):[];
-      var out={difficulty:d,count:count,names:names};if(v._sync)out._sync=v._sync;return out;
+      var out={difficulty:d,count:count,names:names};
+      if(v._sync)out._sync=v._sync;
+      if(v._originAt&&typeof v._originAt==="string")out._originAt=v._originAt;
+      return out;
     });
   });
   return{players:players,cells:cells};
