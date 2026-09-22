@@ -2321,3 +2321,17 @@ html,body{
     font-size:8.5px;
   }
 }
+
+
+/* administrator all-edit mode */
+.admin-edit{
+  border-color:#d5b26a!important;
+  background:#fffaf0!important;
+  color:#8d641c!important;
+  font-weight:950!important;
+}
+.admin-edit.active{
+  border-color:#b88125!important;
+  background:#b88125!important;
+  color:#fff!important;
+}
