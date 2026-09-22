@@ -465,18 +465,21 @@ function base64ToUtf8(str){
   return new TextDecoder().decode(bytes);
 }
 function makeSharePayload(){
-  return{v:4,week:getActiveWeekKey(),charCount,names:[...names],data:deepCopy(data)};
+  return{v:5,week:getActiveWeekKey(),charCount,names:[...names],data:deepCopy(data)};
 }
 function buildShareUrl(){
   const payload=utf8ToBase64(JSON.stringify(makeSharePayload()));
   const u=new URL(location.href);
-  u.hash='';u.search='';
+  u.hash='';
+  u.search='';
   let p=u.pathname;
   if(/\/s\/(?:index\.html)?$/.test(p)) p=p.replace(/\/s\/(?:index\.html)?$/,'/');
   else p=p.replace(/\/index\.html$/,'/');
   if(!p.endsWith('/'))p+='/';
   u.pathname=p+'s/';
-  return `${u.toString()}#plan=${payload}`;
+  u.searchParams.set('plan',payload);
+  u.searchParams.set('sv','5');
+  return u.toString();
 }
 function showShareMessage(text){
   const note=document.getElementById('shareNote');
@@ -487,7 +490,7 @@ function showShareMessage(text){
 async function shareCurrentPlan(){
   persistActive();
   const url=buildShareUrl();
-  const shareData={title:'주간 계획표',text:`주간 계획표 ${getActiveWeekKey()}`,url};
+  const shareData={title:'주간 계획표',text:`주간 계획표\n${url}`,url};
   try{
     if(navigator.share){await navigator.share(shareData);return}
     await navigator.clipboard.writeText(url);
@@ -506,25 +509,44 @@ function makeSharedId(encoded){
   return'shared-'+(h>>>0).toString(36);
 }
 function importSharedPlan(){
-  if(!location.hash.startsWith('#plan='))return false;
   try{
-    const encoded=location.hash.slice(6);
+    const u=new URL(location.href);
+    let encoded=u.searchParams.get('plan');
+    if(!encoded&&location.hash.startsWith('#plan=')) encoded=location.hash.slice(6);
+    if(!encoded)return false;
+
     const shared=JSON.parse(base64ToUtf8(encoded));
-    if(!shared||![1,2,3,4].includes(shared.v)||!Array.isArray(shared.names)||!shared.data)return false;
+    if(!shared||![1,2,3,4,5].includes(shared.v)||!Array.isArray(shared.names)||!shared.data)return false;
+
     const id=makeSharedId(encoded);
     const item={
-      id,receivedAt:Date.now(),week:shared.week||weekKeyFromDate(getCurrentWeekStart()),
+      id,
+      receivedAt:Date.now(),
+      week:shared.week||weekKeyFromDate(getCurrentWeekStart()),
       charCount:Math.min(6,Math.max(1,Number(shared.charCount||1))),
       names:normalizeNames(shared.names),
-      data:normalizeWeekState({charCount:shared.charCount,names:shared.names,data:shared.data},loadStructure()).data
+      data:normalizeWeekState(
+        {charCount:shared.charCount,names:shared.names,data:shared.data},
+        loadStructure()
+      ).data
     };
+
     const i=sharedPlans.findIndex(p=>p.id===id);
-    if(i>=0)sharedPlans[i]=item;else sharedPlans.unshift(item);
+    if(i>=0)sharedPlans[i]=item;
+    else sharedPlans.unshift(item);
     sharedPlans=sharedPlans.slice(0,20);
     saveSharedPlans();
     activeView=id;
-    history.replaceState(null,'',location.href.split('#')[0]);
-    setTimeout(()=>showShareMessage('공유받은 계획을 따로 저장했어요. 내 계획은 그대로 유지됩니다.'),0);
+
+    u.searchParams.delete('plan');
+    u.searchParams.delete('sv');
+    u.hash='';
+    history.replaceState(null,'',u.pathname+(u.search?u.search:''));
+
+    setTimeout(
+      ()=>showShareMessage('공유받은 계획을 따로 저장했어요. 내 계획은 그대로 유지됩니다.'),
+      0
+    );
     return true;
   }catch(e){
     console.warn('공유 불러오기 실패',e);
