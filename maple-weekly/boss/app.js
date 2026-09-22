@@ -25,6 +25,16 @@ function isUnlocked(id){return !!getPin(id)}
 function owner(){return APP.owners.find(function(o){return o.id===activeOwnerId})||APP.owners[0]||null}
 function state(){var o=owner();return o?o.board:null}
 function planned(c){return !!c&&c.difficulty!==""&&c.difficulty!=="x"}
+
+function ownerTheme(name){
+  if(name==="오똑")return"ottok";
+  if(name==="츠죠")return"tsujyo";
+  if(name==="피콕")return"peacock";
+  if(name==="꿈품은")return"dream";
+  if(name==="달하늘의별을")return"sky";
+  return"default";
+}
+
 function emptyCell(){return{difficulty:"",count:0,names:[]}}
 function isMobile(){return window.matchMedia&&window.matchMedia("(max-width:760px)").matches}
 function activeChar(){var o=owner(),st=state();if(!o||!st)return 0;var k=CHAR_PREFIX+o.id;if(activeCharByOwner[o.id]==null){var stored=Number(localStorage.getItem(k));activeCharByOwner[o.id]=Number.isInteger(stored)&&stored>=0&&stored<st.players.length?stored:0}if(activeCharByOwner[o.id]>=st.players.length)activeCharByOwner[o.id]=0;return activeCharByOwner[o.id]}
@@ -110,13 +120,13 @@ function saveBoardNow(){
 
 function renderOwners(){
   var el=document.getElementById("ownerTabs");
-  el.innerHTML=APP.owners.map(function(o){return'<button class="owner-tab '+(o.id===activeOwnerId?"active ":"")+(isUnlocked(o.id)?"unlocked":"locked")+'" data-owner="'+esc(o.id)+'">'+esc(o.name)+'</button>'}).join("");
+  el.innerHTML=APP.owners.map(function(o){return'<button class="owner-tab '+(o.id===activeOwnerId?"active ":"")+(isUnlocked(o.id)?"unlocked":"locked")+'" data-theme="'+ownerTheme(o.name)+'" data-owner="'+esc(o.id)+'">'+esc(o.name)+'</button>'}).join("");
   Array.prototype.forEach.call(el.querySelectorAll("[data-owner]"),function(b){b.onclick=function(){
     if(dirty){toast("저장 중인 변경사항이 있어요.");return}
     activeOwnerId=b.dataset.owner;localStorage.setItem(ACTIVE_KEY,activeOwnerId);render();
   }});
   var o=owner(),unlocked=o&&isUnlocked(o.id),title=document.getElementById("boardTitle");
-  title.innerHTML=o?esc(o.name)+'의 보스 현황 <span class="lock-state '+(unlocked?"open":"")+'">'+(unlocked?"수정 가능":"보기 전용")+'</span>':"";
+  title.className="board-title owner-themed"; if(o)title.setAttribute("data-theme",ownerTheme(o.name)); else title.removeAttribute("data-theme"); title.innerHTML=o?esc(o.name)+'의 보스 현황 <span class="lock-state '+(unlocked?"open":"")+'">'+(unlocked?"수정 가능":"보기 전용")+'</span>':"";
   document.getElementById("unlockOwner").textContent=unlocked?"수정 잠그기":"수정 잠금 해제";
   document.getElementById("renameOwner").disabled=!unlocked;
   document.getElementById("removeOwner").disabled=!unlocked;
@@ -137,7 +147,7 @@ function desktopMembers(c,bi,pi,editable){
 function renderDesktop(){
   var st=state(),board=document.getElementById("board");if(!st){board.innerHTML="";return}
   var unlocked=isUnlocked(owner().id),h='<thead><tr><th class="boss-head">BOSS</th>';
-  st.players.forEach(function(p,i){var w=weekly(i),m=monthly(i);h+='<th class="player-head"><div class="player-row"><input class="player-input" data-player="'+i+'" value="'+esc(p)+'" '+(unlocked?"":"disabled")+'><button class="remove-player" data-remove="'+i+'" '+(unlocked?"":"disabled")+'>×</button></div><div class="sub"><span class="'+(w>=LIMIT?"full":"")+'">주간 '+w+'/'+LIMIT+'</span> · 월간 '+m+'/1</div></th>'});
+  st.players.forEach(function(p,i){var w=weekly(i),m=monthly(i);h+='<th class="player-head owner-themed" data-theme="'+ownerTheme(owner().name)+'"><div class="player-row"><input class="player-input" data-player="'+i+'" value="'+esc(p)+'" '+(unlocked?"":"disabled")+'><button class="remove-player" data-remove="'+i+'" '+(unlocked?"":"disabled")+'>×</button></div><div class="sub"><span class="'+(w>=LIMIT?"full":"")+'">주간 '+w+'/'+LIMIT+'</span> · 월간 '+m+'/1</div></th>'});
   h+="</tr></thead><tbody>";
   BOSSES.forEach(function(b,bi){var mon=MONTHLY.has(b);h+='<tr class="'+(mon?"monthly-row":"")+'"><td class="boss"><div class="boss-name"><span>'+b+'</span><span class="badge '+(mon?"monthly":"")+'">'+(mon?"월간":"주간")+'</span></div></td>';
     st.players.forEach(function(_,pi){var c=st.cells[b][pi]||emptyCell(),auto=!!c._sync,editable=unlocked&&!auto,party="";
@@ -157,8 +167,8 @@ function mobileMemberInputs(c,bi,pi,editable){
 function renderMobile(){
   var box=document.getElementById("mobileBoard"),st=state(),o=owner();if(!st||!o){box.innerHTML='<div class="mobile-loading">보스판이 없습니다.</div>';return}
   var pi=activeChar(),unlocked=isUnlocked(o.id);
-  var strip='<div class="character-strip">'+st.players.map(function(p,i){return'<button class="char-tab '+(i===pi?"active":"")+'" data-char="'+i+'">'+esc(p)+'<span class="mini-count">주간 '+weekly(i)+'/'+LIMIT+'</span></button>'}).join("")+'</div>';
-  var summary='<div class="mobile-summary"><div><strong>'+esc(st.players[pi])+'</strong><br><span>'+esc(o.name)+' 보유 캐릭터</span></div><div><strong>주간 '+weekly(pi)+'/'+LIMIT+'</strong><br><span>월간 '+monthly(pi)+'/1</span></div></div>';
+  var theme=ownerTheme(o.name); var strip='<div class="character-strip">'+st.players.map(function(p,i){return'<button class="char-tab owner-themed '+(i===pi?"active":"")+'" data-theme="'+theme+'" data-char="'+i+'">'+esc(p)+'<span class="mini-count">주간 '+weekly(i)+'/'+LIMIT+'</span></button>'}).join("")+'</div>';
+  var summary='<div class="mobile-summary owner-themed" data-theme="'+theme+'"><div><strong>'+esc(st.players[pi])+'</strong><br><span><i class="owner-dot"></i>'+esc(o.name)+' 보유 캐릭터</span></div><div><strong>주간 '+weekly(pi)+'/'+LIMIT+'</strong><br><span>월간 '+monthly(pi)+'/1</span></div></div>';
   var cards='<div class="mobile-boss-list">';
   BOSSES.forEach(function(b,bi){
     var c=st.cells[b][pi]||emptyCell(),auto=!!c._sync,editable=unlocked&&!auto,mon=MONTHLY.has(b);
