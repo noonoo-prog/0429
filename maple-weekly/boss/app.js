@@ -251,6 +251,8 @@ function renderOwners(){
   Array.prototype.forEach.call(el.querySelectorAll("[data-owner]"),function(b){b.onclick=function(){
     if(dirty){toast("저장 중인 변경사항이 있어요.");return}
     activeOwnerId=b.dataset.owner;localStorage.setItem(ACTIVE_KEY,activeOwnerId);render();
+    document.documentElement.scrollLeft=0;document.body.scrollLeft=0;
+    var mb=document.getElementById("mobileBoard");if(mb)mb.scrollLeft=0;
   }});
   var o=owner(),unlocked=o&&isUnlocked(o.id),title=document.getElementById("boardTitle");
   title.className="board-title owner-themed"; if(o)title.setAttribute("data-theme",ownerTheme(o.name)); else title.removeAttribute("data-theme"); title.innerHTML=o?esc(o.name)+'의 보스 현황 <span class="lock-state '+(unlocked?"open":"")+'">'+(unlocked?"수정 가능":"보기 전용")+'</span>':"";
