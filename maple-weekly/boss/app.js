@@ -737,7 +737,6 @@ function ensureUnlocked(){
 function weekly(pi,except){var st=state();if(!st)return 0;return BOSSES.reduce(function(n,b){return b===except||MONTHLY.has(b)?n:n+(planned(st.cells[b]&&st.cells[b][pi])?1:0)},0)}
 function monthly(pi){var st=state();if(!st)return 0;return BOSSES.reduce(function(n,b){return n+(MONTHLY.has(b)&&planned(st.cells[b]&&st.cells[b][pi])?1:0)},0)}
 function crystalBasePrice(boss,difficulty){
-  if(MONTHLY.has(boss))return 0;
   return Number((BOSS_CRYSTAL_PRICES[boss]||{})[difficulty]||0);
 }
 function effectivePartyCount(boss,c){
@@ -1000,7 +999,7 @@ function compactBossCard(b,bi,c,pi,unlocked){
     sync='<span class="compact-sync">↔ '+esc(so)+(sp?' · '+esc(sp):'')+'</span>';
   }
   var income='<span class="compact-income-slot"></span>';
-  if(planned(c)&&!mon){
+  if(planned(c)){
     var price=crystalBasePrice(b,c.difficulty);
     income=price
       ?'<span class="compact-income-slot"><span class="compact-income">'+formatEok(bossWeeklyIncome(b,c))+'</span></span>'
