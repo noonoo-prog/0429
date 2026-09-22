@@ -165,7 +165,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .mobile-loading{padding:36px;text-align:center;color:var(--muted);font-size:12px}
 
 /* owner colors */
-.owner-tab[data-theme="ottok"],.owner-themed[data-theme="ottok"]{--owner-accent:#d98d39;--owner-line:#efc28e}
+.owner-tab[data-theme="ottok"],.owner-themed[data-theme="ottok"]{--owner-accent:#f28c28;--owner-line:#f6c38f}
 .owner-tab[data-theme="tsujyo"],.owner-themed[data-theme="tsujyo"]{--owner-accent:#cf7896;--owner-line:#e9b8c9}
 .owner-tab[data-theme="peacock"],.owner-themed[data-theme="peacock"]{--owner-accent:#7b2943;--owner-line:#bd8295}
 .owner-tab[data-theme="dream"],.owner-themed[data-theme="dream"]{--owner-accent:#4a9460;--owner-line:#a7d2b2}
