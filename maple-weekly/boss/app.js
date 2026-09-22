@@ -4,7 +4,7 @@
 const SUPABASE_URL="https://ibqpjcedzcllacbamrnu.supabase.co";
 const SUPABASE_KEY="sb_publishable_s-EiUNh66D17Xd3JFGUyvA_aNEDNMKq";
 const API_URL=SUPABASE_URL+"/functions/v1/boss-board-api";
-const BOSSES=["스우","데미안","루시드","윌","더스크","진힐라","듄켈","세렌","칼로스","카링","림보","대적자","흉성","벨로나","검은 마법사"];
+const BOSSES=["스우","데미안","가엔슬","루시드","윌","더스크","진힐라","듄켈","세렌","칼로스","카링","림보","발드릭스","유피테르","대적자","흉성","벨로나","검은 마법사"];
 const MONTHLY=new Set(["검은 마법사"]);
 const SOLO=new Set(["데미안","루시드","윌","더스크","진힐라","듄켈"]);
 const LIMIT=12,DIFFS=["","x","이지","노말","하드","카오스","익스트림"];
