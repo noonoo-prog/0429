@@ -511,7 +511,22 @@ document.getElementById("changePinOwner").onclick=function(){
   }).catch(function(e){toast(e.message||"비밀번호를 변경하지 못했습니다.")});
 };
 
-document.getElementById("removeOwner").onclick=function(){var o=owner();if(!o||!isUnlocked(o.id))return;if(!confirm("“"+o.name+"” 보스판 전체를 삭제할까요?"))return;callApi("delete_owner",{ownerId:o.id,pin:getPin(o.id)}).then(function(data){clearPin(o.id);applyPayload(data);activeOwnerId=APP.owners[0]?APP.owners[0].id:"";if(activeOwnerId)localStorage.setItem(ACTIVE_KEY,activeOwnerId);render();toast("보스판을 삭제했어요.")}).catch(function(e){toast(e.message||"보스판을 삭제하지 못했습니다.")})};
+document.getElementById("removeOwner").onclick=function(){
+  var o=owner();if(!o||!isUnlocked(o.id))return;
+  var adminCode=(prompt("현재 주인을 삭제하려면 관리자 번호를 입력해 주세요.")||"").trim();
+  if(!adminCode)return;
+  if(!confirm("“"+o.name+"” 보스판 전체를 삭제할까요?\n삭제 후 되돌릴 수 없습니다."))return;
+  callApi("delete_owner",{ownerId:o.id,pin:getPin(o.id),adminCode:adminCode}).then(function(data){
+    clearPin(o.id);
+    applyPayload(data);
+    activeOwnerId=APP.owners[0]?APP.owners[0].id:"";
+    if(activeOwnerId)localStorage.setItem(ACTIVE_KEY,activeOwnerId);
+    render();
+    toast("보스판을 삭제했어요.");
+  }).catch(function(e){
+    toast(e.message||"보스판을 삭제하지 못했습니다.");
+  });
+};
 document.getElementById("addPlayer").onclick=function(){var o=owner();if(!o||!isUnlocked(o.id))return;var st=state();st.players.push("새 닉네임");BOSSES.forEach(function(b){st.cells[b].push(emptyCell())});activeCharByOwner[o.id]=st.players.length-1;render();queueSave(120)};
 document.getElementById("reloadBtn").onclick=function(){if(dirty&&!confirm("아직 저장 중인 변경사항이 있습니다. DB 내용을 다시 불러올까요?"))return;loadRemote(true)};
 document.getElementById("shareBtn").onclick=function(){var url=location.origin+location.pathname;if(navigator.share){navigator.share({title:"보스 현황판",url:url}).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){toast("홈페이지 주소를 복사했어요.")})}else{prompt("주소를 복사해 주세요.",url)}};
