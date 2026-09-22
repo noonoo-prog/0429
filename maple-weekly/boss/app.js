@@ -485,6 +485,69 @@ function compactBossCard(b,bi,c,pi,unlocked){
     compactPartyMembers(c,bi,pi,editable)+
   '</article>';
 }
+function reorderCharacter(fromIndex,toIndex){
+  var st=state(),o=owner();
+  if(!st||!o||!isUnlocked(o.id))return;
+  fromIndex=Number(fromIndex);toIndex=Number(toIndex);
+  if(!Number.isInteger(fromIndex)||!Number.isInteger(toIndex))return;
+  if(fromIndex<0||toIndex<0||fromIndex>=st.players.length||toIndex>=st.players.length||fromIndex===toIndex)return;
+
+  var movedPlayer=st.players.splice(fromIndex,1)[0];
+  st.players.splice(toIndex,0,movedPlayer);
+  BOSSES.forEach(function(b){
+    var arr=st.cells[b]||[];
+    var movedCell=arr.splice(fromIndex,1)[0]||emptyCell();
+    arr.splice(toIndex,0,movedCell);
+    st.cells[b]=arr;
+  });
+
+  var active=activeChar();
+  if(active===fromIndex)active=toIndex;
+  else if(fromIndex<toIndex&&active>fromIndex&&active<=toIndex)active--;
+  else if(toIndex<fromIndex&&active>=toIndex&&active<fromIndex)active++;
+  activeCharByOwner[o.id]=active;
+  localStorage.setItem(CHAR_PREFIX+o.id,String(active));
+
+  queueSave();
+  render();
+}
+function bindCharacterReorder(root,enabled){
+  if(!enabled)return;
+  var dragFrom=null;
+  Array.prototype.forEach.call(root.querySelectorAll("[data-drag-character]"),function(handle){
+    handle.ondragstart=function(e){
+      dragFrom=+handle.dataset.dragCharacter;
+      var column=handle.closest(".character-column");
+      if(column)column.classList.add("is-dragging");
+      if(e.dataTransfer){
+        e.dataTransfer.effectAllowed="move";
+        try{e.dataTransfer.setData("text/plain",String(dragFrom))}catch(_){}
+      }
+    };
+    handle.ondragend=function(){
+      dragFrom=null;
+      Array.prototype.forEach.call(root.querySelectorAll(".character-column"),function(col){col.classList.remove("is-dragging","drag-over")});
+    };
+  });
+  Array.prototype.forEach.call(root.querySelectorAll(".character-column[data-character-index]"),function(column){
+    column.ondragover=function(e){
+      if(dragFrom==null)return;
+      e.preventDefault();
+      column.classList.add("drag-over");
+      if(e.dataTransfer)e.dataTransfer.dropEffect="move";
+    };
+    column.ondragleave=function(){column.classList.remove("drag-over")};
+    column.ondrop=function(e){
+      e.preventDefault();
+      column.classList.remove("drag-over");
+      if(dragFrom==null)return;
+      var to=+column.dataset.characterIndex,from=dragFrom;
+      dragFrom=null;
+      reorderCharacter(from,to);
+    };
+  });
+}
+
 function renderDesktop(){
   var st=state(),root=document.getElementById("desktopBoard");
   if(!st){root.innerHTML="";return}
@@ -512,10 +575,10 @@ function renderDesktop(){
   visible.forEach(function(item){
     var p=item.p,pi=item.pi,w=weekly(pi),m=monthly(pi);
     var charIncome=characterWeeklyIncome(pi),missingPrices=characterMissingPriceCount(pi);
-    h+='<section class="character-column owner-themed" data-theme="'+theme+'">'+
+    h+='<section class="character-column owner-themed" data-theme="'+theme+'" data-character-index="'+pi+'">'+
       '<header class="character-column-head">'+
         '<div class="character-title-row">'+
-          '<span class="drag-dots" aria-hidden="true">⠿</span>'+
+          '<span class="drag-dots '+(unlocked&&!q?"order-enabled":"")+'" '+(unlocked&&!q?'draggable="true" data-drag-character="'+pi+'" title="드래그해서 캐릭터 순서 변경"':'aria-hidden="true"')+'>⠿</span>'+
           '<input class="column-player-name player-input" data-player="'+pi+'" value="'+esc(p)+'" '+(unlocked?"":"disabled")+'>'+
           (pi===0?'<span class="representative-badge">대표</span>':'')+
           (w>=LIMIT?'<span class="complete-badge">완료</span>':'')+
@@ -535,6 +598,7 @@ function renderDesktop(){
   h+='</div>';
   root.innerHTML=h;
   bindCommon(root);
+  bindCharacterReorder(root,unlocked&&!q);
 }
 function mobileMemberInputs(c,bi,pi,editable){
   if(!c.count)return'<div class="solo">인원수를 선택해 주세요</div>';
@@ -589,7 +653,14 @@ function renderMobile(){
       '<span>주간 수익 <b class="mobile-income">'+formatEok(charIncome)+'</b>'+(missingPrices?' · 가격 미등록 '+missingPrices+'건':'')+(w>=LIMIT?' · 미설정 숨김':'')+'</span>'+
       (pi===0?'<span class="mobile-owner-total">전체 주간 '+formatEok(ownerIncome)+(ownerMissing?' · 미등록 '+ownerMissing+'건':'')+'</span>':'')+
     '</div>'+
-    '<div class="mobile-char-actions"><div class="mobile-char-count"><b>'+w+'/'+LIMIT+'</b><small>월간 '+m+'/1</small></div>'+(unlocked?'<button class="mobile-remove-character" data-remove="'+pi+'" aria-label="현재 캐릭터 삭제">삭제</button>':'')+'</div>'+
+    '<div class="mobile-char-actions">'+
+      (unlocked?'<div class="mobile-order-actions">'+
+        '<button class="mobile-order-btn" data-move-character="-1" '+(pi===0?'disabled':'')+' aria-label="캐릭터를 왼쪽으로 이동">←</button>'+
+        '<button class="mobile-order-btn" data-move-character="1" '+(pi===st.players.length-1?'disabled':'')+' aria-label="캐릭터를 오른쪽으로 이동">→</button>'+
+      '</div>':'')+
+      '<div class="mobile-char-count"><b>'+w+'/'+LIMIT+'</b><small>월간 '+m+'/1</small></div>'+
+      (unlocked?'<button class="mobile-remove-character" data-remove="'+pi+'" aria-label="현재 캐릭터 삭제">삭제</button>':'')+
+    '</div>'+
   '</div>';
 
   var list='<div class="mobile-compact-list">';
@@ -629,6 +700,12 @@ function bindCommon(root){
   Array.prototype.forEach.call(root.querySelectorAll("[data-count]:not(:disabled)"),function(e){e.onchange=function(){if(!e.checked)return;SELECT_ACTIVE=false;PENDING_RENDER=false;changeCount(+e.dataset.b,+e.dataset.p,+e.dataset.count)}});
   Array.prototype.forEach.call(root.querySelectorAll("[data-mobile-count]:not(:disabled)"),function(e){e.onchange=function(){SELECT_ACTIVE=false;PENDING_RENDER=false;changeCount(+e.dataset.b,+e.dataset.p,+e.value)}});
   Array.prototype.forEach.call(root.querySelectorAll(".party-picker-trigger:not(:disabled)"),function(e){e.onclick=function(){openPartyPicker(+e.dataset.b,+e.dataset.p,+e.dataset.m)}});
+  Array.prototype.forEach.call(root.querySelectorAll("[data-move-character]:not(:disabled)"),function(e){
+    e.onclick=function(){
+      var from=activeChar(),delta=Number(e.dataset.moveCharacter)||0;
+      reorderCharacter(from,from+delta);
+    };
+  });
   Array.prototype.forEach.call(root.querySelectorAll("[data-add-character]"),function(e){e.onclick=addCharacter});
   Array.prototype.forEach.call(root.querySelectorAll("[data-remove]:not(:disabled)"),function(e){e.onclick=function(){
     var i=+e.dataset.remove;if(st.players.length<=1){toast("캐릭터는 1명 이상 있어야 해요.");return}
