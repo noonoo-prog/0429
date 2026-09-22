@@ -370,7 +370,11 @@ function compactCountSelect(c,editable,bi,pi){
 }
 function compactPartyMembers(c,bi,pi,editable){
   if(!planned(c)||!c.count||c.count<=1)return "";
+  var st=state(),currentOwner=owner();
+  var selfName=(st&&st.players&&st.players[pi])?String(st.players[pi]):"";
+  var selfTheme=currentOwner?ownerTheme(currentOwner.name):"default";
   var h='<div class="compact-party-members">';
+  h+='<span class="compact-member compact-member-self owner-themed" data-theme="'+selfTheme+'">'+esc(selfName)+'</span>';
   for(var i=0;i<c.count-1;i++){
     var name=(c.names&&c.names[i])||"";
     var owned=name?characterOwner(name):null;
