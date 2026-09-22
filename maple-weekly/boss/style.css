@@ -43,7 +43,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   font-size:12px;font-weight:900;white-space:nowrap
 }
 .owner-tab.active{background:var(--owner-accent,#626a76);border-color:var(--owner-accent,#626a76);color:#fff}
-.owner-tab.locked:after{content:" · 보기";font-size:9px;opacity:.55}
+.owner-tab.locked:after{content:"";display:none}
 .owner-tab.unlocked:after{content:" · 수정";font-size:9px;opacity:.78}
 
 .context-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
