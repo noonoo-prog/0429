@@ -993,10 +993,10 @@ function compactPartyMembers(c,bi,pi,editable){
 function compactBossCard(b,bi,c,pi,unlocked){
   var auto=!!c._sync,editable=unlocked&&!auto,mon=MONTHLY.has(b);
   var sync="";
-  if(auto&&unlocked){
+  if(auto){
     var so=c._sync.sourceOwnerName||"";
     var sp=c._sync.sourcePlayer||"";
-    sync='<span class="compact-sync">↔ '+esc(so)+(sp?' · '+esc(sp):'')+'</span>';
+    sync='<span class="compact-sync">↔ 자동 연동'+(so?' · '+esc(so):'')+(sp?' · '+esc(sp):'')+'</span>';
   }
   var income='<span class="compact-income-slot"></span>';
   if(planned(c)){
