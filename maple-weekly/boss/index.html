@@ -2,21 +2,23 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f6f7fb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
 <title>보스 현황판</title>
-<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./style.css?v=mobile-20260922-3">
 </head>
 <body>
 <div class="page">
 <header class="topbar">
-  <div>
+  <div class="titlebox">
     <h1>보스 현황판</h1>
-    <p>주간 보스는 캐릭터당 최대 12개 · 검은 마법사는 월간으로 별도 관리해요.</p>
+    <p>주간 최대 12개 · 검은 마법사는 월간</p>
   </div>
-  <div>
+  <div class="top-actions">
     <div class="toolbar">
-      <button class="btn primary" id="addPlayer">+ 캐릭터 추가</button>
+      <button class="btn primary" id="addPlayer">+ 캐릭터</button>
       <button class="btn" id="shareBtn">주소 복사</button>
       <button class="btn" id="reloadBtn">새로고침</button>
     </div>
@@ -25,30 +27,33 @@
 </header>
 
 <div class="ownerbar">
-  <div class="owners" id="ownerTabs"></div>
-  <button class="owner-add" id="addOwner">+ 주인 추가</button>
-  <div class="owner-tools">
-    <button class="btn" id="unlockOwner">수정 잠금 해제</button>
-    <button class="btn" id="renameOwner">주인 이름 수정</button>
-    <button class="btn" id="removeOwner">주인 삭제</button>
-  </div>
+  <div class="owner-scroll"><div class="owners" id="ownerTabs"></div></div>
+  <button class="owner-add" id="addOwner">+ 주인</button>
+</div>
+
+<div class="owner-tools">
+  <button class="btn" id="unlockOwner">수정 잠금 해제</button>
+  <button class="btn" id="renameOwner">이름 수정</button>
+  <button class="btn danger-lite" id="removeOwner">삭제</button>
 </div>
 
 <div class="board-title" id="boardTitle"></div>
 
-<section class="shell">
-  <div class="scroll">
-    <table id="board"></table>
-  </div>
+<section class="desktop-board shell">
+  <div class="scroll"><table id="board"></table></div>
+</section>
+
+<section class="mobile-board" id="mobileBoard">
+  <div class="mobile-loading">보스판을 불러오는 중…</div>
 </section>
 
 <p class="hint">
-  난이도가 설정된 주간 보스는 1건으로 계산합니다. 캐릭터당 최대 12건이며 검은 마법사는 월간이라 주간 제한에 포함되지 않습니다.
+  다른 주인의 캐릭터 닉네임을 파티원으로 입력하면 상대 보스판에도 자동 연동됩니다.
   데미안·루시드·윌·더스크·진힐라·듄켈은 1인 고정입니다.
-  다른 주인의 닉네임을 파티원으로 입력하면 해당 주인의 보스판에도 자동으로 대칭 반영됩니다.
 </p>
 </div>
 <div class="toast" id="toast"></div>
-<script type="module" src="./app.js"></script>
+<noscript><div style="padding:24px;font-family:sans-serif">JavaScript를 켜야 보스 현황판을 사용할 수 있어요.</div></noscript>
+<script defer src="./app.js?v=mobile-20260922-3"></script>
 </body>
 </html>
