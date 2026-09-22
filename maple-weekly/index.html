@@ -16,7 +16,7 @@
 <section class="window">
 <div class="titlebar"><strong>메이플 주간 계획표</strong><span class="week" id="weekRange"></span></div>
 <div class="body">
-<div class="char-controls"><span class="label">캐릭터 칸</span><button class="mini-btn" id="removeChar" type="button">−</button><span class="char-count" id="charCountText">3칸</span><button class="mini-btn" id="addChar" type="button">＋</button></div>
+<div class="char-controls"><span class="label">캐릭터 칸</span><button class="mini-btn" id="removeChar" type="button">−</button><span class="char-count" id="charCountText">1칸</span><button class="mini-btn" id="addChar" type="button">＋</button></div>
 <div class="table" id="tableWrap"><div class="row head" id="headerRow"></div></div>
 <div class="weekly"><div class="weekly-title">이번 주 메모</div><textarea id="weeklyMemo" placeholder="이번 주 목표나 기억할 내용을 적어두세요."></textarea></div>
 <div class="bottom"><div class="left-info">자동 저장 · 목요일마다 새 주간 <span class="saved" id="savedText">저장됨</span></div><div class="actions"><button class="share-btn" id="shareBtn">현재 계획 공유</button><button id="clearBtn">이번 주 비우기</button></div></div>
@@ -34,8 +34,8 @@ function fmt(d){return `${d.getUTCMonth()+1}.${d.getUTCDate()}`}
 function keyDate(d){return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`}
 const start=getWeekStart(),end=new Date(start);end.setUTCDate(end.getUTCDate()+6);const weekKey=keyDate(start);
 document.getElementById('weekRange').textContent=`${start.getUTCFullYear()}.${fmt(start)} ~ ${end.getUTCFullYear()}.${fmt(end)}`;
-const namesKey='maple-simple-share-names-v3',countKey='maple-simple-share-charcount-v1',planKey=`maple-simple-share-plan-v3-${weekKey}`;
-let charCount=Math.min(6,Math.max(1,Number(localStorage.getItem(countKey)||3)));
+const namesKey='maple-simple-share-names-v3',countKey='maple-simple-share-charcount-v2',planKey=`maple-simple-share-plan-v3-${weekKey}`;
+let charCount=Math.min(6,Math.max(1,Number(localStorage.getItem(countKey)||1)));
 let names=JSON.parse(localStorage.getItem(namesKey)||'null')||['캐릭터 1','캐릭터 2','캐릭터 3'];while(names.length<6)names.push(`캐릭터 ${names.length+1}`);
 let data=JSON.parse(localStorage.getItem(planKey)||'null')||{cells:{},daily:{},weeklyMemo:''},saveTimer=null;
 function flashSaved(){const el=document.getElementById('savedText');el.classList.add('show');clearTimeout(saveTimer);saveTimer=setTimeout(()=>el.classList.remove('show'),900)}
