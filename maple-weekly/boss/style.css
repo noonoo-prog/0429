@@ -3673,3 +3673,13 @@ html[data-theme="dark"] input{
     margin-top:11px;
   }
 }
+
+
+/* clearer separation between wrapped character rows */
+@media(min-width:761px){
+  .character-columns,
+  .character-columns.is-searching{
+    row-gap:30px!important;
+    column-gap:7px!important;
+  }
+}
