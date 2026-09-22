@@ -1972,3 +1972,129 @@ html,body{overflow-x:hidden}
     font-size:11px;
   }
 }
+
+
+/* FINAL edit-mode party count control — no native-arrow clipping */
+@media(min-width:761px){
+  .character-boss-list .compact-main{
+    grid-template-columns:58px minmax(0,1fr) 62px 44px;
+    column-gap:5px;
+  }
+
+  .character-boss-list .compact-count-slot{
+    position:relative;
+    width:62px;
+    min-width:62px;
+    max-width:62px;
+    overflow:visible;
+  }
+
+  .character-boss-list .compact-count-slot:has(.compact-count)::after{
+    content:"⌄";
+    position:absolute;
+    top:50%;
+    right:6px;
+    transform:translateY(-56%);
+    color:#444b55;
+    font-size:13px;
+    font-weight:900;
+    line-height:1;
+    pointer-events:none;
+  }
+
+  .character-boss-list .compact-count-slot .compact-count{
+    appearance:none;
+    -webkit-appearance:none;
+    box-sizing:border-box;
+    width:62px;
+    min-width:62px;
+    max-width:62px;
+    height:29px;
+    margin:0;
+    padding:0 20px 0 7px;
+    border:1px solid #cfd4db;
+    border-radius:6px;
+    background:#fff;
+    color:#222831;
+    font-size:12px;
+    font-weight:900;
+    line-height:29px;
+    text-align:left;
+    text-align-last:left;
+    overflow:visible;
+  }
+
+  .character-boss-list .compact-count-slot .compact-count:focus{
+    border-color:#6d63db;
+    outline:2px solid rgba(109,99,219,.12);
+    outline-offset:0;
+  }
+
+  .character-boss-list .compact-count-slot .compact-solo{
+    width:62px;
+    min-width:62px;
+    max-width:62px;
+  }
+}
+
+@media(max-width:760px){
+  .mobile-compact-list .compact-main{
+    grid-template-columns:68px minmax(0,1fr) 58px 54px;
+    column-gap:5px;
+  }
+
+  .mobile-compact-list .compact-count-slot{
+    position:relative;
+    width:58px;
+    min-width:58px;
+    max-width:58px;
+    overflow:visible;
+  }
+
+  .mobile-compact-list .compact-count-slot:has(.compact-count)::after{
+    content:"⌄";
+    position:absolute;
+    top:50%;
+    right:6px;
+    transform:translateY(-56%);
+    color:#444b55;
+    font-size:13px;
+    font-weight:900;
+    line-height:1;
+    pointer-events:none;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-count{
+    appearance:none;
+    -webkit-appearance:none;
+    box-sizing:border-box;
+    width:58px;
+    min-width:58px;
+    max-width:58px;
+    height:30px;
+    margin:0;
+    padding:0 19px 0 6px;
+    border:1px solid #cfd4db;
+    border-radius:6px;
+    background:#fff;
+    color:#222831;
+    font-size:12px;
+    font-weight:900;
+    line-height:30px;
+    text-align:left;
+    text-align-last:left;
+    overflow:visible;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-count:focus{
+    border-color:#6d63db;
+    outline:2px solid rgba(109,99,219,.12);
+    outline-offset:0;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-solo{
+    width:58px;
+    min-width:58px;
+    max-width:58px;
+  }
+}
