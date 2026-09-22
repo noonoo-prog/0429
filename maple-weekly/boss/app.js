@@ -339,9 +339,12 @@ function renderDesktop(){
   var o=owner(),unlocked=isUnlocked(o.id),theme=ownerTheme(o.name),q=normalizeSearch(SEARCH_QUERY);
   var visible=[];
   st.players.forEach(function(p,pi){
+    var full=weekly(pi)>=LIMIT;
     var bosses=BOSSES.filter(function(b){
       var c=st.cells[b][pi]||emptyCell();
-      return !q||cellMatchesSearch(c,p,q);
+      if(q)return cellMatchesSearch(c,p,q);
+      if(full && !MONTHLY.has(b) && !planned(c))return false;
+      return true;
     });
     if(!q||bosses.length)visible.push({p:p,pi:pi,bosses:bosses});
   });
@@ -423,13 +426,14 @@ function renderMobile(){
   }).join("")+'</div>';
 
   var summary='<div class="mobile-character-head owner-themed" data-theme="'+theme+'">'+
-    '<div><strong>'+esc(st.players[pi])+'</strong><span>'+esc(o.name)+' 보유 캐릭터</span></div>'+
+    '<div><strong>'+esc(st.players[pi])+'</strong><span>'+esc(o.name)+' 보유 캐릭터'+(w>=LIMIT?' · 미설정 숨김':'')+'</span></div>'+
     '<div class="mobile-char-count"><b>'+w+'/'+LIMIT+'</b><small>월간 '+m+'/1</small></div>'+
   '</div>';
 
   var list='<div class="mobile-compact-list">';
   BOSSES.forEach(function(b,bi){
     var c=st.cells[b][pi]||emptyCell();
+    if(w>=LIMIT && !MONTHLY.has(b) && !planned(c))return;
     list+=compactBossCard(b,bi,c,pi,unlocked);
   });
   list+='</div>';
