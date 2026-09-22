@@ -1797,3 +1797,120 @@ html,body{overflow-x:hidden}
     max-width:44px;
   }
 }
+
+
+/* FINAL party-count label visibility */
+.compact-count option{
+  color:#222;
+  background:#fff;
+  font-size:12px;
+  line-height:1.4;
+}
+
+@media(min-width:761px){
+  .character-columns,
+  .character-columns.is-searching{
+    grid-template-columns:repeat(var(--cols),256px);
+  }
+  .character-column{
+    width:256px;
+    min-width:256px;
+    max-width:256px;
+  }
+
+  .character-boss-list .compact-main{
+    grid-template-columns:58px minmax(0,1fr) 56px 44px;
+    column-gap:5px;
+  }
+
+  .character-boss-list .compact-count-slot{
+    width:56px;
+    min-width:56px;
+    max-width:56px;
+    overflow:visible;
+  }
+
+  .character-boss-list .compact-count-slot .compact-count{
+    box-sizing:border-box;
+    width:56px;
+    min-width:56px;
+    max-width:56px;
+    height:28px;
+    margin:0;
+    padding:0 20px 0 6px;
+    overflow:visible;
+    font-size:11.5px;
+    font-weight:900;
+    text-align:left;
+    text-align-last:left;
+  }
+
+  .character-boss-list .compact-count-slot .compact-count:disabled{
+    width:56px;
+    min-width:56px;
+    max-width:56px;
+    padding:0 4px;
+    text-align:right;
+    text-align-last:right;
+    appearance:none;
+    -webkit-appearance:none;
+  }
+
+  .character-boss-list .compact-count-slot .compact-solo{
+    width:56px;
+    min-width:56px;
+    max-width:56px;
+    font-size:11px;
+    font-weight:900;
+    text-align:right;
+  }
+}
+
+@media(max-width:760px){
+  .mobile-compact-list .compact-main{
+    grid-template-columns:68px minmax(0,1fr) 50px 54px;
+    column-gap:5px;
+  }
+
+  .mobile-compact-list .compact-count-slot{
+    width:50px;
+    min-width:50px;
+    max-width:50px;
+    overflow:visible;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-count{
+    box-sizing:border-box;
+    width:50px;
+    min-width:50px;
+    max-width:50px;
+    height:29px;
+    margin:0;
+    padding:0 18px 0 5px;
+    overflow:visible;
+    font-size:12px;
+    font-weight:900;
+    text-align:left;
+    text-align-last:left;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-count:disabled{
+    width:50px;
+    min-width:50px;
+    max-width:50px;
+    padding:0 3px;
+    text-align:right;
+    text-align-last:right;
+    appearance:none;
+    -webkit-appearance:none;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-solo{
+    width:50px;
+    min-width:50px;
+    max-width:50px;
+    font-size:12px;
+    font-weight:900;
+    text-align:right;
+  }
+}
