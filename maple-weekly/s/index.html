@@ -27,6 +27,7 @@
 .tone-tsujo .name-input,.tone-tsujo textarea,.name-input.tone-tsujo,textarea.tone-tsujo{background:#fff3f8!important}
 .tone-peacock .name-input,.tone-peacock textarea,.name-input.tone-peacock,textarea.tone-peacock{background:#f6fbf1!important}
 @media(max-width:760px){.tone-ottok,.tone-tsujo,.tone-peacock{border-top-color:rgba(0,0,0,.08)!important}}
+.week-nav{display:flex;gap:5px;margin-bottom:7px}.week-nav button{height:29px;min-width:82px}.week-nav button.current{font-weight:800;background:#fff}.week-nav button:disabled{opacity:.4}@media(max-width:760px){.week-nav{gap:4px;margin-bottom:6px}.week-nav button{flex:1;height:36px;min-width:0;font-size:12px}}
 </style>
 </head>
 <body>
@@ -38,6 +39,11 @@
   <select id="planViewSelect" aria-label="계획표 선택"><option value="mine">내 계획</option></select>
   <button id="deleteSharedBtn" type="button" hidden>공유 삭제</button>
 </div>
+<div class="week-nav" id="weekNav">
+  <button id="prevWeekBtn" type="button">〈 지난주</button>
+  <button id="currentWeekBtn" type="button">이번 주</button>
+  <button id="nextWeekBtn" type="button">다음주 〉</button>
+</div>
 <div class="char-controls"><span class="label">칸</span><button class="mini-btn" id="removeChar" type="button">−</button><span class="char-count" id="charCountText">1칸</span><button class="mini-btn" id="addChar" type="button">＋</button></div>
 <div class="table" id="tableWrap"><div class="row head" id="headerRow"></div></div>
 <div class="weekly"><div class="weekly-title">이번 주 메모</div><textarea id="weeklyMemo" placeholder="이번 주 목표나 기억할 내용을 적어두세요."></textarea></div>
@@ -47,21 +53,148 @@
 </section>
 </main>
 <script>
+
 const DAYS=['목요일','금요일','토요일','일요일','월요일','화요일','수요일'];
+const SHORT_DAYS=['목','금','토','일','월','화','수'];
 const BASE_START=new Date(Date.UTC(2026,8,24));
+const WEEK_MS=7*86400000;
+
+const WEEK_PREFIX='weekly-planner-v4-week-';
+const STRUCTURE_KEY='weekly-planner-v4-structure';
+const SHARED_KEY='weekly-shared-plans-v1';
+const LEGACY_NAMES_KEY='maple-simple-share-names-v3';
+const LEGACY_COUNT_KEY='maple-simple-share-charcount-v2';
+const LEGACY_WEEK_PREFIX='maple-simple-share-plan-v3-';
+
+let activeView='mine';
+let selectedWeekStart=getCurrentWeekStart();
+let charCount=1;
+let names=['이름 1','이름 2','이름 3','이름 4','이름 5','이름 6'];
+let data=emptyPlanData();
+let sharedPlans=loadSharedPlans();
+let saveTimer=null;
+const undoStack=[];
+const redoStack=[];
+const HISTORY_LIMIT=100;
+
 function pad(n){return String(n).padStart(2,'0')}
-function kstDateOnly(now=new Date()){const k=new Date(now.getTime()+9*60*60*1000);return new Date(Date.UTC(k.getUTCFullYear(),k.getUTCMonth(),k.getUTCDate()))}
-function getWeekStart(now=new Date()){const today=kstDateOnly(now);if(today<BASE_START)return new Date(BASE_START);const daysFromBase=Math.floor((today-BASE_START)/86400000);const weeksFromBase=Math.floor(daysFromBase/7);const start=new Date(BASE_START);start.setUTCDate(start.getUTCDate()+weeksFromBase*7);return start}
 function fmt(d){return `${d.getUTCMonth()+1}.${d.getUTCDate()}`}
-function keyDate(d){return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`}
-const start=getWeekStart(),end=new Date(start);end.setUTCDate(end.getUTCDate()+6);const weekKey=keyDate(start);
-document.getElementById('weekRange').textContent=`${start.getUTCFullYear()}.${fmt(start)} ~ ${end.getUTCFullYear()}.${fmt(end)}`;
-const namesKey='maple-simple-share-names-v3',countKey='maple-simple-share-charcount-v2',planKey=`maple-simple-share-plan-v3-${weekKey}`,sharedPlansKey='weekly-shared-plans-v1';let sharedPlans=JSON.parse(localStorage.getItem(sharedPlansKey)||'[]');if(!Array.isArray(sharedPlans))sharedPlans=[];let activeView='mine';
-let charCount=Math.min(6,Math.max(1,Number(localStorage.getItem(countKey)||1)));
-let names=JSON.parse(localStorage.getItem(namesKey)||'null')||['이름 1','이름 2','이름 3'];while(names.length<6)names.push(`이름 ${names.length+1}`);
-let data=JSON.parse(localStorage.getItem(planKey)||'null')||{cells:{},daily:{},weeklyMemo:''},saveTimer=null;
-function flashSaved(){const el=document.getElementById('savedText');el.classList.add('show');clearTimeout(saveTimer);saveTimer=setTimeout(()=>el.classList.remove('show'),900)}
-function save(){
+function weekKeyFromDate(d){return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`}
+function dateFromWeekKey(k){
+  const p=String(k||'').split('-').map(Number);
+  if(p.length!==3||p.some(n=>!Number.isFinite(n))) return new Date(BASE_START);
+  return new Date(Date.UTC(p[0],p[1]-1,p[2]));
+}
+function kstDateOnly(now=new Date()){
+  const k=new Date(now.getTime()+9*60*60*1000);
+  return new Date(Date.UTC(k.getUTCFullYear(),k.getUTCMonth(),k.getUTCDate()));
+}
+function getCurrentWeekStart(now=new Date()){
+  const today=kstDateOnly(now);
+  if(today<BASE_START) return new Date(BASE_START);
+  const weeks=Math.floor((today-BASE_START)/WEEK_MS);
+  const d=new Date(BASE_START);
+  d.setUTCDate(d.getUTCDate()+weeks*7);
+  return d;
+}
+function shiftWeek(d,amount){
+  const x=new Date(d);
+  x.setUTCDate(x.getUTCDate()+amount*7);
+  return x<BASE_START?new Date(BASE_START):x;
+}
+function emptyPlanData(){return{cells:{},daily:{},weeklyMemo:''}}
+function deepCopy(v){return JSON.parse(JSON.stringify(v))}
+function normalizeNames(arr){
+  const out=Array.isArray(arr)?arr.slice(0,6):[];
+  while(out.length<6) out.push(`이름 ${out.length+1}`);
+  return out;
+}
+function normalizeWeekState(raw,template){
+  const t=template||{charCount:1,names:['이름 1']};
+  const count=Math.min(6,Math.max(1,Number(raw&&raw.charCount||t.charCount||1)));
+  const nm=normalizeNames(raw&&raw.names||t.names);
+  const d=raw&&raw.data?raw.data:raw||{};
+  return{
+    charCount:count,
+    names:nm,
+    data:{
+      cells:d&&d.cells&&typeof d.cells==='object'?d.cells:{},
+      daily:d&&d.daily&&typeof d.daily==='object'?d.daily:{},
+      weeklyMemo:typeof(d&&d.weeklyMemo)==='string'?d.weeklyMemo:''
+    }
+  };
+}
+function loadStructure(){
+  try{
+    const s=JSON.parse(localStorage.getItem(STRUCTURE_KEY)||'null');
+    if(s) return normalizeWeekState({charCount:s.charCount,names:s.names,data:emptyPlanData()});
+  }catch{}
+  let legacyNames=null;
+  try{legacyNames=JSON.parse(localStorage.getItem(LEGACY_NAMES_KEY)||'null')}catch{}
+  const legacyCount=Number(localStorage.getItem(LEGACY_COUNT_KEY)||1);
+  return normalizeWeekState({charCount:legacyCount,names:legacyNames||['이름 1'],data:emptyPlanData()});
+}
+function saveStructure(){
+  localStorage.setItem(STRUCTURE_KEY,JSON.stringify({charCount,names:[...names]}));
+}
+function mineStorageKey(k){return WEEK_PREFIX+k}
+function loadMineWeek(k){
+  try{
+    const raw=JSON.parse(localStorage.getItem(mineStorageKey(k))||'null');
+    if(raw) return normalizeWeekState(raw,loadStructure());
+  }catch{}
+  try{
+    const legacy=JSON.parse(localStorage.getItem(LEGACY_WEEK_PREFIX+k)||'null');
+    if(legacy){
+      const s=loadStructure();
+      const migrated=normalizeWeekState({charCount:s.charCount,names:s.names,data:legacy},s);
+      localStorage.setItem(mineStorageKey(k),JSON.stringify(migrated));
+      return migrated;
+    }
+  }catch{}
+  return normalizeWeekState(null,loadStructure());
+}
+function saveMineWeek(k){
+  const state={charCount,names:[...names],data:deepCopy(data)};
+  localStorage.setItem(mineStorageKey(k),JSON.stringify(state));
+  saveStructure();
+}
+function loadSharedPlans(){
+  try{
+    const a=JSON.parse(localStorage.getItem(SHARED_KEY)||'[]');
+    return Array.isArray(a)?a:[];
+  }catch{return[]}
+}
+function saveSharedPlans(){
+  localStorage.setItem(SHARED_KEY,JSON.stringify(sharedPlans.slice(0,20)));
+}
+function isSharedView(){return activeView!=='mine'}
+function getActiveSharedPlan(){return sharedPlans.find(p=>p.id===activeView)||null}
+function getActiveWeekStart(){
+  if(isSharedView()){
+    const p=getActiveSharedPlan();
+    return p&&p.week?dateFromWeekKey(p.week):new Date(selectedWeekStart);
+  }
+  return new Date(selectedWeekStart);
+}
+function getActiveWeekKey(){
+  if(isSharedView()){
+    const p=getActiveSharedPlan();
+    return p&&p.week?p.week:weekKeyFromDate(selectedWeekStart);
+  }
+  return weekKeyFromDate(selectedWeekStart);
+}
+function loadActiveState(){
+  if(isSharedView()){
+    const p=getActiveSharedPlan();
+    const s=normalizeWeekState(p||null,loadStructure());
+    charCount=s.charCount;names=s.names;data=s.data;
+  }else{
+    const s=loadMineWeek(weekKeyFromDate(selectedWeekStart));
+    charCount=s.charCount;names=s.names;data=s.data;
+  }
+}
+function persistActive(){
   if(isSharedView()){
     const i=sharedPlans.findIndex(p=>p.id===activeView);
     if(i>=0){
@@ -69,81 +202,407 @@ function save(){
       saveSharedPlans();
     }
   }else{
-    localStorage.setItem(namesKey,JSON.stringify(names));
-    localStorage.setItem(countKey,String(charCount));
-    localStorage.setItem(planKey,JSON.stringify(data));
+    saveMineWeek(weekKeyFromDate(selectedWeekStart));
   }
   flashSaved();
 }
-const undoStack=[],redoStack=[],HISTORY_LIMIT=100;
-function snapshotState(){return JSON.stringify({charCount,names:[...names],data:JSON.parse(JSON.stringify(data))})}
-function pushUndo(s){if(undoStack[undoStack.length-1]!==s){undoStack.push(s);if(undoStack.length>HISTORY_LIMIT)undoStack.shift()}redoStack.length=0;updateHistoryButtons()}
-function restoreSnapshot(s){const x=JSON.parse(s);charCount=Math.min(6,Math.max(1,Number(x.charCount||1)));names=Array.isArray(x.names)?x.names.slice(0,6):[];while(names.length<6)names.push(`이름 ${names.length+1}`);data=x.data||{cells:{},daily:{},weeklyMemo:''};save();renderPlanner();weeklyMemo.value=data.weeklyMemo||'';updateHistoryButtons()}
-function undo(){if(!undoStack.length)return;const cur=snapshotState(),prev=undoStack.pop();redoStack.push(cur);restoreSnapshot(prev)}
-function redo(){if(!redoStack.length)return;const cur=snapshotState(),next=redoStack.pop();undoStack.push(cur);restoreSnapshot(next)}
-function updateHistoryButtons(){const u=document.getElementById('undoBtn'),r=document.getElementById('redoBtn');if(u)u.disabled=!undoStack.length;if(r)r.disabled=!redoStack.length}
-
-function isSharedView(){return activeView!=='mine'}
-function deepCopy(v){return JSON.parse(JSON.stringify(v))}
-function saveSharedPlans(){localStorage.setItem(sharedPlansKey,JSON.stringify(sharedPlans.slice(0,20)))}
-function makeSharedId(encoded){let h=2166136261;for(let i=0;i<encoded.length;i++){h^=encoded.charCodeAt(i);h=Math.imul(h,16777619)}return 'shared-'+(h>>>0).toString(36)}
-function sharedPlanLabel(p,index){const custom=(p.names||[]).find(n=>n&&n.trim()&&!/^이름\s*\d+$/u.test(n.trim()));const d=(p.week||'').slice(5).replace('-','/');const who=custom?custom.trim():'공유 계획 '+(index+1);return d?who+' · '+d:who}
-function getActiveSharedPlan(){return sharedPlans.find(p=>p.id===activeView)||null}
-function getViewWeekStart(){const p=getActiveSharedPlan(),k=p&&p.week?p.week:weekKey;const a=k.split('-').map(Number);return a.length===3?new Date(Date.UTC(a[0],a[1]-1,a[2])):new Date(start)}
-function updateWeekRangeDisplay(){const s=getViewWeekStart(),e=new Date(s);e.setUTCDate(e.getUTCDate()+6);document.getElementById('weekRange').textContent=`${s.getUTCFullYear()}.${fmt(s)} ~ ${e.getUTCFullYear()}.${fmt(e)}`}
-function loadMineState(){activeView='mine';charCount=Math.min(6,Math.max(1,Number(localStorage.getItem(countKey)||1)));names=JSON.parse(localStorage.getItem(namesKey)||'null')||['이름 1','이름 2','이름 3'];while(names.length<6)names.push(`이름 ${names.length+1}`);data=JSON.parse(localStorage.getItem(planKey)||'null')||{cells:{},daily:{},weeklyMemo:''}}
-function loadSharedState(id){const p=sharedPlans.find(x=>x.id===id);if(!p){loadMineState();return}activeView=id;charCount=Math.min(6,Math.max(1,Number(p.charCount||1)));names=Array.isArray(p.names)?p.names.slice(0,6):[];while(names.length<6)names.push(`이름 ${names.length+1}`);data=deepCopy(p.data||{cells:{},daily:{},weeklyMemo:''})}
-function renderPlanSwitcher(){const s=document.getElementById('planViewSelect');if(!s)return;s.innerHTML='<option value="mine">내 계획</option>';sharedPlans.forEach((p,i)=>{const o=document.createElement('option');o.value=p.id;o.textContent=sharedPlanLabel(p,i);s.append(o)});s.value=activeView;document.getElementById('deleteSharedBtn').hidden=!isSharedView()}
-function applyViewMode(){const shared=isSharedView();document.querySelector('.window').classList.remove('shared-readonly');document.getElementById('saveBtn').disabled=false;document.getElementById('clearBtn').disabled=false;document.getElementById('weeklyMemo').readOnly=false;document.getElementById('deleteSharedBtn').hidden=!shared;updateHistoryButtons();updateWeekRangeDisplay()}
-function activateView(id){undoStack.length=0;redoStack.length=0;if(id==='mine')loadMineState();else loadSharedState(id);renderPlanSwitcher();renderPlanner();const w=document.getElementById('weeklyMemo');w.value=data.weeklyMemo||'';applyViewMode()}
-
-function updateMobileLabels(){document.querySelectorAll('[data-char-label]').forEach(el=>{const idx=Number(el.dataset.charLabel);el.textContent=names[idx]||`이름 ${idx+1}`})}
-function utf8ToBase64(str){const bytes=new TextEncoder().encode(str);let binary='';bytes.forEach(b=>binary+=String.fromCharCode(b));return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
-function base64ToUtf8(str){str=str.replace(/-/g,'+').replace(/_/g,'/');while(str.length%4)str+='=';const binary=atob(str),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes)}
-function makeSharePayload(){const p=getActiveSharedPlan();return{v:3,week:p&&p.week?p.week:weekKey,charCount,names,data}}
-function buildShareUrl(){
-  const payload=utf8ToBase64(JSON.stringify(makeSharePayload()));
-  const u=new URL(location.href);
-  u.hash='';
-  u.search='';
-  let p=u.pathname;
-  if(/\/s\/(?:index\.html)?$/.test(p)) p=p.replace(/\/s\/(?:index\.html)?$/, '/');
-  else p=p.replace(/\/index\.html$/, '/');
-  if(!p.endsWith('/')) p+='/';
-  u.pathname=p+'s/';
-  return `${u.toString()}#plan=${payload}`;
+function flashSaved(){
+  const el=document.getElementById('savedText');
+  if(!el)return;
+  el.classList.add('show');
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>el.classList.remove('show'),900);
 }
-function showShareMessage(text){const note=document.getElementById('shareNote');note.textContent=text;note.classList.add('show');setTimeout(()=>note.classList.remove('show'),5000)}
-async function shareCurrentPlan(){save();const shareUrl=buildShareUrl(),shareData={title:'주간 계획표',text:`주간 계획표 ${weekKey}`,url:shareUrl};try{if(navigator.share){await navigator.share(shareData);return}await navigator.clipboard.writeText(shareUrl);showShareMessage('현재 계획이 포함된 링크를 복사했어요.')}catch(err){if(err&&err.name==='AbortError')return;try{await navigator.clipboard.writeText(shareUrl);showShareMessage('현재 계획이 포함된 링크를 복사했어요.')}catch{prompt('이 링크를 복사해서 공유하세요.',shareUrl)}}}
-function importSharedPlan(){if(!location.hash.startsWith('#plan='))return null;try{const encoded=location.hash.slice(6),shared=JSON.parse(base64ToUtf8(encoded));if(!shared||![1,2,3].includes(shared.v)||!Array.isArray(shared.names)||!shared.data)return null;const id=makeSharedId(encoded),item={id,receivedAt:Date.now(),week:shared.week||weekKey,charCount:Math.min(6,Math.max(1,Number(shared.charCount||1))),names:shared.names.slice(0,6),data:deepCopy(shared.data)};while(item.names.length<6)item.names.push(`이름 ${item.names.length+1}`);const i=sharedPlans.findIndex(p=>p.id===id);if(i>=0)sharedPlans[i]=item;else sharedPlans.unshift(item);sharedPlans=sharedPlans.slice(0,20);saveSharedPlans();loadSharedState(id);history.replaceState(null,'',location.href.split('#')[0]);setTimeout(()=>showShareMessage('공유받은 계획을 별도로 저장했어요. 내 계획은 그대로 유지됩니다.'),0);return id}catch(e){console.warn('공유 불러오기 실패',e);return null}}
-const tableWrap=document.getElementById('tableWrap'),headerRow=document.getElementById('headerRow');
-function setGridColumns(){document.documentElement.style.setProperty('--char-count',charCount);document.getElementById('charCountText').textContent=`${charCount}칸`;document.getElementById('removeChar').disabled=charCount<=1;document.getElementById('addChar').disabled=charCount>=6}
+function snapshotState(){
+  return JSON.stringify({charCount,names:[...names],data:deepCopy(data)});
+}
+function pushUndo(snapshot){
+  if(undoStack[undoStack.length-1]!==snapshot){
+    undoStack.push(snapshot);
+    if(undoStack.length>HISTORY_LIMIT)undoStack.shift();
+  }
+  redoStack.length=0;
+  updateHistoryButtons();
+}
+function restoreSnapshot(snapshot){
+  const s=normalizeWeekState(JSON.parse(snapshot),loadStructure());
+  charCount=s.charCount;names=s.names;data=s.data;
+  persistActive();
+  renderPlanner();
+  document.getElementById('weeklyMemo').value=data.weeklyMemo||'';
+  updateHistoryButtons();
+}
+function undo(){
+  if(!undoStack.length)return;
+  const cur=snapshotState();
+  const prev=undoStack.pop();
+  redoStack.push(cur);
+  restoreSnapshot(prev);
+}
+function redo(){
+  if(!redoStack.length)return;
+  const cur=snapshotState();
+  const next=redoStack.pop();
+  undoStack.push(cur);
+  restoreSnapshot(next);
+}
+function updateHistoryButtons(){
+  document.getElementById('undoBtn').disabled=!undoStack.length;
+  document.getElementById('redoBtn').disabled=!redoStack.length;
+}
+function resetHistory(){undoStack.length=0;redoStack.length=0;updateHistoryButtons()}
+
 function nameToneClass(name){
   const n=String(name||'').trim();
-  if(n==='오똑') return 'tone-ottok';
-  if(n==='츠죠') return 'tone-tsujo';
-  if(n==='피콕') return 'tone-peacock';
-  return '';
+  if(n==='오똑')return'tone-ottok';
+  if(n==='츠죠')return'tone-tsujo';
+  if(n==='피콕')return'tone-peacock';
+  return'';
 }
-function applyNameToneToElement(el,name){
-  if(!el)return;
+function applyNameTone(el,name){
   el.classList.remove('tone-ottok','tone-tsujo','tone-peacock');
   const cls=nameToneClass(name);
   if(cls)el.classList.add(cls);
 }
 function updateColumnTone(index){
-  const name=names[index]||'';
-  document.querySelectorAll('[data-char-col="'+index+'"]').forEach(el=>applyNameToneToElement(el,name));
+  document.querySelectorAll('[data-char-col="'+index+'"]').forEach(el=>applyNameTone(el,names[index]));
 }
-function renderPlanner(){const viewStart=getViewWeekStart();setGridColumns();headerRow.innerHTML='';const dayHead=document.createElement('div');dayHead.className='cell';dayHead.textContent='';headerRow.append(dayHead);for(let i=0;i<charCount;i++){const head=document.createElement('div');head.className='cell char-head';head.dataset.charCol=i;applyNameToneToElement(head,names[i]);const input=document.createElement('input');input.className='name-input';input.placeholder=`이름 ${i+1}`;input.value=names[i]||`이름 ${i+1}`;input.addEventListener('input',()=>{const before=snapshotState();names[i]=input.value;pushUndo(before);updateMobileLabels();updateColumnTone(i);save()});head.append(input);headerRow.append(head)}const memoHead=document.createElement('div');memoHead.className='cell';memoHead.textContent='메모';headerRow.append(memoHead);tableWrap.querySelectorAll('.day-row').forEach(el=>el.remove());DAYS.forEach((day,di)=>{const currentDate=new Date(viewStart);currentDate.setUTCDate(currentDate.getUTCDate()+di);const row=document.createElement('div');row.className='row day-row';const dayCell=document.createElement('div');dayCell.className='cell day-cell';if(day==='토요일')dayCell.classList.add('sat');if(day==='일요일')dayCell.classList.add('sun');const shortDay=['목','금','토','일','월','화','수'][di];dayCell.innerHTML=`<span class="day-name">${shortDay}</span><span class="date">${currentDate.getUTCMonth()+1}/${currentDate.getUTCDate()}</span>`;row.append(dayCell);for(let ci=0;ci<charCount;ci++){const cell=document.createElement('div');cell.className='cell';cell.dataset.charCol=ci;applyNameToneToElement(cell,names[ci]);const label=document.createElement('div');label.className='mobile-label';label.dataset.charLabel=ci;label.textContent=names[ci]||`이름 ${ci+1}`;const ta=document.createElement('textarea');const key=`${di}-${ci}`;ta.placeholder='할 일';ta.value=data.cells[key]||'';ta.addEventListener('input',()=>{const before=snapshotState();data.cells[key]=ta.value;pushUndo(before);save()});cell.append(label,ta);row.append(cell)}const memoCell=document.createElement('div');memoCell.className='cell';const memoLabel=document.createElement('div');memoLabel.className='mobile-label';memoLabel.textContent='메모';const memo=document.createElement('textarea');memo.placeholder='메모';memo.value=data.daily[di]||'';memo.addEventListener('input',()=>{const before=snapshotState();data.daily[di]=memo.value;pushUndo(before);save()});memoCell.append(memoLabel,memo);row.append(memoCell);tableWrap.append(row)});updateMobileLabels()}
-document.getElementById('removeChar').addEventListener('click',()=>{if(charCount<=1)return;const before=snapshotState();charCount--;pushUndo(before);save();renderPlanner()});
-document.getElementById('addChar').addEventListener('click',()=>{if(charCount>=6)return;const before=snapshotState();charCount++;pushUndo(before);save();renderPlanner()});
-const weeklyMemo=document.getElementById('weeklyMemo');weeklyMemo.value=data.weeklyMemo||'';weeklyMemo.addEventListener('input',()=>{const before=snapshotState();data.weeklyMemo=weeklyMemo.value;pushUndo(before);save()});
+function updateMobileLabels(){
+  document.querySelectorAll('[data-char-label]').forEach(el=>{
+    const i=Number(el.dataset.charLabel);
+    el.textContent=names[i]||`이름 ${i+1}`;
+  });
+}
+
+function updateWeekRange(){
+  const s=getActiveWeekStart(),e=new Date(s);
+  e.setUTCDate(e.getUTCDate()+6);
+  document.getElementById('weekRange').textContent=`${s.getUTCFullYear()}.${fmt(s)} ~ ${e.getUTCFullYear()}.${fmt(e)}`;
+}
+function updateWeekNav(){
+  const shared=isSharedView();
+  const current=getCurrentWeekStart();
+  const selectedKey=weekKeyFromDate(selectedWeekStart);
+  const currentKey=weekKeyFromDate(current);
+  const prev=document.getElementById('prevWeekBtn');
+  const now=document.getElementById('currentWeekBtn');
+  const next=document.getElementById('nextWeekBtn');
+  prev.disabled=shared||selectedWeekStart<=BASE_START;
+  now.disabled=shared;
+  next.disabled=shared;
+  now.classList.toggle('current',!shared&&selectedKey===currentKey);
+}
+function navigateWeek(amount){
+  if(isSharedView())return;
+  persistActive();
+  selectedWeekStart=shiftWeek(selectedWeekStart,amount);
+  loadActiveState();
+  resetHistory();
+  renderAll();
+}
+function goCurrentWeek(){
+  if(isSharedView())return;
+  persistActive();
+  selectedWeekStart=getCurrentWeekStart();
+  loadActiveState();
+  resetHistory();
+  renderAll();
+}
+
+function sharedPlanLabel(p,index){
+  const custom=(p.names||[]).find(n=>n&&String(n).trim()&&!/^이름\s*\d+$/u.test(String(n).trim()));
+  const d=(p.week||'').slice(5).replace('-','/');
+  return (custom?String(custom).trim():`공유 계획 ${index+1}`)+(d?` · ${d}`:'');
+}
+function renderPlanSwitcher(){
+  const s=document.getElementById('planViewSelect');
+  s.innerHTML='<option value="mine">내 계획</option>';
+  sharedPlans.forEach((p,i)=>{
+    const o=document.createElement('option');
+    o.value=p.id;o.textContent=sharedPlanLabel(p,i);
+    s.append(o);
+  });
+  s.value=activeView;
+  document.getElementById('deleteSharedBtn').hidden=!isSharedView();
+}
+function activateView(id){
+  persistActive();
+  activeView=id;
+  if(activeView==='mine') selectedWeekStart=getCurrentWeekStart();
+  loadActiveState();
+  resetHistory();
+  renderAll();
+}
+
+const tableWrap=document.getElementById('tableWrap');
+const headerRow=document.getElementById('headerRow');
+
+function setGridColumns(){
+  document.documentElement.style.setProperty('--char-count',charCount);
+  document.getElementById('charCountText').textContent=`${charCount}칸`;
+  document.getElementById('removeChar').disabled=charCount<=1;
+  document.getElementById('addChar').disabled=charCount>=6;
+}
+function renderPlanner(){
+  setGridColumns();
+  const weekStart=getActiveWeekStart();
+  headerRow.innerHTML='';
+
+  const dayHead=document.createElement('div');
+  dayHead.className='cell';
+  dayHead.textContent='';
+  headerRow.append(dayHead);
+
+  for(let i=0;i<charCount;i++){
+    const head=document.createElement('div');
+    head.className='cell char-head';
+    head.dataset.charCol=i;
+    applyNameTone(head,names[i]);
+
+    const input=document.createElement('input');
+    input.className='name-input';
+    input.placeholder=`이름 ${i+1}`;
+    input.value=names[i]||`이름 ${i+1}`;
+    input.addEventListener('input',()=>{
+      const before=snapshotState();
+      names[i]=input.value;
+      pushUndo(before);
+      updateMobileLabels();
+      updateColumnTone(i);
+      persistActive();
+    });
+    head.append(input);
+    headerRow.append(head);
+  }
+
+  const memoHead=document.createElement('div');
+  memoHead.className='cell';
+  memoHead.textContent='메모';
+  headerRow.append(memoHead);
+
+  tableWrap.querySelectorAll('.day-row').forEach(el=>el.remove());
+
+  DAYS.forEach((day,di)=>{
+    const currentDate=new Date(weekStart);
+    currentDate.setUTCDate(currentDate.getUTCDate()+di);
+
+    const row=document.createElement('div');
+    row.className='row day-row';
+
+    const dayCell=document.createElement('div');
+    dayCell.className='cell day-cell';
+    if(day==='토요일')dayCell.classList.add('sat');
+    if(day==='일요일')dayCell.classList.add('sun');
+    dayCell.innerHTML=`<span class="day-name">${SHORT_DAYS[di]}</span><span class="date">${currentDate.getUTCMonth()+1}/${currentDate.getUTCDate()}</span>`;
+    row.append(dayCell);
+
+    for(let ci=0;ci<charCount;ci++){
+      const cell=document.createElement('div');
+      cell.className='cell';
+      cell.dataset.charCol=ci;
+      applyNameTone(cell,names[ci]);
+
+      const label=document.createElement('div');
+      label.className='mobile-label';
+      label.dataset.charLabel=ci;
+      label.textContent=names[ci]||`이름 ${ci+1}`;
+
+      const ta=document.createElement('textarea');
+      const key=`${di}-${ci}`;
+      ta.placeholder='할 일';
+      ta.value=data.cells[key]||'';
+      ta.addEventListener('input',()=>{
+        const before=snapshotState();
+        data.cells[key]=ta.value;
+        pushUndo(before);
+        persistActive();
+      });
+
+      cell.append(label,ta);
+      row.append(cell);
+    }
+
+    const memoCell=document.createElement('div');
+    memoCell.className='cell';
+    const memoLabel=document.createElement('div');
+    memoLabel.className='mobile-label';
+    memoLabel.textContent='메모';
+    const memo=document.createElement('textarea');
+    memo.placeholder='메모';
+    memo.value=data.daily[di]||'';
+    memo.addEventListener('input',()=>{
+      const before=snapshotState();
+      data.daily[di]=memo.value;
+      pushUndo(before);
+      persistActive();
+    });
+    memoCell.append(memoLabel,memo);
+    row.append(memoCell);
+    tableWrap.append(row);
+  });
+  updateMobileLabels();
+}
+
+function renderAll(){
+  renderPlanSwitcher();
+  updateWeekRange();
+  updateWeekNav();
+  renderPlanner();
+  document.getElementById('weeklyMemo').value=data.weeklyMemo||'';
+  updateHistoryButtons();
+}
+
+function utf8ToBase64(str){
+  const bytes=new TextEncoder().encode(str);
+  let binary='';
+  bytes.forEach(b=>binary+=String.fromCharCode(b));
+  return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function base64ToUtf8(str){
+  str=str.replace(/-/g,'+').replace(/_/g,'/');
+  while(str.length%4)str+='=';
+  const binary=atob(str),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+function makeSharePayload(){
+  return{v:4,week:getActiveWeekKey(),charCount,names:[...names],data:deepCopy(data)};
+}
+function buildShareUrl(){
+  const payload=utf8ToBase64(JSON.stringify(makeSharePayload()));
+  const u=new URL(location.href);
+  u.hash='';u.search='';
+  let p=u.pathname;
+  if(/\/s\/(?:index\.html)?$/.test(p)) p=p.replace(/\/s\/(?:index\.html)?$/,'/');
+  else p=p.replace(/\/index\.html$/,'/');
+  if(!p.endsWith('/'))p+='/';
+  u.pathname=p+'s/';
+  return `${u.toString()}#plan=${payload}`;
+}
+function showShareMessage(text){
+  const note=document.getElementById('shareNote');
+  note.textContent=text;
+  note.classList.add('show');
+  setTimeout(()=>note.classList.remove('show'),4500);
+}
+async function shareCurrentPlan(){
+  persistActive();
+  const url=buildShareUrl();
+  const shareData={title:'주간 계획표',text:`주간 계획표 ${getActiveWeekKey()}`,url};
+  try{
+    if(navigator.share){await navigator.share(shareData);return}
+    await navigator.clipboard.writeText(url);
+    showShareMessage('현재 계획이 포함된 링크를 복사했어요.');
+  }catch(err){
+    if(err&&err.name==='AbortError')return;
+    try{
+      await navigator.clipboard.writeText(url);
+      showShareMessage('현재 계획이 포함된 링크를 복사했어요.');
+    }catch{prompt('이 링크를 복사해서 공유하세요.',url)}
+  }
+}
+function makeSharedId(encoded){
+  let h=2166136261;
+  for(let i=0;i<encoded.length;i++){h^=encoded.charCodeAt(i);h=Math.imul(h,16777619)}
+  return'shared-'+(h>>>0).toString(36);
+}
+function importSharedPlan(){
+  if(!location.hash.startsWith('#plan='))return false;
+  try{
+    const encoded=location.hash.slice(6);
+    const shared=JSON.parse(base64ToUtf8(encoded));
+    if(!shared||![1,2,3,4].includes(shared.v)||!Array.isArray(shared.names)||!shared.data)return false;
+    const id=makeSharedId(encoded);
+    const item={
+      id,receivedAt:Date.now(),week:shared.week||weekKeyFromDate(getCurrentWeekStart()),
+      charCount:Math.min(6,Math.max(1,Number(shared.charCount||1))),
+      names:normalizeNames(shared.names),
+      data:normalizeWeekState({charCount:shared.charCount,names:shared.names,data:shared.data},loadStructure()).data
+    };
+    const i=sharedPlans.findIndex(p=>p.id===id);
+    if(i>=0)sharedPlans[i]=item;else sharedPlans.unshift(item);
+    sharedPlans=sharedPlans.slice(0,20);
+    saveSharedPlans();
+    activeView=id;
+    history.replaceState(null,'',location.href.split('#')[0]);
+    setTimeout(()=>showShareMessage('공유받은 계획을 따로 저장했어요. 내 계획은 그대로 유지됩니다.'),0);
+    return true;
+  }catch(e){
+    console.warn('공유 불러오기 실패',e);
+    return false;
+  }
+}
+
+document.getElementById('removeChar').addEventListener('click',()=>{
+  if(charCount<=1)return;
+  const before=snapshotState();
+  charCount--;
+  pushUndo(before);
+  persistActive();
+  renderPlanner();
+});
+document.getElementById('addChar').addEventListener('click',()=>{
+  if(charCount>=6)return;
+  const before=snapshotState();
+  charCount++;
+  pushUndo(before);
+  persistActive();
+  renderPlanner();
+});
+document.getElementById('weeklyMemo').addEventListener('input',e=>{
+  const before=snapshotState();
+  data.weeklyMemo=e.target.value;
+  pushUndo(before);
+  persistActive();
+});
+document.getElementById('saveBtn').addEventListener('click',()=>{
+  persistActive();
+  const b=document.getElementById('saveBtn'),t=b.textContent;
+  b.textContent='저장됨';
+  setTimeout(()=>b.textContent=t,900);
+});
+document.getElementById('clearBtn').addEventListener('click',()=>{
+  if(!confirm('이 주의 계획과 메모를 모두 비울까요?'))return;
+  const before=snapshotState();
+  data=emptyPlanData();
+  pushUndo(before);
+  persistActive();
+  renderPlanner();
+  document.getElementById('weeklyMemo').value='';
+});
+document.getElementById('shareBtn').addEventListener('click',shareCurrentPlan);
+document.getElementById('undoBtn').addEventListener('click',undo);
+document.getElementById('redoBtn').addEventListener('click',redo);
 document.getElementById('planViewSelect').addEventListener('change',e=>activateView(e.target.value));
-document.getElementById('deleteSharedBtn').addEventListener('click',()=>{if(!isSharedView())return;const p=getActiveSharedPlan();if(!p)return;if(!confirm('이 공유 계획을 목록에서 삭제할까요?'))return;sharedPlans=sharedPlans.filter(x=>x.id!==p.id);saveSharedPlans();activateView('mine')});
-document.getElementById('saveBtn').addEventListener('click',()=>{save();const b=document.getElementById('saveBtn'),t=b.textContent;b.textContent='저장됨';setTimeout(()=>b.textContent=t,900)});document.getElementById('undoBtn').addEventListener('click',undo);document.getElementById('redoBtn').addEventListener('click',redo);document.getElementById('shareBtn').addEventListener('click',shareCurrentPlan);
-document.getElementById('clearBtn').addEventListener('click',()=>{if(!confirm('이번 주 계획과 메모를 모두 비울까요?'))return;const before=snapshotState();data={cells:{},daily:{},weeklyMemo:''};pushUndo(before);save();document.querySelectorAll('.day-row textarea').forEach(el=>el.value='');weeklyMemo.value=''});
-const importedSharedId=importSharedPlan();renderPlanSwitcher();renderPlanner();weeklyMemo.value=data.weeklyMemo||'';applyViewMode();setInterval(()=>{const currentKey=keyDate(getWeekStart());if(currentKey!==weekKey)location.reload()},60000);
+document.getElementById('deleteSharedBtn').addEventListener('click',()=>{
+  if(!isSharedView())return;
+  const p=getActiveSharedPlan();
+  if(!p)return;
+  if(!confirm('이 공유 계획을 목록에서 삭제할까요?'))return;
+  sharedPlans=sharedPlans.filter(x=>x.id!==p.id);
+  saveSharedPlans();
+  activeView='mine';
+  selectedWeekStart=getCurrentWeekStart();
+  loadActiveState();
+  resetHistory();
+  renderAll();
+});
+document.getElementById('prevWeekBtn').addEventListener('click',()=>navigateWeek(-1));
+document.getElementById('currentWeekBtn').addEventListener('click',goCurrentWeek);
+document.getElementById('nextWeekBtn').addEventListener('click',()=>navigateWeek(1));
+
+const imported=importSharedPlan();
+if(!imported)activeView='mine';
+loadActiveState();
+renderAll();
+
+setInterval(()=>{
+  if(isSharedView())return;
+  const currentKey=weekKeyFromDate(getCurrentWeekStart());
+  const selectedKey=weekKeyFromDate(selectedWeekStart);
+  if(selectedKey===currentKey)return;
+  // 사용자가 과거나 미래 주를 보고 있으면 강제로 이동시키지 않음.
+},60000);
+
 </script>
 </body>
 </html>
