@@ -70,6 +70,7 @@ let CHECKLIST_MONTH=(function(){
   return y+"-"+String(m).padStart(2,"0");
 })();
 let CHECKLISTS={};
+let BOSS_RUN_CHECKS={};
 let CHECKLIST_LOADED=false;
 let CHECKLIST_LOADING=false;
 let CHECKLIST_SAVING="";
@@ -204,16 +205,34 @@ function changeChecklistMonth(delta){
   CHECKLIST_MONTH=next;
   renderChecklist();
 }
-function checklistItem(ownerId,weekStart){
-  var raw=CHECKLISTS[ownerId]&&CHECKLISTS[ownerId][weekStart];
-  if(raw&&typeof raw==="object")return raw;
-  return {completed:!!raw,meso:0};
+function bossRunItem(ownerId,weekStart,characterName,bossName){
+  var o=BOSS_RUN_CHECKS[ownerId];
+  var w=o&&o[weekStart];
+  var c=w&&w[characterName];
+  var item=c&&c[bossName];
+  return item&&typeof item==="object"?item:{completed:false,meso:0};
 }
-function checklistValue(ownerId,weekStart){
-  return !!checklistItem(ownerId,weekStart).completed;
+function setBossRunItem(ownerId,weekStart,characterName,bossName,item){
+  if(!BOSS_RUN_CHECKS[ownerId])BOSS_RUN_CHECKS[ownerId]={};
+  if(!BOSS_RUN_CHECKS[ownerId][weekStart])BOSS_RUN_CHECKS[ownerId][weekStart]={};
+  if(!BOSS_RUN_CHECKS[ownerId][weekStart][characterName])BOSS_RUN_CHECKS[ownerId][weekStart][characterName]={};
+  BOSS_RUN_CHECKS[ownerId][weekStart][characterName][bossName]=item;
 }
-function checklistMeso(ownerId,weekStart){
-  return Math.max(0,Number(checklistItem(ownerId,weekStart).meso)||0);
+function sumBossRunMeso(ownerId,weekStart,characterName){
+  var week=BOSS_RUN_CHECKS[ownerId]&&BOSS_RUN_CHECKS[ownerId][weekStart];
+  if(!week)return 0;
+  if(characterName){
+    var bosses=week[characterName]||{};
+    return Object.keys(bosses).reduce(function(sum,b){
+      var x=bosses[b];return sum+(x&&x.completed?Math.max(0,Number(x.meso)||0):0);
+    },0);
+  }
+  return Object.keys(week).reduce(function(sum,name){
+    var bosses=week[name]||{};
+    return sum+Object.keys(bosses).reduce(function(s,b){
+      var x=bosses[b];return s+(x&&x.completed?Math.max(0,Number(x.meso)||0):0);
+    },0);
+  },0);
 }
 function loadChecklist(show){
   if(CHECKLIST_LOADING)return Promise.resolve();
@@ -221,6 +240,7 @@ function loadChecklist(show){
   if(show!==false)renderChecklist();
   return callApi("checklist_bootstrap").then(function(data){
     CHECKLISTS={};
+    BOSS_RUN_CHECKS={};
     (data.checklists||[]).forEach(function(x){
       if(!CHECKLISTS[x.owner_id])CHECKLISTS[x.owner_id]={};
       CHECKLISTS[x.owner_id][x.week_start]={
@@ -228,52 +248,84 @@ function loadChecklist(show){
         meso:Math.max(0,Number(x.meso_earned)||0)
       };
     });
+    (data.bossRunChecklists||[]).forEach(function(x){
+      setBossRunItem(
+        x.owner_id,
+        x.week_start,
+        String(x.character_name||""),
+        String(x.boss_name||""),
+        {completed:!!x.completed,meso:Math.max(0,Number(x.meso_earned)||0)}
+      );
+    });
     CHECKLIST_LOADED=true;
     if(PAGE_VIEW==="checklist")renderChecklist();
   }).catch(function(e){
     toast(e.message||"체크리스트를 불러오지 못했습니다.");
   }).finally(function(){CHECKLIST_LOADING=false});
 }
-function saveChecklistWeek(weekStart,completed){
-  var o=owner();if(!o)return;
+function saveBossRunCheck(weekStart,characterName,bossName,pi,completed){
+  var o=owner(),st=state();if(!o||!st)return;
+  var c=st.cells[bossName]&&st.cells[bossName][pi];
+  var payout=completed?Math.round(bossWeeklyIncome(bossName,c)):0;
+  var saveKey=o.id+"|"+weekStart+"|"+characterName+"|"+bossName;
+
   function doSave(){
-    if(!CHECKLISTS[o.id])CHECKLISTS[o.id]={};
-    var before=JSON.parse(JSON.stringify(checklistItem(o.id,weekStart)));
-    var mesoEarned=completed?Math.round(ownerWeeklyIncome()):0;
-    CHECKLISTS[o.id][weekStart]={completed:completed,meso:mesoEarned};
-    CHECKLIST_SAVING=o.id+"|"+weekStart;
+    var before=JSON.parse(JSON.stringify(bossRunItem(o.id,weekStart,characterName,bossName)));
+    setBossRunItem(o.id,weekStart,characterName,bossName,{completed:completed,meso:payout});
+    CHECKLIST_SAVING=saveKey;
     renderChecklist();
-    callApi("save_checklist",{
+
+    callApi("save_boss_run_check",{
       ownerId:o.id,
       pin:getPin(o.id),
       adminCode:ADMIN_UNLOCKED?ADMIN_CODE:"",
       weekStart:weekStart,
+      characterName:characterName,
+      bossName:bossName,
       completed:completed,
-      mesoEarned:mesoEarned
+      mesoEarned:payout
     }).then(function(data){
-      if(!CHECKLISTS[o.id])CHECKLISTS[o.id]={};
-      CHECKLISTS[o.id][weekStart]={
-        completed:!!(data.item&&data.item.completed),
-        meso:Math.max(0,Number(data.item&&data.item.meso_earned)||0)
-      };
-      toast(completed?"완료 · "+formatEok(mesoEarned)+" 저장했어요.":"완료 체크를 해제했어요.");
+      var item=data.item||{};
+      setBossRunItem(o.id,weekStart,characterName,bossName,{
+        completed:!!item.completed,
+        meso:Math.max(0,Number(item.meso_earned)||0)
+      });
+      toast(completed?bossName+" 완료 · "+formatEok(payout):bossName+" 체크를 해제했어요.");
     }).catch(function(e){
-      if(!CHECKLISTS[o.id])CHECKLISTS[o.id]={};
-      CHECKLISTS[o.id][weekStart]=before;
-      toast(e.message||"체크를 저장하지 못했습니다.");
+      setBossRunItem(o.id,weekStart,characterName,bossName,before);
+      toast(e.message||"보스 체크를 저장하지 못했습니다.");
     }).finally(function(){
       CHECKLIST_SAVING="";
       renderChecklist();
     });
   }
+
   if(isUnlocked(o.id))doSave();
   else ensureUnlocked().then(function(ok){if(ok)doSave();else renderChecklist()});
+}
+function plannedWeeklyBossesForCharacter(pi){
+  var st=state();if(!st)return[];
+  return BOSSES.filter(function(b){
+    if(MONTHLY.has(b))return false;
+    return planned(st.cells[b]&&st.cells[b][pi]);
+  });
+}
+function weekRunProgress(ownerId,weekStart){
+  var st=state();if(!st)return{done:0,total:0};
+  var done=0,total=0;
+  st.players.forEach(function(name,pi){
+    plannedWeeklyBossesForCharacter(pi).forEach(function(b){
+      total++;
+      if(bossRunItem(ownerId,weekStart,name,b).completed)done++;
+    });
+  });
+  return{done:done,total:total};
 }
 function renderChecklist(){
   var panel=document.getElementById("checklistPanel");
   if(!panel)return;
-  var o=owner();
-  if(!o){panel.innerHTML='<div class="checklist-loading">주인이 없습니다.</div>';return}
+  var o=owner(),st=state();
+  if(!o||!st){panel.innerHTML='<div class="checklist-loading">주인이 없습니다.</div>';return}
   if(!CHECKLIST_LOADED){
     panel.innerHTML='<div class="checklist-loading">'+(CHECKLIST_LOADING?"체크리스트를 불러오는 중…":"체크리스트를 불러와 주세요.")+'</div>';
     return;
@@ -282,18 +334,18 @@ function renderChecklist(){
   var weeks=monthWeeks(CHECKLIST_MONTH);
   var p=CHECKLIST_MONTH.split("-"),monthNum=Number(p[1]),title=Number(p[0])+"년 "+monthNum+"월";
   var theme=ownerTheme(o.name);
-  var completedCount=weeks.filter(function(w){return checklistValue(o.id,w.start)}).length;
-  var monthMeso=weeks.reduce(function(sum,w){
-    return sum+(checklistValue(o.id,w.start)?checklistMeso(o.id,w.start):0);
-  },0);
-  var currentEstimate=Math.round(ownerWeeklyIncome());
+  var monthMeso=weeks.reduce(function(sum,w){return sum+sumBossRunMeso(o.id,w.start);},0);
+  var completedWeeks=weeks.filter(function(w){
+    var x=weekRunProgress(o.id,w.start);
+    return x.total>0&&x.done===x.total;
+  }).length;
 
   var h='<div class="checklist-card calendar-checklist owner-themed" data-theme="'+theme+'">'+
     '<div class="checklist-toolbar">'+
       '<button class="checklist-month-btn" data-month-move="-1" '+(CHECKLIST_MONTH==="2026-09"?"disabled":"")+' aria-label="이전 달">‹</button>'+
       '<div class="checklist-month-title"><strong>'+title+'</strong>'+
-        '<span>'+esc(o.name)+' · '+completedCount+'/'+weeks.length+'주 완료</span>'+
-        '<b class="checklist-month-meso">누적 획득 '+formatEok(monthMeso)+'</b>'+
+        '<span>'+esc(o.name)+' · '+completedWeeks+'/'+weeks.length+'주 전체 완료</span>'+
+        '<b class="checklist-month-meso">월 누적 획득 '+formatEok(monthMeso)+'</b>'+
       '</div>'+
       '<button class="checklist-month-btn" data-month-move="1" aria-label="다음 달">›</button>'+
     '</div>'+
@@ -305,43 +357,85 @@ function renderChecklist(){
   if(!weeks.length){
     h+='<div class="checklist-empty">2026년 9월 24일부터 체크리스트가 시작됩니다.</div>';
   }else{
-    weeks.forEach(function(w,i){
-      var item=checklistItem(o.id,w.start),checked=!!item.completed;
-      var savedMeso=Math.max(0,Number(item.meso)||0);
-      var displayMeso=checked?savedMeso:currentEstimate;
-      var saving=CHECKLIST_SAVING===o.id+"|"+w.start;
-      h+='<section class="calendar-week-row '+(checked?"done":"")+'">'+
+    weeks.forEach(function(w,wi){
+      var progress=weekRunProgress(o.id,w.start);
+      var weekMeso=sumBossRunMeso(o.id,w.start);
+      var weekEstimate=Math.round(ownerWeeklyIncome());
+      var weekDone=progress.total>0&&progress.done===progress.total;
+
+      h+='<section class="calendar-week-row '+(weekDone?"done":"")+'">'+
         '<div class="calendar-days">';
       for(var di=0;di<7;di++){
         var d=addDaysUTC(parseDateUTC(w.start),di);
         var outside=(d.getUTCMonth()+1)!==monthNum;
         h+='<div class="calendar-day '+(outside?"outside":"")+'">'+
           '<small>'+formatShortDate(d)+'</small>'+
-          (di===0?'<b>'+(i+1)+'주차</b>':'')+
+          (di===0?'<b>'+(wi+1)+'주차</b>':'')+
         '</div>';
       }
       h+='</div>'+
-        '<label class="calendar-week-summary">'+
-          '<input class="checklist-checkbox" type="checkbox" data-week="'+w.start+'" '+(checked?"checked":"")+' '+(saving?"disabled":"")+'>'+
-          '<span class="checklist-checkmark">'+(checked?"✓":"")+'</span>'+
-          '<span class="calendar-summary-copy">'+
-            '<b>'+formatShortDate(parseDateUTC(w.start))+' ~ '+formatShortDate(parseDateUTC(w.end))+'</b>'+
-            '<small>'+(checked?"획득 메소":"예상 수익")+'</small>'+
-          '</span>'+
-          '<strong class="calendar-meso">'+formatEok(displayMeso)+'</strong>'+
-          '<span class="checklist-status">'+(saving?"저장 중…":(checked?"완료":"미완료"))+'</span>'+
-        '</label>'+
-      '</section>';
+        '<div class="week-run-head">'+
+          '<div><strong>'+formatShortDate(parseDateUTC(w.start))+' ~ '+formatShortDate(parseDateUTC(w.end))+'</strong>'+
+          '<span>'+progress.done+'/'+progress.total+' 보스 완료</span></div>'+
+          '<div class="week-run-money"><small>주간 획득</small><b>'+formatEok(weekMeso)+'</b><em>예상 '+formatEok(weekEstimate)+'</em></div>'+
+        '</div>'+
+        '<div class="character-run-grid">';
+
+      st.players.forEach(function(characterName,pi){
+        var bosses=plannedWeeklyBossesForCharacter(pi);
+        var charEarned=sumBossRunMeso(o.id,w.start,characterName);
+        var charEstimate=Math.round(characterWeeklyIncome(pi));
+        var charDone=bosses.filter(function(b){return bossRunItem(o.id,w.start,characterName,b).completed}).length;
+
+        h+='<section class="character-run-card">'+
+          '<header class="character-run-head">'+
+            '<div><strong>'+esc(characterName)+'</strong><span>'+charDone+'/'+bosses.length+' 완료</span></div>'+
+            '<div><small>획득</small><b>'+formatEok(charEarned)+'</b><em>/ '+formatEok(charEstimate)+'</em></div>'+
+          '</header>'+
+          '<div class="boss-run-list">';
+
+        if(!bosses.length){
+          h+='<div class="boss-run-empty">등록된 주간 보스 없음</div>';
+        }else{
+          bosses.forEach(function(b){
+            var c=st.cells[b][pi]||emptyCell();
+            var item=bossRunItem(o.id,w.start,characterName,b);
+            var checked=!!item.completed;
+            var payout=checked?Math.max(0,Number(item.meso)||0):Math.round(bossWeeklyIncome(b,c));
+            var saveKey=o.id+"|"+w.start+"|"+characterName+"|"+b;
+            var saving=CHECKLIST_SAVING===saveKey;
+            h+='<label class="boss-run-row '+(checked?"done":"")+'">'+
+              '<input class="boss-run-checkbox" type="checkbox" data-week="'+w.start+'" data-character="'+esc(characterName)+'" data-pi="'+pi+'" data-boss="'+esc(b)+'" '+(checked?"checked":"")+' '+(saving?"disabled":"")+'>'+
+              '<span class="boss-run-check">'+(checked?"✓":"")+'</span>'+
+              '<span class="boss-run-name"><strong>'+esc(b)+'</strong><small>'+esc(c.difficulty||"")+'</small></span>'+
+              '<span class="boss-run-meso"><small>'+(checked?"획득":"예상")+'</small><b>'+formatEok(payout)+'</b></span>'+
+            '</label>';
+          });
+        }
+
+        h+='</div></section>';
+      });
+
+      h+='</div></section>';
     });
   }
 
   h+='</div></div>';
   panel.innerHTML=h;
+
   Array.prototype.forEach.call(panel.querySelectorAll("[data-month-move]"),function(btn){
     btn.onclick=function(){changeChecklistMonth(Number(btn.dataset.monthMove)||0)};
   });
-  Array.prototype.forEach.call(panel.querySelectorAll(".checklist-checkbox"),function(input){
-    input.onchange=function(){saveChecklistWeek(input.dataset.week,!!input.checked)};
+  Array.prototype.forEach.call(panel.querySelectorAll(".boss-run-checkbox"),function(input){
+    input.onchange=function(){
+      saveBossRunCheck(
+        input.dataset.week,
+        input.dataset.character,
+        input.dataset.boss,
+        Number(input.dataset.pi),
+        !!input.checked
+      );
+    };
   });
 }
 function updatePageView(){
