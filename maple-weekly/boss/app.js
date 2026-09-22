@@ -71,6 +71,7 @@ let CHECKLIST_MONTH=(function(){
 })();
 let CHECKLISTS={};
 let BOSS_RUN_CHECKS={};
+let SELECTED_RUN_DATES={};
 let CHECKLIST_LOADED=false;
 let CHECKLIST_LOADING=false;
 let CHECKLIST_SAVING="";
@@ -210,13 +211,23 @@ function bossRunItem(ownerId,weekStart,characterName,bossName){
   var w=o&&o[weekStart];
   var c=w&&w[characterName];
   var item=c&&c[bossName];
-  return item&&typeof item==="object"?item:{completed:false,meso:0};
+  return item&&typeof item==="object"?item:{completed:false,meso:0,runDate:weekStart};
 }
 function setBossRunItem(ownerId,weekStart,characterName,bossName,item){
   if(!BOSS_RUN_CHECKS[ownerId])BOSS_RUN_CHECKS[ownerId]={};
   if(!BOSS_RUN_CHECKS[ownerId][weekStart])BOSS_RUN_CHECKS[ownerId][weekStart]={};
   if(!BOSS_RUN_CHECKS[ownerId][weekStart][characterName])BOSS_RUN_CHECKS[ownerId][weekStart][characterName]={};
   BOSS_RUN_CHECKS[ownerId][weekStart][characterName][bossName]=item;
+}
+function selectedRunDate(weekStart){
+  var d=SELECTED_RUN_DATES[weekStart]||weekStart;
+  var end=dateKeyUTC(addDaysUTC(parseDateUTC(weekStart),6));
+  if(d<weekStart||d>end)d=weekStart;
+  return d;
+}
+function setSelectedRunDate(weekStart,runDate){
+  SELECTED_RUN_DATES[weekStart]=runDate;
+  renderChecklist();
 }
 function sumBossRunMeso(ownerId,weekStart,characterName){
   var week=BOSS_RUN_CHECKS[ownerId]&&BOSS_RUN_CHECKS[ownerId][weekStart];
@@ -233,6 +244,23 @@ function sumBossRunMeso(ownerId,weekStart,characterName){
       var x=bosses[b];return s+(x&&x.completed?Math.max(0,Number(x.meso)||0):0);
     },0);
   },0);
+}
+function dayRunData(ownerId,weekStart,runDate){
+  var week=BOSS_RUN_CHECKS[ownerId]&&BOSS_RUN_CHECKS[ownerId][weekStart];
+  var entries=[],total=0;
+  if(!week)return{entries:entries,total:0};
+  Object.keys(week).forEach(function(characterName){
+    var bosses=week[characterName]||{};
+    Object.keys(bosses).forEach(function(bossName){
+      var x=bosses[bossName];
+      if(x&&x.completed&&(x.runDate||weekStart)===runDate){
+        var meso=Math.max(0,Number(x.meso)||0);
+        total+=meso;
+        entries.push({character:characterName,boss:bossName,meso:meso});
+      }
+    });
+  });
+  return{entries:entries,total:total};
 }
 function loadChecklist(show){
   if(CHECKLIST_LOADING)return Promise.resolve();
@@ -254,7 +282,11 @@ function loadChecklist(show){
         x.week_start,
         String(x.character_name||""),
         String(x.boss_name||""),
-        {completed:!!x.completed,meso:Math.max(0,Number(x.meso_earned)||0)}
+        {
+          completed:!!x.completed,
+          meso:Math.max(0,Number(x.meso_earned)||0),
+          runDate:String(x.run_date||x.week_start||"")
+        }
       );
     });
     CHECKLIST_LOADED=true;
@@ -263,7 +295,7 @@ function loadChecklist(show){
     toast(e.message||"체크리스트를 불러오지 못했습니다.");
   }).finally(function(){CHECKLIST_LOADING=false});
 }
-function saveBossRunCheck(weekStart,characterName,bossName,pi,completed){
+function saveBossRunCheck(weekStart,runDate,characterName,bossName,pi,completed){
   var o=owner(),st=state();if(!o||!st)return;
   var c=st.cells[bossName]&&st.cells[bossName][pi];
   var payout=completed?Math.round(bossWeeklyIncome(bossName,c)):0;
@@ -271,7 +303,11 @@ function saveBossRunCheck(weekStart,characterName,bossName,pi,completed){
 
   function doSave(){
     var before=JSON.parse(JSON.stringify(bossRunItem(o.id,weekStart,characterName,bossName)));
-    setBossRunItem(o.id,weekStart,characterName,bossName,{completed:completed,meso:payout});
+    setBossRunItem(o.id,weekStart,characterName,bossName,{
+      completed:completed,
+      meso:payout,
+      runDate:completed?runDate:(before.runDate||weekStart)
+    });
     CHECKLIST_SAVING=saveKey;
     renderChecklist();
 
@@ -280,6 +316,7 @@ function saveBossRunCheck(weekStart,characterName,bossName,pi,completed){
       pin:getPin(o.id),
       adminCode:ADMIN_UNLOCKED?ADMIN_CODE:"",
       weekStart:weekStart,
+      runDate:runDate,
       characterName:characterName,
       bossName:bossName,
       completed:completed,
@@ -288,9 +325,10 @@ function saveBossRunCheck(weekStart,characterName,bossName,pi,completed){
       var item=data.item||{};
       setBossRunItem(o.id,weekStart,characterName,bossName,{
         completed:!!item.completed,
-        meso:Math.max(0,Number(item.meso_earned)||0)
+        meso:Math.max(0,Number(item.meso_earned)||0),
+        runDate:String(item.run_date||runDate)
       });
-      toast(completed?bossName+" 완료 · "+formatEok(payout):bossName+" 체크를 해제했어요.");
+      toast(completed?formatShortDate(parseDateUTC(runDate))+" · "+bossName+" "+formatEok(payout):bossName+" 체크를 해제했어요.");
     }).catch(function(e){
       setBossRunItem(o.id,weekStart,characterName,bossName,before);
       toast(e.message||"보스 체크를 저장하지 못했습니다.");
@@ -350,7 +388,7 @@ function renderChecklist(){
       '<button class="checklist-month-btn" data-month-move="1" aria-label="다음 달">›</button>'+
     '</div>'+
     '<div class="calendar-weekdays">'+
-      '<span>목</span><span>금</span><span>토</span><span>일</span><span>월</span><span>화</span><span>수</span>'+
+      '<span>목</span><span>금</span><span class="weekday-sat">토</span><span class="weekday-sun">일</span><span>월</span><span>화</span><span>수</span>'+
     '</div>'+
     '<div class="calendar-weeks">';
 
@@ -362,21 +400,34 @@ function renderChecklist(){
       var weekMeso=sumBossRunMeso(o.id,w.start);
       var weekEstimate=Math.round(ownerWeeklyIncome());
       var weekDone=progress.total>0&&progress.done===progress.total;
+      var pickedDate=selectedRunDate(w.start);
 
       h+='<section class="calendar-week-row '+(weekDone?"done":"")+'">'+
         '<div class="calendar-days">';
       for(var di=0;di<7;di++){
         var d=addDaysUTC(parseDateUTC(w.start),di);
+        var dateKey=dateKeyUTC(d);
         var outside=(d.getUTCMonth()+1)!==monthNum;
-        h+='<div class="calendar-day '+(outside?"outside":"")+'">'+
+        var dayData=dayRunData(o.id,w.start,dateKey);
+        var dayClass=(di===2?" saturday":(di===3?" sunday":""));
+        var selected=dateKey===pickedDate;
+        h+='<button type="button" class="calendar-day'+dayClass+(outside?" outside":"")+(selected?" selected":"")+'" data-run-date="'+dateKey+'" data-week="'+w.start+'">'+
           '<small>'+formatShortDate(d)+'</small>'+
-          (di===0?'<b>'+(wi+1)+'주차</b>':'')+
-        '</div>';
+          (di===0?'<b class="week-chip">'+(wi+1)+'주차</b>':'')+
+          '<span class="calendar-day-runs">';
+        dayData.entries.slice(0,3).forEach(function(entry){
+          h+='<em>'+esc(entry.boss)+' <strong>'+formatEok(entry.meso)+'</strong></em>';
+        });
+        if(dayData.entries.length>3)h+='<em class="more">+'+(dayData.entries.length-3)+'개</em>';
+        h+='</span>'+
+          (dayData.total>0?'<span class="calendar-day-total">총 '+formatEok(dayData.total)+'</span>':'')+
+        '</button>';
       }
+
       h+='</div>'+
         '<div class="week-run-head">'+
-          '<div><strong>'+formatShortDate(parseDateUTC(w.start))+' ~ '+formatShortDate(parseDateUTC(w.end))+'</strong>'+
-          '<span>'+progress.done+'/'+progress.total+' 보스 완료</span></div>'+
+          '<div><strong>'+formatShortDate(parseDateUTC(pickedDate))+'에 잡은 보스 체크</strong>'+
+          '<span>'+progress.done+'/'+progress.total+' 주간 보스 완료 · 날짜를 누르면 체크 날짜가 바뀝니다.</span></div>'+
           '<div class="week-run-money"><small>주간 획득</small><b>'+formatEok(weekMeso)+'</b><em>예상 '+formatEok(weekEstimate)+'</em></div>'+
         '</div>'+
         '<div class="character-run-grid">';
@@ -404,10 +455,11 @@ function renderChecklist(){
             var payout=checked?Math.max(0,Number(item.meso)||0):Math.round(bossWeeklyIncome(b,c));
             var saveKey=o.id+"|"+w.start+"|"+characterName+"|"+b;
             var saving=CHECKLIST_SAVING===saveKey;
+            var runLabel=checked&&item.runDate?formatShortDate(parseDateUTC(item.runDate))+" 완료":formatShortDate(parseDateUTC(pickedDate))+"에 체크";
             h+='<label class="boss-run-row '+(checked?"done":"")+'">'+
-              '<input class="boss-run-checkbox" type="checkbox" data-week="'+w.start+'" data-character="'+esc(characterName)+'" data-pi="'+pi+'" data-boss="'+esc(b)+'" '+(checked?"checked":"")+' '+(saving?"disabled":"")+'>'+
+              '<input class="boss-run-checkbox" type="checkbox" data-week="'+w.start+'" data-run-date="'+pickedDate+'" data-character="'+esc(characterName)+'" data-pi="'+pi+'" data-boss="'+esc(b)+'" '+(checked?"checked":"")+' '+(saving?"disabled":"")+'>'+
               '<span class="boss-run-check">'+(checked?"✓":"")+'</span>'+
-              '<span class="boss-run-name"><strong>'+esc(b)+'</strong><small>'+esc(c.difficulty||"")+'</small></span>'+
+              '<span class="boss-run-name"><strong>'+esc(b)+'</strong><small>'+esc(c.difficulty||"")+' · '+runLabel+'</small></span>'+
               '<span class="boss-run-meso"><small>'+(checked?"획득":"예상")+'</small><b>'+formatEok(payout)+'</b></span>'+
             '</label>';
           });
@@ -426,10 +478,14 @@ function renderChecklist(){
   Array.prototype.forEach.call(panel.querySelectorAll("[data-month-move]"),function(btn){
     btn.onclick=function(){changeChecklistMonth(Number(btn.dataset.monthMove)||0)};
   });
+  Array.prototype.forEach.call(panel.querySelectorAll(".calendar-day[data-run-date]"),function(btn){
+    btn.onclick=function(){setSelectedRunDate(btn.dataset.week,btn.dataset.runDate)};
+  });
   Array.prototype.forEach.call(panel.querySelectorAll(".boss-run-checkbox"),function(input){
     input.onchange=function(){
       saveBossRunCheck(
         input.dataset.week,
+        input.dataset.runDate,
         input.dataset.character,
         input.dataset.boss,
         Number(input.dataset.pi),
