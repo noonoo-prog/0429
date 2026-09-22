@@ -563,3 +563,19 @@ body.picker-open{overflow:hidden}
     font-size:8.5px
   }
 }
+
+
+.mobile-char-actions{
+  display:flex;align-items:center;gap:8px;flex:none
+}
+.mobile-remove-character{
+  min-height:30px;border:1px solid #efd0d0;border-radius:8px;
+  background:#fff7f7;color:#c34a4a;padding:5px 8px;
+  font-size:9px;font-weight:900
+}
+@media(max-width:760px){
+  .mobile-char-actions{gap:7px}
+  .mobile-remove-character{
+    min-height:32px;padding:5px 9px;font-size:9.5px
+  }
+}
