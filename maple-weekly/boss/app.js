@@ -385,16 +385,19 @@ function compactBossCard(b,bi,c,pi,unlocked){
     var sp=c._sync.sourcePlayer||"";
     sync='<span class="compact-sync">↔ '+esc(so)+(sp?' · '+esc(sp):'')+'</span>';
   }
-  var income="";
+  var income='<span class="compact-income-slot"></span>';
   if(planned(c)&&!mon){
     var price=crystalBasePrice(b,c.difficulty);
-    income=price?'<span class="compact-income">'+formatEok(bossWeeklyIncome(b,c))+'</span>':'<span class="compact-income missing">가격 미등록</span>';
+    income=price
+      ?'<span class="compact-income-slot"><span class="compact-income">'+formatEok(bossWeeklyIncome(b,c))+'</span></span>'
+      :'<span class="compact-income-slot"><span class="compact-income missing">미등록</span></span>';
   }
   return '<article class="compact-boss-card '+(planned(c)?"is-set ":"is-empty ")+(auto?"is-sync ":"")+(mon?"is-monthly":"")+'">'+
     '<div class="compact-main">'+
       compactDifficultySelect(c,editable,bi,pi)+
-      '<div class="compact-name-wrap"><div class="compact-title-line"><strong class="compact-boss-name">'+esc(b)+'</strong>'+income+'</div>'+sync+'</div>'+
-      compactCountSelect(c,editable,bi,pi)+
+      '<div class="compact-name-wrap"><strong class="compact-boss-name">'+esc(b)+'</strong>'+sync+'</div>'+
+      income+
+      '<div class="compact-count-slot">'+compactCountSelect(c,editable,bi,pi)+'</div>'+
     '</div>'+
     compactPartyMembers(c,bi,pi,editable)+
   '</article>';
