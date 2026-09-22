@@ -14,6 +14,7 @@ let APP={owners:[]};
 let activeOwnerId=localStorage.getItem(ACTIVE_KEY)||"";
 let activeCharByOwner={};
 let saveTimer=null,dirty=false,saving=false,pollTimer=null;
+let PICKER=null;
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(m){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})}
 function toast(m){var e=document.getElementById("toast");e.textContent=m;e.classList.add("show");setTimeout(function(){e.classList.remove("show")},1900)}
@@ -133,6 +134,80 @@ function renderOwners(){
   document.getElementById("addPlayer").disabled=!unlocked;
 }
 
+function characterOwner(charName){
+  var target=String(charName||"").trim();
+  if(!target)return null;
+  for(var oi=0;oi<APP.owners.length;oi++){
+    var o=APP.owners[oi],players=(o.board&&o.board.players)||[];
+    for(var pi=0;pi<players.length;pi++){
+      if(String(players[pi]||"").trim()===target)return o;
+    }
+  }
+  return null;
+}
+function memberPickButton(c,bi,pi,mi,editable){
+  var name=(c.names&&c.names[mi])||"";
+  var owned=name?characterOwner(name):null;
+  var theme=owned?ownerTheme(owned.name):"default";
+  return '<button class="member-pick party-picker-trigger '+(name?"":"empty")+' owner-themed" data-theme="'+theme+'" data-b="'+bi+'" data-p="'+pi+'" data-m="'+mi+'" '+(editable?"":"disabled")+'>'+
+    '<span class="member-owner-dot owner-themed" data-theme="'+theme+'"></span>'+
+    '<span class="member-pick-name">'+esc(name||"파티원 선택")+'</span>'+
+    '<span class="member-slot-label">#'+(mi+1)+'</span></button>';
+}
+function openPartyPicker(bi,pi,mi){
+  var st=state();if(!st)return;
+  PICKER={bi:bi,pi:pi,mi:mi};
+  var boss=BOSSES[bi],source=st.players[pi]||"캐릭터";
+  document.getElementById("partyPickerTitle").textContent=boss+" · 파티원 "+(mi+1)+" 선택";
+  document.getElementById("partyPickerSub").textContent=source+"의 파티";
+  var q=document.getElementById("partyPickerSearch");q.value="";
+  document.getElementById("partyPicker").hidden=false;
+  document.body.classList.add("picker-open");
+  renderPartyPicker("");
+  setTimeout(function(){q.focus()},80);
+}
+function closePartyPicker(){
+  PICKER=null;
+  document.getElementById("partyPicker").hidden=true;
+  document.body.classList.remove("picker-open");
+}
+function renderPartyPicker(query){
+  if(!PICKER)return;
+  var st=state(),c=st.cells[BOSSES[PICKER.bi]][PICKER.pi];
+  var current=(c.names&&c.names[PICKER.mi])||"";
+  var source=String(st.players[PICKER.pi]||"").trim();
+  var used=(c.names||[]).filter(function(_,i){return i!==PICKER.mi}).map(function(x){return String(x||"").trim()}).filter(Boolean);
+  var needle=String(query||"").trim().toLowerCase();
+  var html="";
+  APP.owners.forEach(function(o){
+    var theme=ownerTheme(o.name);
+    var chars=((o.board&&o.board.players)||[]).filter(function(name){
+      return !needle||String(name).toLowerCase().indexOf(needle)>=0||String(o.name).toLowerCase().indexOf(needle)>=0;
+    });
+    if(!chars.length)return;
+    html+='<section class="picker-owner-group owner-themed" data-theme="'+theme+'">'+
+      '<div class="picker-owner-title"><span class="picker-dot owner-themed" data-theme="'+theme+'"></span>'+esc(o.name)+'</div>'+
+      '<div class="picker-grid">';
+    chars.forEach(function(name){
+      var clean=String(name||"").trim();
+      var disabled=clean===source||used.indexOf(clean)>=0;
+      html+='<button class="picker-character owner-themed '+(clean===current?"selected":"")+'" data-theme="'+theme+'" data-pick-character="'+esc(clean)+'" '+(disabled?"disabled":"")+'>'+esc(clean)+'</button>';
+    });
+    html+='</div></section>';
+  });
+  if(!html)html='<div class="picker-empty">검색 결과가 없습니다.</div>';
+  var root=document.getElementById("partyPickerContent");root.innerHTML=html;
+  Array.prototype.forEach.call(root.querySelectorAll("[data-pick-character]:not(:disabled)"),function(btn){
+    btn.onclick=function(){
+      if(!PICKER)return;
+      var st2=state(),cell=st2.cells[BOSSES[PICKER.bi]][PICKER.pi];
+      cell.names[PICKER.mi]=btn.dataset.pickCharacter;
+      queueSave(100);
+      closePartyPicker();
+      render();
+    };
+  });
+}
 function diffOptions(c,editable,bi,pi,mobile){
   return'<select class="difficulty '+(mobile?"m-diff":"")+'" data-b="'+bi+'" data-p="'+pi+'" data-v="'+esc(c.difficulty)+'" '+(editable?"":"disabled")+'>'+
     DIFFS.map(function(x){return'<option value="'+esc(x)+'" '+(x===c.difficulty?"selected":"")+'>'+(x||"—")+'</option>'}).join("")+'</select>';
@@ -141,7 +216,7 @@ function desktopMembers(c,bi,pi,editable){
   if(!c.count)return'<div class="solo">인원수 선택</div>';
   if(c.count===1)return'<div class="solo">본인 단독</div>';
   var h='<div class="member-list">';
-  for(var i=0;i<c.count-1;i++)h+='<input class="member" data-b="'+bi+'" data-p="'+pi+'" data-m="'+i+'" value="'+esc(c.names[i]||"")+'" placeholder="파티원 '+(i+1)+' 이름" '+(editable?"":"disabled")+'>';
+  for(var i=0;i<c.count-1;i++)h+=memberPickButton(c,bi,pi,i,editable);
   return h+"</div>";
 }
 function renderDesktop(){
@@ -156,17 +231,16 @@ function renderDesktop(){
       if(auto){
         var syncOwner=c._sync.sourceOwnerName||"다른 주인";
         var syncPlayer=c._sync.sourcePlayer||syncOwner;
-        party+='<div class="sync-note">↔ '+esc(syncOwner)+' · '+esc(syncPlayer)+' 원본</div>';
+        party+='<div class="sync-note">↔ 원본 '+esc(syncOwner)+' · '+esc(syncPlayer)+'</div>';
       }
-      var syncTheme=auto?ownerTheme(c._sync.sourceOwnerName):"";
-      h+='<td class="slot '+(auto?"sync-themed":"")+'" '+(auto?'data-sync-theme="'+syncTheme+'"':"")+'><div class="slot-grid">'+diffOptions(c,editable,bi,pi,false)+'<div class="party">'+party+'</div></div></td>';
+      h+='<td class="slot '+(auto?"synced-slot":"")+'"><div class="slot-grid">'+diffOptions(c,editable,bi,pi,false)+'<div class="party">'+party+'</div></div></td>';
     });h+="</tr>";
   });h+="</tbody>";board.innerHTML=h;bindCommon(board);
 }
 function mobileMemberInputs(c,bi,pi,editable){
   if(!c.count)return'<div class="solo">인원수를 선택해 주세요</div>';
   if(c.count===1)return'<div class="solo">본인 단독</div>';
-  var h="";for(var i=0;i<c.count-1;i++)h+='<input class="member mobile-member" data-b="'+bi+'" data-p="'+pi+'" data-m="'+i+'" value="'+esc(c.names[i]||"")+'" placeholder="파티원 '+(i+1)+' 닉네임" '+(editable?"":"disabled")+'>';
+  var h="";for(var i=0;i<c.count-1;i++)h+=memberPickButton(c,bi,pi,i,editable);
   return h;
 }
 function renderMobile(){
@@ -188,11 +262,10 @@ function renderMobile(){
     if(auto){
       var syncOwner=c._sync.sourceOwnerName||"다른 주인";
       var syncPlayer=c._sync.sourcePlayer||syncOwner;
-      party+='<div class="sync-note">↔ 원본 캐릭터: '+esc(syncPlayer)+'</div>';
+      party+='<div class="sync-note">↔ 원본 '+esc(syncOwner)+' · '+esc(syncPlayer)+'</div>';
     }
-    var syncTheme=auto?ownerTheme(c._sync.sourceOwnerName):"";
-    var syncState=auto?'<span class="sync-source-pill">'+esc(c._sync.sourceOwnerName||"자동")+' 연동</span>':(unlocked?"수정 가능":"보기 전용");
-    cards+='<article class="mobile-boss-card '+(mon?"monthly ":"")+(auto?"synced sync-themed":"")+'" '+(auto?'data-sync-theme="'+syncTheme+'"':"")+'><div class="mobile-boss-head"><div class="mobile-boss-name">'+esc(b)+' <span class="badge '+(mon?"monthly":"")+'">'+(mon?"월간":"주간")+'</span></div><div class="mobile-boss-state">'+syncState+'</div></div><div class="mobile-controls">'+diffOptions(c,editable,bi,pi,true)+'<div class="mobile-party">'+party+'</div></div></article>';
+    var syncState=auto?'<span class="sync-neutral-pill">자동연동</span>':(unlocked?"수정 가능":"보기 전용");
+    cards+='<article class="mobile-boss-card '+(mon?"monthly ":"")+(auto?"synced":"")+'"><div class="mobile-boss-head"><div class="mobile-boss-name">'+esc(b)+' <span class="badge '+(mon?"monthly":"")+'">'+(mon?"월간":"주간")+'</span></div><div class="mobile-boss-state">'+syncState+'</div></div><div class="mobile-controls">'+diffOptions(c,editable,bi,pi,true)+'<div class="mobile-party">'+party+'</div></div></article>';
   });
   cards+="</div>";box.innerHTML=strip+summary+cards;
   Array.prototype.forEach.call(box.querySelectorAll("[data-char]"),function(b){b.onclick=function(){setActiveChar(+b.dataset.char)}});
@@ -211,7 +284,7 @@ function bindCommon(root){
   }});
   Array.prototype.forEach.call(root.querySelectorAll("[data-count]:not(:disabled)"),function(e){e.onchange=function(){if(!e.checked)return;changeCount(+e.dataset.b,+e.dataset.p,+e.dataset.count)}});
   Array.prototype.forEach.call(root.querySelectorAll("[data-mobile-count]:not(:disabled)"),function(e){e.onchange=function(){changeCount(+e.dataset.b,+e.dataset.p,+e.value)}});
-  Array.prototype.forEach.call(root.querySelectorAll(".member:not(:disabled)"),function(e){e.oninput=function(){var b=BOSSES[+e.dataset.b];st.cells[b][+e.dataset.p].names[+e.dataset.m]=e.value;queueSave()}});
+  Array.prototype.forEach.call(root.querySelectorAll(".party-picker-trigger:not(:disabled)"),function(e){e.onclick=function(){openPartyPicker(+e.dataset.b,+e.dataset.p,+e.dataset.m)}});
   Array.prototype.forEach.call(root.querySelectorAll("[data-remove]:not(:disabled)"),function(e){e.onclick=function(){
     var i=+e.dataset.remove;if(st.players.length<=1){toast("캐릭터는 1명 이상 있어야 해요.");return}
     if(!confirm("“"+(st.players[i]||"캐릭터")+"” 열을 삭제할까요?"))return;
@@ -221,6 +294,24 @@ function bindCommon(root){
 function changeCount(bi,pi,n){
   var st=state(),b=BOSSES[bi],c=st.cells[b][pi];c.count=n;c.names=(c.names||[]).slice(0,Math.max(0,n-1));while(c.names.length<n-1)c.names.push("");queueSave(120);render();
 }
+
+document.getElementById("partyPickerClose").onclick=closePartyPicker;
+document.getElementById("partyPicker").onclick=function(e){if(e.target===this)closePartyPicker()};
+document.getElementById("partyPickerSearch").oninput=function(){renderPartyPicker(this.value)};
+document.getElementById("partyPickerManual").onclick=function(){
+  if(!PICKER)return;
+  var st=state(),cell=st.cells[BOSSES[PICKER.bi]][PICKER.pi];
+  var current=(cell.names&&cell.names[PICKER.mi])||"";
+  var name=(prompt("등록되지 않은 파티원 닉네임을 입력해 주세요.",current)||"").trim();
+  if(!name)return;
+  cell.names[PICKER.mi]=name;queueSave(100);closePartyPicker();render();
+};
+document.getElementById("partyPickerClear").onclick=function(){
+  if(!PICKER)return;
+  var st=state(),cell=st.cells[BOSSES[PICKER.bi]][PICKER.pi];
+  cell.names[PICKER.mi]="";queueSave(100);closePartyPicker();render();
+};
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&PICKER)closePartyPicker()});
 
 document.getElementById("unlockOwner").onclick=function(){
   var o=owner();if(!o)return;
