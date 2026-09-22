@@ -156,6 +156,9 @@ function updatePartyFilterUI(){
   var row=document.getElementById("partyFilterRow");
   if(!btn||!row)return;
   row.hidden=PAGE_VIEW!=="board";
+  var o=owner();
+  btn.classList.add("owner-themed");
+  if(o)btn.setAttribute("data-theme",ownerTheme(o.name));
   btn.classList.toggle("active",PARTY_ONLY);
   btn.setAttribute("aria-pressed",PARTY_ONLY?"true":"false");
   var label=btn.querySelector("span:last-child");
@@ -610,14 +613,14 @@ function updatePageView(){
   var mobile=document.getElementById("mobileBoard");
   var hint=document.getElementById("boardHint");
   var panel=document.getElementById("checklistPanel");
-  var search=document.getElementById("partySearch");
+  var partyFilter=document.getElementById("partyFilterRow");
   var save=document.querySelector(".save-controls");
   if(desktop)desktop.hidden=checklist;
   if(mobile)mobile.hidden=checklist;
   if(hint)hint.hidden=checklist;
   if(panel)panel.hidden=!checklist;
   if(save)save.hidden=checklist;
-  if(search&&checklist)search.hidden=true;
+  if(partyFilter)partyFilter.hidden=checklist;
 
   var pageTitle=document.getElementById("pageTitle"),pageSub=document.getElementById("pageSub");
   if(pageTitle)pageTitle.textContent=checklist?"보스 체크리스트":"보스 현황판";
