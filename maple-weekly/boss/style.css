@@ -444,3 +444,122 @@ body.picker-open{overflow:hidden}
   }
   .mobile-compact-list .compact-member{font-size:11px}
 }
+
+
+/* weekly crystal income + completion UI */
+.owner-weekly-total{
+  margin-left:3px;padding:3px 7px;border-radius:999px;
+  background:#eef6ff;color:#3979b8;font-size:9px;font-weight:950
+}
+.representative-badge,.complete-badge{
+  flex:none;display:inline-flex;align-items:center;justify-content:center;
+  height:18px;padding:0 5px;border-radius:999px;font-size:8px;font-weight:950;white-space:nowrap
+}
+.representative-badge{background:#f1efff;color:#6558c8}
+.complete-badge{background:#e8f7ed;color:#2f8a51}
+.column-sub{
+  display:flex;align-items:center;justify-content:space-between;gap:5px;
+  min-height:14px
+}
+.representative-total{
+  color:#3979b8;font-size:9px;font-weight:950;white-space:nowrap
+}
+.compact-name-wrap{
+  min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px
+}
+.compact-title-line{
+  min-width:0;display:flex;align-items:center;gap:5px
+}
+.compact-income{
+  flex:none;padding:2px 5px;border-radius:999px;
+  background:#eef6ff;color:#3979b8;font-size:8px;font-weight:950;white-space:nowrap
+}
+.compact-income.missing{
+  background:#f1f2f4;color:#969ca5;font-size:7px
+}
+.compact-sync{display:block;line-height:1.1}
+.add-character-column{
+  min-height:82px;border:1px dashed #cfd5dc;border-radius:11px;background:#fafbfc;
+  color:#757c86;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;padding:10px
+}
+.add-character-column strong{font-size:12px;font-weight:950;color:#505762}
+.add-character-column span{font-size:9px}
+.tab-complete{
+  margin-left:4px;padding:1px 4px;border-radius:999px;
+  background:rgba(255,255,255,.82);color:#2f8a51;font-size:7px;font-weight:950
+}
+.char-tab:not(.active) .tab-complete{background:#e8f7ed}
+.add-char-tab{
+  border-style:dashed!important;color:#69717c!important;background:#fafbfc!important
+}
+
+.mobile-character-name-line{
+  display:flex;align-items:center;gap:5px;margin-bottom:2px
+}
+.mobile-income{color:#3979b8;font-weight:950}
+.mobile-owner-total{
+  display:inline-flex!important;align-items:center;margin-top:4px;
+  width:max-content;padding:3px 7px;border-radius:999px;
+  background:#eef6ff;color:#3979b8!important;font-size:9px!important;font-weight:950!important
+}
+
+/* larger mobile typography */
+@media(max-width:760px){
+  .mobile-character-head{
+    padding:11px 12px;
+  }
+  .mobile-character-head strong{font-size:17px}
+  .mobile-character-head span{font-size:10.5px}
+  .representative-badge,.complete-badge{
+    height:20px;padding:0 6px;font-size:8.5px
+  }
+  .mobile-char-count b{font-size:16px}
+  .mobile-char-count small{font-size:9.5px}
+
+  .mobile-compact-list .compact-boss-card{
+    padding:10px 10px;
+  }
+  .mobile-compact-list .compact-main{
+    grid-template-columns:76px minmax(0,1fr) 72px;
+    min-height:35px;
+    gap:9px;
+  }
+  .mobile-compact-list .compact-difficulty{
+    width:76px;height:30px;border-radius:7px;
+    font-size:10.5px;
+  }
+  .mobile-compact-list .compact-boss-name{
+    font-size:15.5px;
+    line-height:1.15;
+  }
+  .mobile-compact-list .compact-income{
+    font-size:9px;
+    padding:2px 5px;
+  }
+  .mobile-compact-list .compact-income.missing{
+    font-size:8px;
+  }
+  .mobile-compact-list .compact-count{
+    width:72px;min-width:72px;height:33px;
+    padding:0 21px 0 8px;
+    font-size:13px;
+    font-weight:950;
+  }
+  .mobile-compact-list .compact-count:disabled{
+    width:72px;min-width:72px;padding:0 7px;
+    font-size:12px;
+  }
+  .mobile-compact-list .compact-solo{
+    min-width:44px;font-size:12px;font-weight:950
+  }
+  .mobile-compact-list .compact-party-members{
+    padding-left:85px;margin-top:5px
+  }
+  .mobile-compact-list .compact-member{
+    font-size:11.5px
+  }
+  .mobile-compact-list .compact-sync{
+    font-size:8.5px
+  }
+}
