@@ -3683,3 +3683,250 @@ html[data-theme="dark"] input{
     column-gap:7px!important;
   }
 }
+
+
+/* SOFT DARK V2 — dimmed, low-saturation palette */
+html[data-theme="dark"]{
+  --bg:#22272e;
+  --surface:#2d333b;
+  --surface-soft:#272d35;
+  --line:#444c56;
+  --line-strong:#545d68;
+  --text:#adbac7;
+  --muted:#909dab;
+  --muted2:#768390;
+  --accent:#8e89c7;
+  --danger:#c97878;
+  --success:#7ba889;
+  --shadow:0 2px 10px rgba(0,0,0,.12);
+}
+
+/* dark-only owner accents: lower saturation, readable on dimmed surfaces */
+html[data-theme="dark"] .owner-tab[data-theme="ottok"],
+html[data-theme="dark"] .owner-themed[data-theme="ottok"]{
+  --owner-accent:#d19a66;--owner-line:#7a6552;
+}
+html[data-theme="dark"] .owner-tab[data-theme="tsujyo"],
+html[data-theme="dark"] .owner-themed[data-theme="tsujyo"]{
+  --owner-accent:#d783a6;--owner-line:#7a5f6c;
+}
+html[data-theme="dark"] .owner-tab[data-theme="peacock"],
+html[data-theme="dark"] .owner-themed[data-theme="peacock"]{
+  --owner-accent:#cf879d;--owner-line:#765963;
+}
+html[data-theme="dark"] .owner-tab[data-theme="dream"],
+html[data-theme="dark"] .owner-themed[data-theme="dream"]{
+  --owner-accent:#77a982;--owner-line:#586b5d;
+}
+html[data-theme="dark"] .owner-tab[data-theme="sky"],
+html[data-theme="dark"] .owner-themed[data-theme="sky"]{
+  --owner-accent:#76a9c3;--owner-line:#586b78;
+}
+html[data-theme="dark"] .owner-tab[data-theme="ochre"],
+html[data-theme="dark"] .owner-themed[data-theme="ochre"]{
+  --owner-accent:#b99361;--owner-line:#70614f;
+}
+html[data-theme="dark"] .owner-tab[data-theme="default"],
+html[data-theme="dark"] .owner-themed[data-theme="default"]{
+  --owner-accent:#909dab;--owner-line:#59616c;
+}
+
+/* selected owner/character buttons are tinted instead of solid neon fills */
+html[data-theme="dark"] .owner-tab.active,
+html[data-theme="dark"] .char-tab.active,
+html[data-theme="dark"] .picker-character.selected{
+  background:color-mix(in srgb,var(--owner-accent,#909dab) 18%,#1c2128);
+  border-color:var(--owner-line,#59616c);
+  color:var(--owner-accent,#909dab);
+}
+html[data-theme="dark"] .owner-tab.active,
+html[data-theme="dark"] .char-tab.active{
+  box-shadow:none;
+}
+
+/* surfaces */
+html[data-theme="dark"] .compact-boss-card.is-monthly{
+  background:#302d27;
+  border-top-color:#806f50;
+}
+html[data-theme="dark"] .page-switch{
+  background:#1c2128;
+  border-color:#444c56;
+}
+html[data-theme="dark"] .page-switch-btn.active{
+  background:#373e47;
+  color:#c4cfda;
+  box-shadow:none;
+}
+html[data-theme="dark"] .picker-search,
+html[data-theme="dark"] .party-search-box,
+html[data-theme="dark"] .party-search-box input{
+  background:#1c2128;
+  border-color:#444c56;
+}
+html[data-theme="dark"] .month-day.outside,
+html[data-theme="dark"] .calendar-day.outside{
+  background:#252b32;
+}
+html[data-theme="dark"] .character-run-grid{
+  background:#1f242b;
+}
+html[data-theme="dark"] .calendar-weekdays{
+  background:#262c34;
+}
+html[data-theme="dark"] .lock-state,
+html[data-theme="dark"] .desktop-board-meta span,
+html[data-theme="dark"] .checklist-status,
+html[data-theme="dark"] .picker-close,
+html[data-theme="dark"] .save-board-btn{
+  background:#373e47;
+  color:#9da9b6;
+}
+
+/* information/status colors */
+html[data-theme="dark"] .owner-weekly-total,
+html[data-theme="dark"] .compact-income{
+  background:#283744;
+  color:#7fa7cb;
+}
+html[data-theme="dark"] .compact-income.missing{
+  background:#343a43;
+  color:#8a949f;
+}
+html[data-theme="dark"] .mobile-income,
+html[data-theme="dark"] .representative-total{
+  color:#7fa7cb;
+}
+html[data-theme="dark"] .representative-badge{
+  background:#353246;
+  color:#a9a0d0;
+}
+html[data-theme="dark"] .complete-badge,
+html[data-theme="dark"] .char-tab:not(.active) .tab-complete{
+  background:#293a31;
+  color:#84af91;
+}
+html[data-theme="dark"] .tab-complete{
+  background:#344039;
+  color:#91b69b;
+}
+html[data-theme="dark"] .lock-state.open{
+  background:#293a31;
+  color:#84af91;
+}
+html[data-theme="dark"] .save span{
+  background:#7ba889;
+}
+html[data-theme="dark"] .save-controls:has(.save-board-btn.needs-save) > span{
+  background:#b79464;
+}
+html[data-theme="dark"] .save-controls:has(.save-board-btn.needs-save) #saveText{
+  color:#bfa071;
+}
+html[data-theme="dark"] .save-board-btn.needs-save{
+  border-color:#716ca1;
+  background:#555178;
+  color:#dedbea;
+  box-shadow:none;
+}
+html[data-theme="dark"] .danger-lite{
+  color:#c97878;
+}
+
+/* lower-saturation boss difficulty palette */
+html[data-theme="dark"] .compact-difficulty[data-v=""]{
+  background:#373e47;
+  color:#8f9aa6;
+}
+html[data-theme="dark"] .compact-difficulty[data-v="이지"]{
+  background:#56616d;
+  color:#e2e8ef;
+}
+html[data-theme="dark"] .compact-difficulty[data-v="노말"]{
+  background:#466f9d;
+  color:#eef4fa;
+}
+html[data-theme="dark"] .compact-difficulty[data-v="하드"]{
+  background:#8a4850;
+  color:#f3e7e8;
+}
+html[data-theme="dark"] .compact-difficulty[data-v="카오스"]{
+  background:#1c2128;
+  color:#c6aa63;
+  box-shadow:inset 0 0 0 1px #4a4333;
+}
+html[data-theme="dark"] .compact-difficulty[data-v="익스트림"]{
+  background:#1c2128;
+  color:#d97880;
+  box-shadow:inset 0 0 0 1px #55383d;
+}
+
+/* weekend colors: keep meaning, reduce glare */
+html[data-theme="dark"] .calendar-weekdays .weekday-sat,
+html[data-theme="dark"] .calendar-day.saturday small,
+html[data-theme="dark"] .month-day.saturday .month-day-date{
+  color:#78a5ce!important;
+}
+html[data-theme="dark"] .calendar-weekdays .weekday-sun,
+html[data-theme="dark"] .calendar-day.sunday small,
+html[data-theme="dark"] .month-day.sunday .month-day-date{
+  color:#ca839b!important;
+}
+html[data-theme="dark"] .calendar-day.outside.saturday small{
+  color:#6787a5!important;
+}
+html[data-theme="dark"] .calendar-day.outside.sunday small{
+  color:#a56d80!important;
+}
+
+/* interactions: much weaker color wash */
+html[data-theme="dark"] .month-day:hover,
+html[data-theme="dark"] .calendar-day:hover{
+  background:color-mix(in srgb,var(--owner-accent,#909dab) 4%,var(--surface));
+}
+html[data-theme="dark"] .month-day.selected,
+html[data-theme="dark"] .calendar-day.selected{
+  background:color-mix(in srgb,var(--owner-accent,#909dab) 6%,var(--surface));
+}
+html[data-theme="dark"] .checklist-month-meso,
+html[data-theme="dark"] .calendar-day b{
+  background:color-mix(in srgb,var(--owner-accent,#909dab) 7%,var(--surface));
+}
+html[data-theme="dark"] .boss-run-row.done,
+html[data-theme="dark"] .calendar-week-row.done .calendar-week-summary,
+html[data-theme="dark"] .checklist-week.done{
+  background:color-mix(in srgb,var(--owner-accent,#909dab) 5%,var(--surface));
+}
+
+/* checked states stay clear without becoming bright blocks */
+html[data-theme="dark"] .boss-run-row.done .boss-run-check,
+html[data-theme="dark"] .checklist-week.done .checklist-checkmark,
+html[data-theme="dark"] .boss-toggle-all.all-checked{
+  background:color-mix(in srgb,var(--owner-accent,#909dab) 65%,#1c2128);
+  border-color:var(--owner-line,#59616c);
+  color:#dce3ea;
+}
+html[data-theme="dark"] .checklist-week.done .checklist-status{
+  background:color-mix(in srgb,var(--owner-accent,#909dab) 18%,#1c2128);
+  color:var(--owner-accent,#909dab);
+}
+html[data-theme="dark"] .character-toggle-all.all-checked{
+  background:color-mix(in srgb,var(--owner-accent,#909dab) 8%,transparent);
+}
+
+/* soften small secondary text and separators */
+html[data-theme="dark"] .compact-member:not(:last-child):after{
+  color:#707b87;
+}
+html[data-theme="dark"] .boss-section-label{
+  border-color:#3b434d;
+}
+html[data-theme="dark"] .month-day-total,
+html[data-theme="dark"] .calendar-day-total{
+  border-color:#3b434d;
+}
+html[data-theme="dark"] .toast{
+  background:#1c2128;
+  color:#cdd9e5;
+  box-shadow:0 6px 22px rgba(0,0,0,.18);
+}
