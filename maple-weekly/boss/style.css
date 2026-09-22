@@ -446,3 +446,53 @@ body.picker-open{overflow:hidden}
     margin-top:6px;border-top:3px solid #e0c48e;background:#fffdf8
   }
 }
+
+
+/* difficulty colors — Maple-style final */
+.difficulty[data-v=""],
+.difficulty[data-v="x"]{
+  background:#f2f3f5!important;
+  color:#9da3ad!important;
+  border-color:#e1e4e8!important;
+}
+.difficulty[data-v="이지"]{
+  background:#82d8c0!important;
+  color:#ffffff!important;
+  border-color:#82d8c0!important;
+}
+.difficulty[data-v="노말"]{
+  background:#66a6f7!important;
+  color:#ffffff!important;
+  border-color:#66a6f7!important;
+}
+.difficulty[data-v="하드"]{
+  background:#ff5c63!important;
+  color:#ffffff!important;
+  border-color:#ff5c63!important;
+}
+.difficulty[data-v="카오스"]{
+  background:#111111!important;
+  color:#f2c14f!important;
+  border-color:#111111!important;
+}
+.difficulty[data-v="익스트림"]{
+  background:#111111!important;
+  color:#ff4b55!important;
+  border-color:#111111!important;
+}
+
+@media(max-width:760px){
+  .mobile-controls .difficulty{
+    font-weight:950;
+    letter-spacing:-.02em;
+    box-shadow:none!important;
+  }
+  .mobile-controls .difficulty[data-v=""],
+  .mobile-controls .difficulty[data-v="x"]{
+    color:#9da3ad!important;
+  }
+  .mobile-controls .difficulty[data-v="카오스"],
+  .mobile-controls .difficulty[data-v="익스트림"]{
+    border-color:#111111!important;
+  }
+}
