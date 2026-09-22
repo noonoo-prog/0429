@@ -170,7 +170,6 @@ function memberPickButton(c,bi,pi,mi,editable){
   var owned=name?characterOwner(name):null;
   var theme=owned?ownerTheme(owned.name):"default";
   return '<button class="member-pick party-picker-trigger '+(name?"":"empty")+' owner-themed" data-theme="'+theme+'" data-b="'+bi+'" data-p="'+pi+'" data-m="'+mi+'" '+(editable?"":"disabled")+'>'+
-    '<span class="member-owner-dot owner-themed" data-theme="'+theme+'"></span>'+
     '<span class="member-pick-name">'+esc(name||"파티원 선택")+'</span>'+
     '<span class="member-slot-label">#'+(mi+1)+'</span></button>';
 }
@@ -206,7 +205,7 @@ function renderPartyPicker(query){
     });
     if(!chars.length)return;
     html+='<section class="picker-owner-group owner-themed" data-theme="'+theme+'">'+
-      '<div class="picker-owner-title"><span class="picker-dot owner-themed" data-theme="'+theme+'"></span>'+esc(o.name)+'</div>'+
+      '<div class="picker-owner-title owner-themed" data-theme="'+theme+'">'+esc(o.name)+' <span class="picker-owner-count">'+chars.length+'명</span></div>'+
       '<div class="picker-grid">';
     chars.forEach(function(name){
       var clean=String(name||"").trim();
@@ -269,7 +268,7 @@ function renderMobile(){
   var box=document.getElementById("mobileBoard"),st=state(),o=owner();if(!st||!o){box.innerHTML='<div class="mobile-loading">보스판이 없습니다.</div>';return}
   var pi=activeChar(),unlocked=isUnlocked(o.id);
   var theme=ownerTheme(o.name); var strip='<div class="character-strip">'+st.players.map(function(p,i){return'<button class="char-tab owner-themed '+(i===pi?"active":"")+'" data-theme="'+theme+'" data-char="'+i+'">'+esc(p)+'<span class="mini-count">주간 '+weekly(i)+'/'+LIMIT+'</span></button>'}).join("")+'</div>';
-  var summary='<div class="mobile-summary owner-themed" data-theme="'+theme+'"><div><strong>'+esc(st.players[pi])+'</strong><br><span><i class="owner-dot"></i>'+esc(o.name)+' 보유 캐릭터</span></div><div><strong>주간 '+weekly(pi)+'/'+LIMIT+'</strong><br><span>월간 '+monthly(pi)+'/1</span></div></div>';
+  var summary='<div class="mobile-summary owner-themed" data-theme="'+theme+'"><div><strong>'+esc(st.players[pi])+'</strong><br><span class="summary-owner-name">'+esc(o.name)+'</span><span> 보유 캐릭터</span></div><div class="summary-counts"><strong>주간 '+weekly(pi)+'/'+LIMIT+'</strong><br><span>월간 '+monthly(pi)+'/1</span></div></div>';
   var cards='<div class="mobile-boss-list">';
   BOSSES.forEach(function(b,bi){
     var c=st.cells[b][pi]||emptyCell(),auto=!!c._sync,editable=unlocked&&!auto,mon=MONTHLY.has(b);
@@ -287,7 +286,7 @@ function renderMobile(){
       party+='<div class="sync-note">↔ 원본 '+esc(syncOwner)+' · '+esc(syncPlayer)+'</div>';
     }
     var syncState=auto?'<span class="sync-neutral-pill">자동연동</span>':(unlocked?"수정 가능":"보기 전용");
-    cards+='<article class="mobile-boss-card '+(mon?"monthly ":"")+(auto?"synced":"")+'"><div class="mobile-boss-head"><div class="mobile-boss-name">'+esc(b)+' <span class="badge '+(mon?"monthly":"")+'">'+(mon?"월간":"주간")+'</span></div><div class="mobile-boss-state">'+syncState+'</div></div><div class="mobile-controls">'+diffOptions(c,editable,bi,pi,true)+'<div class="mobile-party">'+party+'</div></div></article>';
+    cards+='<article class="mobile-boss-card '+(mon?"monthly ":"")+(auto?"synced ":"")+(planned(c)?"boss-active":"boss-empty")+'"><div class="mobile-boss-head"><div class="mobile-boss-name">'+esc(b)+' <span class="badge '+(mon?"monthly":"")+'">'+(mon?"월간":"주간")+'</span></div><div class="mobile-boss-state">'+syncState+'</div></div><div class="mobile-controls">'+diffOptions(c,editable,bi,pi,true)+'<div class="mobile-party">'+party+'</div></div></article>';
   });
   cards+="</div>";box.innerHTML=strip+summary+cards;
   Array.prototype.forEach.call(box.querySelectorAll("[data-char]"),function(b){b.onclick=function(){setActiveChar(+b.dataset.char)}});
