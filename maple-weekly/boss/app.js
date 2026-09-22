@@ -56,6 +56,7 @@ let activeOwnerId=localStorage.getItem(ACTIVE_KEY)||"";
 let activeCharByOwner={};
 let saveTimer=null,dirty=false,saving=false,pollTimer=null;
 let EDIT_VERSION=0,SELECT_ACTIVE=false,PENDING_RENDER=false;
+let ADMIN_UNLOCKED=false,ADMIN_CODE="";
 let PICKER=null;
 let MOBILE_VIEW=localStorage.getItem(MOBILE_VIEW_KEY)==="all"?"all":"active";
 let SEARCH_QUERY="";
@@ -94,7 +95,7 @@ function pinKey(id){return PIN_PREFIX+id}
 function getPin(id){return sessionStorage.getItem(pinKey(id))||""}
 function setPin(id,pin){sessionStorage.setItem(pinKey(id),pin)}
 function clearPin(id){sessionStorage.removeItem(pinKey(id))}
-function isUnlocked(id){return !!getPin(id)}
+function isUnlocked(id){return ADMIN_UNLOCKED||!!getPin(id)}
 function owner(){return APP.owners.find(function(o){return o.id===activeOwnerId})||APP.owners[0]||null}
 function state(){var o=owner();return o?o.board:null}
 function planned(c){return !!c&&c.difficulty!==""&&c.difficulty!=="x"}
@@ -301,12 +302,13 @@ function saveBoardNow(){
   var o=owner(),st=state();
   if(!o||!st||saving)return Promise.resolve();
   if(!dirty){toast("저장할 변경사항이 없어요.");updateSaveUI();return Promise.resolve();}
-  var pin=getPin(o.id);if(!pin)return Promise.resolve();
+  var pin=getPin(o.id);
+  if(!pin&&!ADMIN_UNLOCKED)return Promise.resolve();
   var saveVersion=EDIT_VERSION;
   var snapshot=JSON.parse(JSON.stringify(st));
   saving=true;
   updateSaveUI();
-  return callApi("save_board",{ownerId:o.id,pin:pin,board:snapshot}).then(function(data){
+  return callApi("save_board",{ownerId:o.id,pin:pin,adminCode:ADMIN_UNLOCKED?ADMIN_CODE:"",board:snapshot}).then(function(data){
     if(saveVersion===EDIT_VERSION){
       dirty=false;
       applyPayload(data);
@@ -318,8 +320,10 @@ function saveBoardNow(){
     }
   }).catch(function(e){
     if(e.status===401){
-      clearPin(o.id);
-      toast("수정 잠금이 풀렸어요. 다시 비밀번호를 입력해 주세요.");
+      if(ADMIN_UNLOCKED){ADMIN_UNLOCKED=false;ADMIN_CODE="";}
+      else clearPin(o.id);
+      toast("수정 권한이 풀렸어요. 다시 인증해 주세요.");
+      render();
       return loadRemote(false);
     }
     toast(e.message||"저장하지 못했습니다.");
@@ -340,7 +344,12 @@ function renderOwners(){
   }});
   var o=owner(),unlocked=o&&isUnlocked(o.id),title=document.getElementById("boardTitle");
   title.className="board-title owner-themed"; if(o)title.setAttribute("data-theme",ownerTheme(o.name)); else title.removeAttribute("data-theme"); title.innerHTML=o?esc(o.name)+'의 보스 현황 <span class="lock-state '+(unlocked?"open":"")+'">'+(unlocked?"수정 가능":"보기 전용")+'</span>':"";
-  document.getElementById("unlockOwner").textContent=unlocked?"수정 잠그기":"수정 잠금 해제";
+  var ownerUnlock=document.getElementById("unlockOwner");
+  ownerUnlock.textContent=ADMIN_UNLOCKED?"관리자 모드 중":(unlocked?"수정 잠그기":"수정 잠금 해제");
+  ownerUnlock.disabled=ADMIN_UNLOCKED;
+  var adminBtn=document.getElementById("adminUnlock");
+  adminBtn.textContent=ADMIN_UNLOCKED?"관리자 수정 종료":"관리자 전체 수정";
+  adminBtn.classList.toggle("active",ADMIN_UNLOCKED);
   document.getElementById("renameOwner").disabled=!unlocked;
   document.getElementById("changePinOwner").disabled=!unlocked;
   document.getElementById("removeOwner").disabled=!unlocked;
@@ -773,27 +782,48 @@ document.addEventListener("keydown",function(e){if(e.key==="Escape"&&PICKER)clos
 
 document.getElementById("unlockOwner").onclick=function(){
   var o=owner();if(!o)return;
+  if(ADMIN_UNLOCKED){toast("관리자 전체 수정 모드입니다.");return}
   if(isUnlocked(o.id)){
     if(dirty){toast("저장 버튼을 눌러 변경사항을 먼저 저장해 주세요.");return}
     clearPin(o.id);render();toast("수정을 잠갔어요.");
   }else ensureUnlocked();
 };
-document.getElementById("addOwner").onclick=function(){
-  var current=owner();if(!current)return;
-  ensureUnlocked().then(function(ok){
-    if(!ok)return;
-    var adminCode=(prompt("새 주인을 추가하려면 관리자 번호를 입력해 주세요.")||"").trim();
-    if(!adminCode)return;
-    var name=(prompt("새 보스판의 주인 이름을 입력해 주세요. 예: 웃토")||"").trim();
-    if(!name)return;
-    var newPin=(prompt("“"+name+"”의 수정 비밀번호를 숫자 4~12자리로 입력해 주세요.")||"").trim();
-    if(!/^\d{4,12}$/.test(newPin)){toast("비밀번호는 숫자 4~12자리로 입력해 주세요.");return}
-    return callApi("create_owner",{authorizingOwnerId:current.id,pin:getPin(current.id),adminCode:adminCode,name:name,newPin:newPin}).then(function(data){
-      applyPayload(data);activeOwnerId=data.newOwnerId;localStorage.setItem(ACTIVE_KEY,activeOwnerId);setPin(activeOwnerId,newPin);render();toast(name+" 보스판을 만들었어요.")
-    }).catch(function(e){toast(e.message||"새 보스판을 만들지 못했습니다.")});
+
+document.getElementById("adminUnlock").onclick=function(){
+  if(ADMIN_UNLOCKED){
+    if(dirty){toast("저장 버튼을 눌러 변경사항을 먼저 저장해 주세요.");return}
+    ADMIN_UNLOCKED=false;ADMIN_CODE="";
+    render();
+    toast("관리자 전체 수정을 종료했어요.");
+    return;
+  }
+  var code=(prompt("관리자 번호를 입력해 주세요.")||"").trim();
+  if(!code)return;
+  callApi("verify_admin",{adminCode:code}).then(function(){
+    ADMIN_CODE=code;
+    ADMIN_UNLOCKED=true;
+    render();
+    toast("전체 보스판 관리자 수정을 시작했어요.");
+  }).catch(function(e){
+    ADMIN_CODE="";ADMIN_UNLOCKED=false;
+    toast(e.message||"관리자 번호가 맞지 않습니다.");
   });
 };
-document.getElementById("renameOwner").onclick=function(){var o=owner();if(!o||!isUnlocked(o.id))return;var n=(prompt("주인 이름을 수정해 주세요.",o.name)||"").trim();if(!n||n===o.name)return;callApi("rename_owner",{ownerId:o.id,pin:getPin(o.id),newName:n}).then(function(data){applyPayload(data);render();toast("주인 이름을 변경했어요.")}).catch(function(e){toast(e.message||"이름을 변경하지 못했습니다.")})};
+document.getElementById("addOwner").onclick=function(){
+  var current=owner();if(!current)return;
+  var adminCode=ADMIN_UNLOCKED?ADMIN_CODE:(prompt("새 주인을 추가하려면 관리자 번호를 입력해 주세요.")||"").trim();
+  if(!adminCode)return;
+  var name=(prompt("새 보스판의 주인 이름을 입력해 주세요. 예: 웃토")||"").trim();
+  if(!name)return;
+  var newPin=(prompt("“"+name+"”의 수정 비밀번호를 숫자 4~12자리로 입력해 주세요.")||"").trim();
+  if(!/^\d{4,12}$/.test(newPin)){toast("비밀번호는 숫자 4~12자리로 입력해 주세요.");return}
+  callApi("create_owner",{adminCode:adminCode,name:name,newPin:newPin}).then(function(data){
+    applyPayload(data);activeOwnerId=data.newOwnerId;localStorage.setItem(ACTIVE_KEY,activeOwnerId);
+    if(!ADMIN_UNLOCKED)setPin(activeOwnerId,newPin);
+    render();toast(name+" 보스판을 만들었어요.");
+  }).catch(function(e){toast(e.message||"새 보스판을 만들지 못했습니다.")});
+};
+document.getElementById("renameOwner").onclick=function(){var o=owner();if(!o||!isUnlocked(o.id))return;var n=(prompt("주인 이름을 수정해 주세요.",o.name)||"").trim();if(!n||n===o.name)return;callApi("rename_owner",{ownerId:o.id,pin:getPin(o.id),adminCode:ADMIN_UNLOCKED?ADMIN_CODE:"",newName:n}).then(function(data){applyPayload(data);render();toast("주인 이름을 변경했어요.")}).catch(function(e){toast(e.message||"이름을 변경하지 못했습니다.")})};
 document.getElementById("changePinOwner").onclick=function(){
   var o=owner();if(!o||!isUnlocked(o.id))return;
   var first=(prompt("새 수정 비밀번호를 숫자 4~12자리로 입력해 주세요.")||"").trim();
@@ -801,8 +831,8 @@ document.getElementById("changePinOwner").onclick=function(){
   if(!/^\d{4,12}$/.test(first)){toast("비밀번호는 숫자 4~12자리로 입력해 주세요.");return}
   var second=(prompt("새 비밀번호를 한 번 더 입력해 주세요.")||"").trim();
   if(first!==second){toast("새 비밀번호가 서로 다릅니다.");return}
-  callApi("change_pin",{ownerId:o.id,currentPin:getPin(o.id),newPin:first}).then(function(){
-    setPin(o.id,first);
+  callApi("change_pin",{ownerId:o.id,currentPin:getPin(o.id),adminCode:ADMIN_UNLOCKED?ADMIN_CODE:"",newPin:first}).then(function(){
+    if(!ADMIN_UNLOCKED)setPin(o.id,first);
     render();
     toast("비밀번호를 변경했어요.");
   }).catch(function(e){toast(e.message||"비밀번호를 변경하지 못했습니다.")});
@@ -810,7 +840,7 @@ document.getElementById("changePinOwner").onclick=function(){
 
 document.getElementById("removeOwner").onclick=function(){
   var o=owner();if(!o||!isUnlocked(o.id))return;
-  var adminCode=(prompt("현재 주인을 삭제하려면 관리자 번호를 입력해 주세요.")||"").trim();
+  var adminCode=ADMIN_UNLOCKED?ADMIN_CODE:(prompt("현재 주인을 삭제하려면 관리자 번호를 입력해 주세요.")||"").trim();
   if(!adminCode)return;
   if(!confirm("“"+o.name+"” 보스판 전체를 삭제할까요?\n삭제 후 되돌릴 수 없습니다."))return;
   callApi("delete_owner",{ownerId:o.id,pin:getPin(o.id),adminCode:adminCode}).then(function(data){
