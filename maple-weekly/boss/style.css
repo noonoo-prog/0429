@@ -1001,3 +1001,208 @@ body.picker-open{overflow:hidden}
     text-align:left;
   }
 }
+
+
+/* mobile overflow containment fix */
+html,body{overflow-x:hidden}
+
+@media(max-width:760px){
+  .mobile-board,
+  .mobile-compact-list,
+  .compact-boss-card,
+  .compact-main,
+  .compact-name-wrap,
+  .mobile-character-head,
+  .mobile-character-head>div,
+  .mobile-search-group,
+  .mobile-search-group>header{
+    min-width:0;
+  }
+
+  .mobile-compact-list .compact-boss-card{
+    width:100%;
+    max-width:100%;
+    overflow:hidden;
+  }
+
+  .mobile-compact-list .compact-main{
+    display:grid;
+    grid-template-columns:72px minmax(0,1fr) 42px 46px;
+    column-gap:6px;
+    align-items:center;
+    width:100%;
+    max-width:100%;
+    min-width:0;
+  }
+
+  .mobile-compact-list .compact-difficulty{
+    width:72px;
+    min-width:72px;
+    max-width:72px;
+  }
+
+  .mobile-compact-list .compact-name-wrap{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    align-items:flex-start;
+    text-align:left;
+  }
+
+  .mobile-compact-list .compact-boss-name{
+    display:block;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    text-align:left;
+    font-size:16px;
+    line-height:1.05;
+  }
+
+  .mobile-compact-list .compact-sync{
+    display:block;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    text-align:left;
+    font-size:8px;
+    line-height:1.05;
+  }
+
+  .mobile-compact-list .compact-count-slot{
+    width:42px;
+    min-width:42px;
+    max-width:42px;
+    overflow:hidden;
+    justify-content:flex-end;
+    text-align:right;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-count{
+    width:42px;
+    min-width:42px;
+    max-width:42px;
+    height:28px;
+    padding:0 13px 0 2px;
+    font-size:12px;
+    text-align:right;
+    text-align-last:right;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-count:disabled{
+    width:42px;
+    min-width:42px;
+    max-width:42px;
+    padding:0 2px;
+    text-align:right;
+    text-align-last:right;
+  }
+
+  .mobile-compact-list .compact-count-slot .compact-solo{
+    width:42px;
+    min-width:42px;
+    max-width:42px;
+    text-align:right;
+  }
+
+  .mobile-compact-list .compact-income-slot{
+    width:46px;
+    min-width:46px;
+    max-width:46px;
+    overflow:hidden;
+    justify-content:flex-end;
+    text-align:right;
+  }
+
+  .mobile-compact-list .compact-income{
+    display:block;
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    margin:0;
+    padding:0;
+    overflow:hidden;
+    text-overflow:clip;
+    white-space:nowrap;
+    text-align:right;
+    justify-content:flex-end;
+    font-size:10px;
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+    background:none;
+  }
+
+  .mobile-compact-list .compact-income.missing{
+    font-size:8px;
+  }
+
+  .mobile-compact-list .compact-party-members{
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    padding-left:78px;
+    padding-right:0;
+    margin-top:2px;
+    gap:1px 4px;
+    justify-content:flex-start;
+    text-align:left;
+    white-space:nowrap;
+  }
+
+  .mobile-compact-list .compact-member{
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:11px;
+    line-height:1.05;
+  }
+
+  .mobile-character-head{
+    width:100%;
+    max-width:100%;
+    overflow:hidden;
+    gap:7px;
+  }
+
+  .mobile-character-head>div:first-child{
+    flex:1;
+    min-width:0;
+    overflow:hidden;
+  }
+
+  .mobile-character-name-line{
+    min-width:0;
+    overflow:hidden;
+  }
+
+  .mobile-character-name-line>strong{
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .mobile-char-actions{
+    flex:none;
+    min-width:0;
+  }
+
+  .mobile-owner-total,
+  .owner-weekly-total,
+  .representative-total{
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+}
