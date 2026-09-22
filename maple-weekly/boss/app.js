@@ -72,6 +72,7 @@ let CHECKLIST_MONTH=(function(){
 let CHECKLISTS={};
 let BOSS_RUN_CHECKS={};
 let SELECTED_RUN_DATES={};
+let CHECKLIST_SELECTED_DATE="";
 let CHECKLIST_LOADED=false;
 let CHECKLIST_LOADING=false;
 let CHECKLIST_SAVING="";
@@ -204,7 +205,60 @@ function changeChecklistMonth(delta){
   var next=d.getUTCFullYear()+"-"+pad2(d.getUTCMonth()+1);
   if(next<"2026-09")return;
   CHECKLIST_MONTH=next;
+  CHECKLIST_SELECTED_DATE="";
   renderChecklist();
+}
+function weekStartForDate(dateKey){
+  var d=parseDateUTC(dateKey);
+  var delta=(d.getUTCDay()-4+7)%7;
+  return dateKeyUTC(addDaysUTC(d,-delta));
+}
+function monthGridDates(monthKey){
+  var p=monthKey.split("-").map(Number),y=p[0],m=p[1]-1;
+  var first=new Date(Date.UTC(y,m,1));
+  var last=new Date(Date.UTC(y,m+1,0));
+  var startDelta=(first.getUTCDay()-4+7)%7;
+  var start=addDaysUTC(first,-startDelta);
+  var endDelta=(3-last.getUTCDay()+7)%7;
+  var end=addDaysUTC(last,endDelta);
+  var out=[];
+  for(var d=new Date(start.getTime());d<=end;d=addDaysUTC(d,1))out.push(dateKeyUTC(d));
+  return out;
+}
+function defaultSelectedDateForMonth(monthKey){
+  if(monthKey==="2026-09")return CHECKLIST_START;
+  return monthKey+"-01";
+}
+function selectedCalendarDate(){
+  if(!CHECKLIST_SELECTED_DATE || CHECKLIST_SELECTED_DATE.slice(0,7)!==CHECKLIST_MONTH){
+    CHECKLIST_SELECTED_DATE=defaultSelectedDateForMonth(CHECKLIST_MONTH);
+  }
+  if(CHECKLIST_SELECTED_DATE<CHECKLIST_START)CHECKLIST_SELECTED_DATE=CHECKLIST_START;
+  return CHECKLIST_SELECTED_DATE;
+}
+function setSelectedCalendarDate(dateKey){
+  if(dateKey<CHECKLIST_START)return;
+  CHECKLIST_SELECTED_DATE=dateKey;
+  renderChecklist();
+}
+function monthRunStats(ownerId,monthKey){
+  var total=0,count=0;
+  var ownerRuns=BOSS_RUN_CHECKS[ownerId]||{};
+  Object.keys(ownerRuns).forEach(function(weekStart){
+    var week=ownerRuns[weekStart]||{};
+    Object.keys(week).forEach(function(characterName){
+      var bosses=week[characterName]||{};
+      Object.keys(bosses).forEach(function(bossName){
+        var x=bosses[bossName];
+        var runDate=x&&String(x.runDate||weekStart);
+        if(x&&x.completed&&runDate.slice(0,7)===monthKey){
+          count++;
+          total+=Math.max(0,Number(x.meso)||0);
+        }
+      });
+    });
+  });
+  return{count:count,total:total};
 }
 function bossRunItem(ownerId,weekStart,characterName,bossName){
   var o=BOSS_RUN_CHECKS[ownerId];
@@ -369,117 +423,109 @@ function renderChecklist(){
     return;
   }
 
-  var weeks=monthWeeks(CHECKLIST_MONTH);
   var p=CHECKLIST_MONTH.split("-"),monthNum=Number(p[1]),title=Number(p[0])+"년 "+monthNum+"월";
   var theme=ownerTheme(o.name);
-  var monthMeso=weeks.reduce(function(sum,w){return sum+sumBossRunMeso(o.id,w.start);},0);
-  var completedWeeks=weeks.filter(function(w){
-    var x=weekRunProgress(o.id,w.start);
-    return x.total>0&&x.done===x.total;
-  }).length;
+  var gridDates=monthGridDates(CHECKLIST_MONTH);
+  var pickedDate=selectedCalendarDate();
+  var pickedWeek=weekStartForDate(pickedDate);
+  var pickedWeekEnd=dateKeyUTC(addDaysUTC(parseDateUTC(pickedWeek),6));
+  var progress=weekRunProgress(o.id,pickedWeek);
+  var weekMeso=sumBossRunMeso(o.id,pickedWeek);
+  var weekEstimate=Math.round(ownerWeeklyIncome());
+  var monthStats=monthRunStats(o.id,CHECKLIST_MONTH);
 
-  var h='<div class="checklist-card calendar-checklist owner-themed" data-theme="'+theme+'">'+
+  var h='<div class="checklist-card monthly-calendar owner-themed" data-theme="'+theme+'">'+
     '<div class="checklist-toolbar">'+
       '<button class="checklist-month-btn" data-month-move="-1" '+(CHECKLIST_MONTH==="2026-09"?"disabled":"")+' aria-label="이전 달">‹</button>'+
       '<div class="checklist-month-title"><strong>'+title+'</strong>'+
-        '<span>'+esc(o.name)+' · '+completedWeeks+'/'+weeks.length+'주 전체 완료</span>'+
-        '<b class="checklist-month-meso">월 누적 획득 '+formatEok(monthMeso)+'</b>'+
+        '<span>'+esc(o.name)+' · '+monthStats.count+'개 보스 완료</span>'+
+        '<b class="checklist-month-meso">월 누적 획득 '+formatEok(monthStats.total)+'</b>'+
       '</div>'+
       '<button class="checklist-month-btn" data-month-move="1" aria-label="다음 달">›</button>'+
     '</div>'+
-    '<div class="calendar-weekdays">'+
+    '<div class="calendar-weekdays month-weekdays">'+
       '<span>목</span><span>금</span><span class="weekday-sat">토</span><span class="weekday-sun">일</span><span>월</span><span>화</span><span>수</span>'+
     '</div>'+
-    '<div class="calendar-weeks">';
+    '<div class="month-calendar-grid">';
 
-  if(!weeks.length){
-    h+='<div class="checklist-empty">2026년 9월 24일부터 체크리스트가 시작됩니다.</div>';
-  }else{
-    weeks.forEach(function(w,wi){
-      var progress=weekRunProgress(o.id,w.start);
-      var weekMeso=sumBossRunMeso(o.id,w.start);
-      var weekEstimate=Math.round(ownerWeeklyIncome());
-      var weekDone=progress.total>0&&progress.done===progress.total;
-      var pickedDate=selectedRunDate(w.start);
+  gridDates.forEach(function(dateKey,index){
+    var d=parseDateUTC(dateKey);
+    var weekStart=weekStartForDate(dateKey);
+    var dayData=dayRunData(o.id,weekStart,dateKey);
+    var outside=dateKey.slice(0,7)!==CHECKLIST_MONTH;
+    var disabled=dateKey<CHECKLIST_START;
+    var column=index%7;
+    var weekendClass=column===2?" saturday":(column===3?" sunday":"");
+    var selected=dateKey===pickedDate;
 
-      h+='<section class="calendar-week-row '+(weekDone?"done":"")+'">'+
-        '<div class="calendar-days">';
-      for(var di=0;di<7;di++){
-        var d=addDaysUTC(parseDateUTC(w.start),di);
-        var dateKey=dateKeyUTC(d);
-        var outside=(d.getUTCMonth()+1)!==monthNum;
-        var dayData=dayRunData(o.id,w.start,dateKey);
-        var dayClass=(di===2?" saturday":(di===3?" sunday":""));
-        var selected=dateKey===pickedDate;
-        h+='<button type="button" class="calendar-day'+dayClass+(outside?" outside":"")+(selected?" selected":"")+'" data-run-date="'+dateKey+'" data-week="'+w.start+'">'+
-          '<small>'+formatShortDate(d)+'</small>'+
-          (di===0?'<b class="week-chip">'+(wi+1)+'주차</b>':'')+
-          '<span class="calendar-day-runs">';
-        dayData.entries.slice(0,3).forEach(function(entry){
-          h+='<em>'+esc(entry.boss)+' <strong>'+formatEok(entry.meso)+'</strong></em>';
-        });
-        if(dayData.entries.length>3)h+='<em class="more">+'+(dayData.entries.length-3)+'개</em>';
-        h+='</span>'+
-          (dayData.total>0?'<span class="calendar-day-total">총 '+formatEok(dayData.total)+'</span>':'')+
-        '</button>';
-      }
+    h+='<button type="button" class="month-day'+weekendClass+(outside?" outside":"")+(disabled?" disabled":"")+(selected?" selected":"")+'" data-month-date="'+dateKey+'" '+(disabled?"disabled":"")+'>'+
+      '<span class="month-day-date">'+formatShortDate(d)+'</span>'+
+      '<span class="month-day-runs">';
 
-      h+='</div>'+
-        '<div class="week-run-head">'+
-          '<div><strong>'+formatShortDate(parseDateUTC(pickedDate))+'에 잡은 보스 체크</strong>'+
-          '<span>'+progress.done+'/'+progress.total+' 주간 보스 완료 · 날짜를 누르면 체크 날짜가 바뀝니다.</span></div>'+
-          '<div class="week-run-money"><small>주간 획득</small><b>'+formatEok(weekMeso)+'</b><em>예상 '+formatEok(weekEstimate)+'</em></div>'+
-        '</div>'+
-        '<div class="character-run-grid">';
-
-      st.players.forEach(function(characterName,pi){
-        var bosses=plannedWeeklyBossesForCharacter(pi);
-        var charEarned=sumBossRunMeso(o.id,w.start,characterName);
-        var charEstimate=Math.round(characterWeeklyIncome(pi));
-        var charDone=bosses.filter(function(b){return bossRunItem(o.id,w.start,characterName,b).completed}).length;
-
-        h+='<section class="character-run-card">'+
-          '<header class="character-run-head">'+
-            '<div><strong>'+esc(characterName)+'</strong><span>'+charDone+'/'+bosses.length+' 완료</span></div>'+
-            '<div><small>획득</small><b>'+formatEok(charEarned)+'</b><em>/ '+formatEok(charEstimate)+'</em></div>'+
-          '</header>'+
-          '<div class="boss-run-list">';
-
-        if(!bosses.length){
-          h+='<div class="boss-run-empty">등록된 주간 보스 없음</div>';
-        }else{
-          bosses.forEach(function(b){
-            var c=st.cells[b][pi]||emptyCell();
-            var item=bossRunItem(o.id,w.start,characterName,b);
-            var checked=!!item.completed;
-            var payout=checked?Math.max(0,Number(item.meso)||0):Math.round(bossWeeklyIncome(b,c));
-            var saveKey=o.id+"|"+w.start+"|"+characterName+"|"+b;
-            var saving=CHECKLIST_SAVING===saveKey;
-            var runLabel=checked&&item.runDate?formatShortDate(parseDateUTC(item.runDate))+" 완료":formatShortDate(parseDateUTC(pickedDate))+"에 체크";
-            h+='<label class="boss-run-row '+(checked?"done":"")+'">'+
-              '<input class="boss-run-checkbox" type="checkbox" data-week="'+w.start+'" data-run-date="'+pickedDate+'" data-character="'+esc(characterName)+'" data-pi="'+pi+'" data-boss="'+esc(b)+'" '+(checked?"checked":"")+' '+(saving?"disabled":"")+'>'+
-              '<span class="boss-run-check">'+(checked?"✓":"")+'</span>'+
-              '<span class="boss-run-name"><strong>'+esc(b)+'</strong><small>'+esc(c.difficulty||"")+' · '+runLabel+'</small></span>'+
-              '<span class="boss-run-meso"><small>'+(checked?"획득":"예상")+'</small><b>'+formatEok(payout)+'</b></span>'+
-            '</label>';
-          });
-        }
-
-        h+='</div></section>';
-      });
-
-      h+='</div></section>';
+    dayData.entries.slice(0,4).forEach(function(entry){
+      h+='<em><i>'+esc(entry.character)+'</i> '+esc(entry.boss)+' <strong>'+formatEok(entry.meso)+'</strong></em>';
     });
-  }
+    if(dayData.entries.length>4)h+='<em class="more">+'+(dayData.entries.length-4)+'개</em>';
 
-  h+='</div></div>';
+    h+='</span>'+
+      (dayData.total>0?'<span class="month-day-total">총 '+formatEok(dayData.total)+'</span>':'')+
+    '</button>';
+  });
+
+  h+='</div>'+
+    '<section class="selected-day-panel">'+
+      '<div class="week-run-head selected-day-head">'+
+        '<div><strong>'+formatShortDate(parseDateUTC(pickedDate))+'에 잡은 보스 체크</strong>'+
+        '<span>'+formatShortDate(parseDateUTC(pickedWeek))+' 목 ~ '+formatShortDate(parseDateUTC(pickedWeekEnd))+' 수 · '+progress.done+'/'+progress.total+' 보스 완료</span></div>'+
+        '<div class="week-run-money"><small>주간 획득</small><b>'+formatEok(weekMeso)+'</b><em>예상 '+formatEok(weekEstimate)+'</em></div>'+
+      '</div>'+
+      '<div class="character-run-grid">';
+
+  st.players.forEach(function(characterName,pi){
+    var bosses=plannedWeeklyBossesForCharacter(pi);
+    var charEarned=sumBossRunMeso(o.id,pickedWeek,characterName);
+    var charEstimate=Math.round(characterWeeklyIncome(pi));
+    var charDone=bosses.filter(function(b){return bossRunItem(o.id,pickedWeek,characterName,b).completed}).length;
+
+    h+='<section class="character-run-card">'+
+      '<header class="character-run-head">'+
+        '<div><strong>'+esc(characterName)+'</strong><span>'+charDone+'/'+bosses.length+' 완료</span></div>'+
+        '<div><small>획득</small><b>'+formatEok(charEarned)+'</b><em>/ '+formatEok(charEstimate)+'</em></div>'+
+      '</header>'+
+      '<div class="boss-run-list">';
+
+    if(!bosses.length){
+      h+='<div class="boss-run-empty">등록된 주간 보스 없음</div>';
+    }else{
+      bosses.forEach(function(b){
+        var c=st.cells[b][pi]||emptyCell();
+        var item=bossRunItem(o.id,pickedWeek,characterName,b);
+        var checked=!!item.completed;
+        var payout=checked?Math.max(0,Number(item.meso)||0):Math.round(bossWeeklyIncome(b,c));
+        var saveKey=o.id+"|"+pickedWeek+"|"+characterName+"|"+b;
+        var saving=CHECKLIST_SAVING===saveKey;
+        var runLabel=checked&&item.runDate?formatShortDate(parseDateUTC(item.runDate))+" 완료":formatShortDate(parseDateUTC(pickedDate))+"에 체크";
+
+        h+='<label class="boss-run-row '+(checked?"done":"")+'">'+
+          '<input class="boss-run-checkbox" type="checkbox" data-week="'+pickedWeek+'" data-run-date="'+pickedDate+'" data-character="'+esc(characterName)+'" data-pi="'+pi+'" data-boss="'+esc(b)+'" '+(checked?"checked":"")+' '+(saving?"disabled":"")+'>'+
+          '<span class="boss-run-check">'+(checked?"✓":"")+'</span>'+
+          '<span class="boss-run-name"><strong>'+esc(b)+'</strong><small>'+esc(c.difficulty||"")+' · '+runLabel+'</small></span>'+
+          '<span class="boss-run-meso"><small>'+(checked?"획득":"예상")+'</small><b>'+formatEok(payout)+'</b></span>'+
+        '</label>';
+      });
+    }
+
+    h+='</div></section>';
+  });
+
+  h+='</div></section></div>';
   panel.innerHTML=h;
 
   Array.prototype.forEach.call(panel.querySelectorAll("[data-month-move]"),function(btn){
     btn.onclick=function(){changeChecklistMonth(Number(btn.dataset.monthMove)||0)};
   });
-  Array.prototype.forEach.call(panel.querySelectorAll(".calendar-day[data-run-date]"),function(btn){
-    btn.onclick=function(){setSelectedRunDate(btn.dataset.week,btn.dataset.runDate)};
+  Array.prototype.forEach.call(panel.querySelectorAll(".month-day[data-month-date]"),function(btn){
+    btn.onclick=function(){setSelectedCalendarDate(btn.dataset.monthDate)};
   });
   Array.prototype.forEach.call(panel.querySelectorAll(".boss-run-checkbox"),function(input){
     input.onchange=function(){
