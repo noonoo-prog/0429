@@ -17,25 +17,38 @@
   <div>
     <div class="toolbar">
       <button class="btn primary" id="addPlayer">+ 캐릭터 추가</button>
-      <button class="btn" id="shareBtn">공유 링크 복사</button>
-      <button class="btn" id="resetBtn">원본으로 초기화</button>
+      <button class="btn" id="shareBtn">주소 복사</button>
+      <button class="btn" id="reloadBtn">새로고침</button>
     </div>
-    <div class="save"><span></span><b id="saveText">이 브라우저에 자동 저장됨</b></div>
+    <div class="save"><span></span><b id="saveText">공용 DB 연결 중…</b></div>
   </div>
 </header>
+
 <div class="ownerbar">
   <div class="owners" id="ownerTabs"></div>
   <button class="owner-add" id="addOwner">+ 주인 추가</button>
   <div class="owner-tools">
+    <button class="btn" id="unlockOwner">수정 잠금 해제</button>
     <button class="btn" id="renameOwner">주인 이름 수정</button>
     <button class="btn" id="removeOwner">주인 삭제</button>
   </div>
 </div>
+
 <div class="board-title" id="boardTitle"></div>
-<section class="shell"><div class="scroll"><table id="board"></table></div></section>
-<p class="hint">난이도가 설정된 주간 보스는 1건으로 계산합니다. 캐릭터당 최대 12건이며 검은 마법사는 월간이라 주간 제한에 포함되지 않습니다. 데미안·루시드·윌·더스크·진힐라·듄켈은 1인 고정입니다.</p>
+
+<section class="shell">
+  <div class="scroll">
+    <table id="board"></table>
+  </div>
+</section>
+
+<p class="hint">
+  난이도가 설정된 주간 보스는 1건으로 계산합니다. 캐릭터당 최대 12건이며 검은 마법사는 월간이라 주간 제한에 포함되지 않습니다.
+  데미안·루시드·윌·더스크·진힐라·듄켈은 1인 고정입니다.
+  다른 주인의 닉네임을 파티원으로 입력하면 해당 주인의 보스판에도 자동으로 대칭 반영됩니다.
+</p>
 </div>
 <div class="toast" id="toast"></div>
-<script src="./app.js"></script>
+<script type="module" src="./app.js"></script>
 </body>
 </html>
