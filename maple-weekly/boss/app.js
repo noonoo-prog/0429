@@ -548,6 +548,12 @@ function bindCharacterReorder(root,enabled){
   });
 }
 
+function desktopRowColumns(total){
+  var w=Math.min(window.innerWidth||1600,1600);
+  var maxCols=w>=1380?6:w>=1160?5:w>=960?4:3;
+  return Math.max(1,Math.min(total,maxCols));
+}
+
 function renderDesktop(){
   var st=state(),root=document.getElementById("desktopBoard");
   if(!st){root.innerHTML="";return}
@@ -570,7 +576,7 @@ function renderDesktop(){
     root.innerHTML=h+'<div class="search-empty"><strong>일치하는 파티가 없어요.</strong><span>다른 닉네임으로 검색해 보세요.</span></div>';
     return;
   }
-  var cols=visible.length,rowCols=Math.max(1,Math.min(cols,6));
+  var cols=visible.length,rowCols=desktopRowColumns(cols);
   h+='<div class="character-columns '+(q?"is-searching":"")+'" style="--cols:'+cols+';--row-cols:'+rowCols+'">';
   visible.forEach(function(item){
     var p=item.p,pi=item.pi,w=weekly(pi),m=monthly(pi);
