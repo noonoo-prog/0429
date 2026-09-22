@@ -362,8 +362,11 @@ function compactDifficultySelect(c,editable,bi,pi){
 }
 function compactCountSelect(c,editable,bi,pi){
   if(!planned(c))return "";
-  if(SOLO.has(BOSSES[bi]))return '<span class="compact-solo" aria-label="1인">1인</span>';
-  return '<select class="compact-count" aria-label="파티 인원" data-mobile-count="1" data-b="'+bi+'" data-p="'+pi+'" '+(editable?"":"disabled")+'>'+
+  if(SOLO.has(BOSSES[bi]))return '<span class="compact-solo" aria-label="1인"></span>';
+  if(!editable){
+    return '<span class="compact-solo">'+(c.count>1?c.count+"인":"")+'</span>';
+  }
+  return '<select class="compact-count" aria-label="파티 인원" data-mobile-count="1" data-b="'+bi+'" data-p="'+pi+'">'+
     '<option value="0" '+(!c.count?"selected":"")+'>인원</option>'+
     [1,2,3,4,5,6].map(function(n){return '<option value="'+n+'" '+(c.count===n?"selected":"")+'>'+n+'인</option>'}).join("")+
   '</select>';
