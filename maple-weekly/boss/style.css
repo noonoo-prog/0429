@@ -170,6 +170,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .owner-tab[data-theme="peacock"],.owner-themed[data-theme="peacock"]{--owner-accent:#7b2943;--owner-line:#bd8295}
 .owner-tab[data-theme="dream"],.owner-themed[data-theme="dream"]{--owner-accent:#4a9460;--owner-line:#a7d2b2}
 .owner-tab[data-theme="sky"],.owner-themed[data-theme="sky"]{--owner-accent:#519fc5;--owner-line:#a8d4e8}
+.owner-tab[data-theme="ochre"],.owner-themed[data-theme="ochre"]{--owner-accent:#a86f2d;--owner-line:#d8b77f}
 .owner-tab[data-theme="default"],.owner-themed[data-theme="default"]{--owner-accent:#68707c;--owner-line:#cdd1d7}
 
 /* party picker */
