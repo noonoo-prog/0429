@@ -361,6 +361,14 @@ function renderPartyPicker(query){
   var used=(c.names||[]).filter(function(_,i){return i!==PICKER.mi}).map(function(x){return String(x||"").trim()}).filter(Boolean);
   var needle=String(query||"").trim().toLowerCase();
   var html="";
+  if(!needle||"미정".indexOf(needle)>=0){
+    html+='<section class="picker-owner-group picker-tbd-group">'+
+      '<div class="picker-owner-title picker-tbd-title">파티원 미정</div>'+
+      '<div class="picker-grid">'+
+        '<button class="picker-character picker-tbd-character '+(current==="미정"?"selected":"")+'" data-pick-tbd="1">미정</button>'+
+      '</div>'+
+    '</section>';
+  }
   APP.owners.forEach(function(o){
     var theme=ownerTheme(o.name);
     var chars=((o.board&&o.board.players)||[]).filter(function(name){
@@ -379,6 +387,16 @@ function renderPartyPicker(query){
   });
   if(!html)html='<div class="picker-empty">검색 결과가 없습니다.</div>';
   var root=document.getElementById("partyPickerContent");root.innerHTML=html;
+  Array.prototype.forEach.call(root.querySelectorAll("[data-pick-tbd]"),function(btn){
+    btn.onclick=function(){
+      if(!PICKER)return;
+      var st2=state(),cell=st2.cells[BOSSES[PICKER.bi]][PICKER.pi];
+      cell.names[PICKER.mi]="미정";
+      queueSave();
+      closePartyPicker();
+      render();
+    };
+  });
   Array.prototype.forEach.call(root.querySelectorAll("[data-pick-character]:not(:disabled)"),function(btn){
     btn.onclick=function(){
       if(!PICKER)return;
@@ -434,9 +452,10 @@ function compactPartyMembers(c,bi,pi,editable){
   h+='<span class="compact-member compact-member-self owner-themed" data-theme="'+selfTheme+'">'+esc(selfName)+'</span>';
   for(var i=0;i<c.count-1;i++){
     var name=(c.names&&c.names[i])||"";
-    var owned=name?characterOwner(name):null;
+    var owned=name&&name!=="미정"?characterOwner(name):null;
     var theme=owned?ownerTheme(owned.name):"default";
-    h+='<button class="compact-member party-picker-trigger owner-themed '+(name?"":"empty")+'" data-theme="'+theme+'" data-b="'+bi+'" data-p="'+pi+'" data-m="'+i+'" '+(editable?"":"disabled")+'>'+esc(name||"파티원")+'</button>';
+    var memberClass=name==="미정"?"tbd":(name?"":"empty");
+    h+='<button class="compact-member party-picker-trigger owner-themed '+memberClass+'" data-theme="'+theme+'" data-b="'+bi+'" data-p="'+pi+'" data-m="'+i+'" '+(editable?"":"disabled")+'>'+esc(name||"파티원")+'</button>';
   }
   return h+'</div>';
 }
