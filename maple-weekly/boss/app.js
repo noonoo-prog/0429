@@ -396,8 +396,8 @@ function compactBossCard(b,bi,c,pi,unlocked){
     '<div class="compact-main">'+
       compactDifficultySelect(c,editable,bi,pi)+
       '<div class="compact-name-wrap"><strong class="compact-boss-name">'+esc(b)+'</strong>'+sync+'</div>'+
-      income+
       '<div class="compact-count-slot">'+compactCountSelect(c,editable,bi,pi)+'</div>'+
+      income+
     '</div>'+
     compactPartyMembers(c,bi,pi,editable)+
   '</article>';
