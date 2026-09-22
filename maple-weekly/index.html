@@ -82,7 +82,18 @@ function updateMobileLabels(){document.querySelectorAll('[data-char-label]').for
 function utf8ToBase64(str){const bytes=new TextEncoder().encode(str);let binary='';bytes.forEach(b=>binary+=String.fromCharCode(b));return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function base64ToUtf8(str){str=str.replace(/-/g,'+').replace(/_/g,'/');while(str.length%4)str+='=';const binary=atob(str),bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes)}
 function makeSharePayload(){const p=getActiveSharedPlan();return{v:3,week:p&&p.week?p.week:weekKey,charCount,names,data}}
-function buildShareUrl(){const payload=utf8ToBase64(JSON.stringify(makeSharePayload()));const u=new URL(location.href);u.hash='';u.searchParams.set('v','3');return `${u.toString()}#plan=${payload}`}
+function buildShareUrl(){
+  const payload=utf8ToBase64(JSON.stringify(makeSharePayload()));
+  const u=new URL(location.href);
+  u.hash='';
+  u.search='';
+  let p=u.pathname;
+  if(/\/s\/(?:index\.html)?$/.test(p)) p=p.replace(/\/s\/(?:index\.html)?$/, '/');
+  else p=p.replace(/\/index\.html$/, '/');
+  if(!p.endsWith('/')) p+='/';
+  u.pathname=p+'s/';
+  return `${u.toString()}#plan=${payload}`;
+}#plan=${payload}`}
 function showShareMessage(text){const note=document.getElementById('shareNote');note.textContent=text;note.classList.add('show');setTimeout(()=>note.classList.remove('show'),5000)}
 async function shareCurrentPlan(){save();const shareUrl=buildShareUrl(),shareData={title:'주간 계획표',text:`주간 계획표 ${weekKey}`,url:shareUrl};try{if(navigator.share){await navigator.share(shareData);return}await navigator.clipboard.writeText(shareUrl);showShareMessage('현재 계획이 포함된 링크를 복사했어요.')}catch(err){if(err&&err.name==='AbortError')return;try{await navigator.clipboard.writeText(shareUrl);showShareMessage('현재 계획이 포함된 링크를 복사했어요.')}catch{prompt('이 링크를 복사해서 공유하세요.',shareUrl)}}}
 function importSharedPlan(){if(!location.hash.startsWith('#plan='))return null;try{const encoded=location.hash.slice(6),shared=JSON.parse(base64ToUtf8(encoded));if(!shared||![1,2,3].includes(shared.v)||!Array.isArray(shared.names)||!shared.data)return null;const id=makeSharedId(encoded),item={id,receivedAt:Date.now(),week:shared.week||weekKey,charCount:Math.min(6,Math.max(1,Number(shared.charCount||1))),names:shared.names.slice(0,6),data:deepCopy(shared.data)};while(item.names.length<6)item.names.push(`이름 ${item.names.length+1}`);const i=sharedPlans.findIndex(p=>p.id===id);if(i>=0)sharedPlans[i]=item;else sharedPlans.unshift(item);sharedPlans=sharedPlans.slice(0,20);saveSharedPlans();loadSharedState(id);history.replaceState(null,'',location.href.split('#')[0]);setTimeout(()=>showShareMessage('공유받은 계획을 별도로 저장했어요. 내 계획은 그대로 유지됩니다.'),0);return id}catch(e){console.warn('공유 불러오기 실패',e);return null}}
