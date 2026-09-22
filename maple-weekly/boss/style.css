@@ -2098,3 +2098,30 @@ html,body{overflow-x:hidden}
     max-width:58px;
   }
 }
+
+
+/* party member TBD state */
+.picker-tbd-group{
+  padding-top:4px;
+  padding-bottom:12px;
+  border-bottom:1px solid #e7e9ed;
+}
+.picker-tbd-title{
+  color:#727985!important;
+}
+.picker-tbd-character{
+  border-style:dashed!important;
+  border-color:#cfd4db!important;
+  background:#f7f8fa!important;
+  color:#6f7680!important;
+}
+.picker-tbd-character.selected{
+  border-style:solid!important;
+  border-color:#8b9098!important;
+  background:#737a84!important;
+  color:#fff!important;
+}
+.compact-member.tbd{
+  color:#8a9099!important;
+  font-weight:900;
+}
