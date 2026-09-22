@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f6f7fb">
+<meta name="theme-color" content="#f5f6f8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
 <title>보스 현황판</title>
-<link rel="stylesheet" href="./style.css?v=sync-colors-20260922-1">
+<link rel="stylesheet" href="./style.css?v=readability-picker-20260922-1">
 </head>
 <body>
 <div class="page">
@@ -26,10 +26,10 @@
   </div>
 </header>
 
-<div class="ownerbar">
+<nav class="ownerbar" aria-label="주인 선택">
   <div class="owner-scroll"><div class="owners" id="ownerTabs"></div></div>
   <button class="owner-add" id="addOwner">+ 주인</button>
-</div>
+</nav>
 
 <div class="owner-tools">
   <button class="btn" id="unlockOwner">수정 잠금 해제</button>
@@ -39,21 +39,42 @@
 
 <div class="board-title" id="boardTitle"></div>
 
-<section class="desktop-board shell">
+<section class="desktop-board shell" aria-label="PC 보스 현황표">
   <div class="scroll"><table id="board"></table></div>
 </section>
 
-<section class="mobile-board" id="mobileBoard">
+<section class="mobile-board" id="mobileBoard" aria-label="모바일 보스 현황">
   <div class="mobile-loading">보스판을 불러오는 중…</div>
 </section>
 
 <p class="hint">
-  다른 주인의 캐릭터 닉네임을 파티원으로 입력하면 상대 보스판에도 자동 연동됩니다.
-  데미안·루시드·윌·더스크·진힐라·듄켈은 1인 고정입니다.
+  파티원 칸을 누르면 등록된 캐릭터를 주인별 색으로 선택할 수 있습니다.
+  자동 연동된 보스는 원본 파티에서만 수정됩니다.
 </p>
 </div>
+
+<div class="party-picker-backdrop" id="partyPicker" hidden>
+  <section class="party-picker-sheet" role="dialog" aria-modal="true" aria-labelledby="partyPickerTitle">
+    <header class="picker-head">
+      <div>
+        <strong id="partyPickerTitle">파티원 선택</strong>
+        <p id="partyPickerSub"></p>
+      </div>
+      <button class="picker-close" id="partyPickerClose" aria-label="닫기">×</button>
+    </header>
+    <div class="picker-search-wrap">
+      <input id="partyPickerSearch" class="picker-search" type="search" placeholder="캐릭터 검색" autocomplete="off">
+    </div>
+    <div class="picker-content" id="partyPickerContent"></div>
+    <footer class="picker-footer">
+      <button class="btn" id="partyPickerManual">직접 입력</button>
+      <button class="btn danger-lite" id="partyPickerClear">선택 지우기</button>
+    </footer>
+  </section>
+</div>
+
 <div class="toast" id="toast"></div>
 <noscript><div style="padding:24px;font-family:sans-serif">JavaScript를 켜야 보스 현황판을 사용할 수 있어요.</div></noscript>
-<script defer src="./app.js?v=sync-colors-20260922-1"></script>
+<script defer src="./app.js?v=readability-picker-20260922-1"></script>
 </body>
 </html>
