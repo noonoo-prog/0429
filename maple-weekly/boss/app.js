@@ -248,7 +248,7 @@ function compactDifficultySelect(c,editable,bi,pi){
   var allowed=[""].concat(BOSS_DIFFICULTIES[boss]||["이지","노말","하드","카오스","익스트림"]);
   return '<select class="difficulty compact-difficulty" data-b="'+bi+'" data-p="'+pi+'" data-v="'+esc(current)+'" '+(editable?"":"disabled")+'>'+
     allowed.map(function(x){
-      var label=x?x.toUpperCase():"미설정";
+      var label=x==="이지"?"EASY":x==="노말"?"NORMAL":x==="하드"?"HARD":x==="카오스"?"CHAOS":x==="익스트림"?"EXTREME":"미설정";
       return '<option value="'+esc(x)+'" '+(x===current?"selected":"")+'>'+label+'</option>';
     }).join("")+
   '</select>';
