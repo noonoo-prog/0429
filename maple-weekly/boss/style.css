@@ -3224,3 +3224,51 @@ html,body{
     margin:9px 4px 8px;
   }
 }
+
+
+/* passwordless boss editing + bulk checklist toggle */
+.selected-day-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+}
+.boss-toggle-all{
+  min-height:36px;
+  padding:0 13px;
+  border:1px solid var(--owner-line,#cfd4db);
+  border-radius:10px;
+  background:#fff;
+  color:var(--owner-accent,#626a76);
+  font-size:10px;
+  font-weight:950;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.boss-toggle-all:hover{
+  background:color-mix(in srgb,var(--owner-accent,#626a76) 7%,#fff);
+}
+.boss-toggle-all.all-checked{
+  border-color:var(--owner-accent,#626a76);
+  background:var(--owner-accent,#626a76);
+  color:#fff;
+}
+.boss-toggle-all:disabled{
+  opacity:.55;
+  cursor:default;
+}
+@media(max-width:760px){
+  .selected-day-head{
+    align-items:flex-start;
+  }
+  .selected-day-actions{
+    flex-direction:column;
+    align-items:flex-end;
+    gap:5px;
+  }
+  .boss-toggle-all{
+    min-height:32px;
+    padding:0 10px;
+    font-size:9px;
+  }
+}
