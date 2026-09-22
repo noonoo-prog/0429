@@ -2335,3 +2335,25 @@ html,body{
   background:#b88125!important;
   color:#fff!important;
 }
+
+
+/* larger save control */
+.save-board-btn{
+  min-width:112px;
+  height:56px;
+  padding:0 20px;
+  border-radius:14px;
+  font-size:18px;
+}
+@media(max-width:760px){
+  .save-board-btn{
+    min-width:96px;
+    height:50px;
+    padding:0 16px;
+    border-radius:13px;
+    font-size:17px;
+  }
+  .save-controls{
+    gap:7px;
+  }
+}
