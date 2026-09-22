@@ -728,3 +728,129 @@ body.picker-open{overflow:hidden}
     font-size:13px;
   }
 }
+
+
+/* fixed-column boss row alignment */
+.compact-main{
+  display:grid;
+  grid-template-columns:62px minmax(0,1fr) 44px 54px;
+  align-items:center;
+  column-gap:7px;
+}
+.compact-name-wrap{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  text-align:left;
+}
+.compact-boss-name{
+  width:100%;
+  text-align:left;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.compact-income-slot{
+  width:44px;
+  min-width:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+.compact-income{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin:0;
+}
+.compact-count-slot{
+  width:54px;
+  min-width:54px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+}
+.compact-count-slot .compact-count{
+  width:54px;
+  min-width:54px;
+}
+.compact-count-slot .compact-solo{
+  width:100%;
+  min-width:0;
+  text-align:right;
+}
+.compact-sync{
+  width:100%;
+  text-align:left;
+}
+.compact-party-members{
+  padding-left:69px;
+  text-align:left;
+  justify-content:flex-start;
+}
+
+@media(max-width:760px){
+  .mobile-compact-list .compact-main{
+    grid-template-columns:76px minmax(0,1fr) 46px 58px;
+    column-gap:7px;
+    min-height:30px;
+  }
+  .mobile-compact-list .compact-difficulty{
+    width:76px;
+  }
+  .mobile-compact-list .compact-name-wrap{
+    align-items:flex-start;
+    text-align:left;
+  }
+  .mobile-compact-list .compact-boss-name{
+    width:100%;
+    font-size:16px;
+    text-align:left;
+    letter-spacing:-.035em;
+  }
+  .mobile-compact-list .compact-income-slot{
+    width:46px;
+    min-width:46px;
+  }
+  .mobile-compact-list .compact-income{
+    min-width:0;
+    padding:1px 3px;
+    font-size:9.5px;
+    text-align:center;
+  }
+  .mobile-compact-list .compact-income.missing{
+    font-size:8px;
+  }
+  .mobile-compact-list .compact-count-slot{
+    width:58px;
+    min-width:58px;
+  }
+  .mobile-compact-list .compact-count-slot .compact-count{
+    width:58px;
+    min-width:58px;
+    height:29px;
+    padding-left:5px;
+    padding-right:18px;
+    font-size:13px;
+  }
+  .mobile-compact-list .compact-count-slot .compact-count:disabled{
+    width:58px;
+    min-width:58px;
+    padding:0 3px;
+    text-align:right;
+    text-align-last:right;
+  }
+  .mobile-compact-list .compact-count-slot .compact-solo{
+    width:58px;
+    font-size:12.5px;
+    text-align:right;
+  }
+  .mobile-compact-list .compact-party-members{
+    padding-left:83px;
+    justify-content:flex-start;
+    text-align:left;
+  }
+}
