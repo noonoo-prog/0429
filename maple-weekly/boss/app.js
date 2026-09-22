@@ -120,18 +120,44 @@ function searchResultCount(){
   });
   return n;
 }
+function hasMultiParty(){
+  var st=state();
+  if(!st)return false;
+  for(var bi=0;bi<BOSSES.length;bi++){
+    var b=BOSSES[bi],arr=st.cells[b]||[];
+    for(var pi=0;pi<arr.length;pi++){
+      var c=arr[pi];
+      if(planned(c)&&Number(c.count)>=2)return true;
+    }
+  }
+  return false;
+}
 function updateSearchUI(){
   var input=document.getElementById("partySearchInput");
   var clear=document.getElementById("partySearchClear");
   var status=document.getElementById("partySearchStatus");
-  if(!input||!clear||!status)return;
+  var wrap=document.getElementById("partySearch");
+  if(!input||!clear||!status||!wrap)return;
+
+  var visible=hasMultiParty();
+  wrap.hidden=!visible;
+
+  if(!visible){
+    if(SEARCH_QUERY){
+      SEARCH_QUERY="";
+      input.value="";
+      setTimeout(function(){renderDesktop();renderMobile()},0);
+    }
+    return;
+  }
+
   if(input.value!==SEARCH_QUERY)input.value=SEARCH_QUERY;
   clear.hidden=!SEARCH_QUERY;
   if(!SEARCH_QUERY){
-    status.textContent="닉네임을 입력하면 그 캐릭터가 포함된 파티만 표시됩니다.";
+    status.textContent="2인 이상 파티 닉네임 검색";
   }else{
     var n=searchResultCount();
-    status.innerHTML='<strong>“'+esc(SEARCH_QUERY)+'”</strong> 포함 파티 <b>'+n+'건</b>';
+    status.innerHTML='<strong>“'+esc(SEARCH_QUERY)+'”</strong> 포함 <b>'+n+'건</b>';
   }
 }
 
