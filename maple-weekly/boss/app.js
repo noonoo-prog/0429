@@ -55,12 +55,25 @@ let APP={owners:[]};
 let activeOwnerId=localStorage.getItem(ACTIVE_KEY)||"";
 let activeCharByOwner={};
 let saveTimer=null,dirty=false,saving=false,pollTimer=null;
+let EDIT_VERSION=0,SELECT_ACTIVE=false,PENDING_RENDER=false;
 let PICKER=null;
 let MOBILE_VIEW=localStorage.getItem(MOBILE_VIEW_KEY)==="all"?"all":"active";
 let SEARCH_QUERY="";
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(m){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})}
 function toast(m){var e=document.getElementById("toast");e.textContent=m;e.classList.add("show");setTimeout(function(){e.classList.remove("show")},1900)}
+function beginSelectInteraction(){SELECT_ACTIVE=true}
+function endSelectInteraction(){
+  SELECT_ACTIVE=false;
+  if(PENDING_RENDER){
+    PENDING_RENDER=false;
+    setTimeout(function(){if(!SELECT_ACTIVE)render()},0);
+  }
+}
+function guardedRender(){
+  if(SELECT_ACTIVE){PENDING_RENDER=true;return}
+  render();
+}
 function pinKey(id){return PIN_PREFIX+id}
 function getPin(id){return sessionStorage.getItem(pinKey(id))||""}
 function setPin(id,pin){sessionStorage.setItem(pinKey(id),pin)}
@@ -165,8 +178,10 @@ function applyPayload(data){
 }
 
 function loadRemote(show){
+  if(show===false&&SELECT_ACTIVE)return Promise.resolve();
   if(show!==false){document.getElementById("saveText").textContent="공용 DB 불러오는 중…";document.getElementById("mobileBoard").innerHTML='<div class="mobile-loading">보스판을 불러오는 중…</div>'}
   return callApi("bootstrap").then(function(data){
+    if(SELECT_ACTIVE||dirty||saving)return;
     applyPayload(data);dirty=false;render();document.getElementById("saveText").textContent="공용 DB 연결됨";
   }).catch(function(e){
     document.getElementById("saveText").textContent="DB 연결 실패";
@@ -231,18 +246,37 @@ function ownerMissingPriceCount(){
 function queueSave(delay){
   if(delay==null)delay=420;
   var o=owner();if(!o||!isUnlocked(o.id))return;
+  EDIT_VERSION++;
   dirty=true;clearTimeout(saveTimer);document.getElementById("saveText").textContent="변경사항 저장 중…";
   saveTimer=setTimeout(saveBoardNow,delay);
 }
 function saveBoardNow(){
   var o=owner(),st=state();if(!o||!st||saving||!dirty)return Promise.resolve();
-  var pin=getPin(o.id);if(!pin)return Promise.resolve();saving=true;
-  return callApi("save_board",{ownerId:o.id,pin:pin,board:st}).then(function(data){
-    applyPayload(data);dirty=false;document.getElementById("saveText").textContent="공용 DB에 저장됨";render();
+  var pin=getPin(o.id);if(!pin)return Promise.resolve();
+  var saveVersion=EDIT_VERSION;
+  var snapshot=JSON.parse(JSON.stringify(st));
+  saving=true;
+  return callApi("save_board",{ownerId:o.id,pin:pin,board:snapshot}).then(function(data){
+    if(saveVersion!==EDIT_VERSION){
+      document.getElementById("saveText").textContent="변경사항 저장 중…";
+      return;
+    }
+    dirty=false;
+    document.getElementById("saveText").textContent="공용 DB에 저장됨";
+    if(!SELECT_ACTIVE){
+      applyPayload(data);
+      render();
+    }
   }).catch(function(e){
     if(e.status===401){clearPin(o.id);toast("수정 잠금이 풀렸어요. 다시 비밀번호를 입력해 주세요.");return loadRemote(false)}
     toast(e.message||"저장하지 못했습니다.");document.getElementById("saveText").textContent="저장 실패";
-  }).finally(function(){saving=false});
+  }).finally(function(){
+    saving=false;
+    if(dirty){
+      clearTimeout(saveTimer);
+      saveTimer=setTimeout(saveBoardNow,160);
+    }
+  });
 }
 
 function renderOwners(){
@@ -536,15 +570,24 @@ function render(){renderOwners();renderDesktop();renderMobile();updateSearchUI()
 
 function bindCommon(root){
   var st=state();if(!st)return;
+  Array.prototype.forEach.call(root.querySelectorAll("select:not(:disabled)"),function(e){
+    e.onfocus=beginSelectInteraction;
+    e.onpointerdown=beginSelectInteraction;
+    e.onblur=function(){setTimeout(endSelectInteraction,0)};
+  });
   Array.prototype.forEach.call(root.querySelectorAll(".player-input:not(:disabled)"),function(e){e.oninput=function(){st.players[+e.dataset.player]=e.value;queueSave()}});
   Array.prototype.forEach.call(root.querySelectorAll(".difficulty:not(:disabled)"),function(e){e.onchange=function(){
     var b=BOSSES[+e.dataset.b],pi=+e.dataset.p,c=st.cells[b][pi],n=e.value;
-    if(!MONTHLY.has(b)&&n&&n!=="x"&&!planned(c)&&weekly(pi,b)>=LIMIT){toast("주간 보스는 최대 "+LIMIT+"개까지만 선택할 수 있어요.");render();return}
+    if(!MONTHLY.has(b)&&n&&n!=="x"&&!planned(c)&&weekly(pi,b)>=LIMIT){
+      SELECT_ACTIVE=false;PENDING_RENDER=false;
+      toast("주간 보스는 최대 "+LIMIT+"개까지만 선택할 수 있어요.");render();return;
+    }
     c.difficulty=n;if(!n||n==="x"){c.count=0;c.names=[]}else if(SOLO.has(b)){c.count=1;c.names=[]}
-    queueSave(120);render();
+    SELECT_ACTIVE=false;PENDING_RENDER=false;
+    queueSave(180);render();
   }});
-  Array.prototype.forEach.call(root.querySelectorAll("[data-count]:not(:disabled)"),function(e){e.onchange=function(){if(!e.checked)return;changeCount(+e.dataset.b,+e.dataset.p,+e.dataset.count)}});
-  Array.prototype.forEach.call(root.querySelectorAll("[data-mobile-count]:not(:disabled)"),function(e){e.onchange=function(){changeCount(+e.dataset.b,+e.dataset.p,+e.value)}});
+  Array.prototype.forEach.call(root.querySelectorAll("[data-count]:not(:disabled)"),function(e){e.onchange=function(){if(!e.checked)return;SELECT_ACTIVE=false;PENDING_RENDER=false;changeCount(+e.dataset.b,+e.dataset.p,+e.dataset.count)}});
+  Array.prototype.forEach.call(root.querySelectorAll("[data-mobile-count]:not(:disabled)"),function(e){e.onchange=function(){SELECT_ACTIVE=false;PENDING_RENDER=false;changeCount(+e.dataset.b,+e.dataset.p,+e.value)}});
   Array.prototype.forEach.call(root.querySelectorAll(".party-picker-trigger:not(:disabled)"),function(e){e.onclick=function(){openPartyPicker(+e.dataset.b,+e.dataset.p,+e.dataset.m)}});
   Array.prototype.forEach.call(root.querySelectorAll("[data-add-character]"),function(e){e.onclick=addCharacter});
   Array.prototype.forEach.call(root.querySelectorAll("[data-remove]:not(:disabled)"),function(e){e.onclick=function(){
@@ -651,12 +694,12 @@ partySearchClear.addEventListener("click",function(){
   partySearchInput.focus();
 });
 
-window.addEventListener("resize",function(){clearTimeout(window.__bossResize);window.__bossResize=setTimeout(render,120)});
+window.addEventListener("resize",function(){clearTimeout(window.__bossResize);window.__bossResize=setTimeout(guardedRender,120)});
 window.addEventListener("pageshow",function(e){if(e.persisted)loadRemote(false)});
 
 function startPolling(){
   clearInterval(pollTimer);
-  pollTimer=setInterval(function(){if(document.hidden||dirty||saving)return;loadRemote(false)},4000);
+  pollTimer=setInterval(function(){if(document.hidden||dirty||saving||SELECT_ACTIVE)return;loadRemote(false)},4000);
 }
 loadRemote(true).then(startPolling);
 })();
