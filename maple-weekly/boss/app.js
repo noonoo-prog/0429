@@ -49,7 +49,7 @@ const MONTHLY=new Set(["검은 마법사"]);
 const SOLO=new Set(["데미안","루시드","윌","더스크","진힐라","듄켈"]);
 const LIMIT=12,DIFFS=["","x","이지","노말","하드","카오스","익스트림"];
 const ACTIVE_KEY="boss-board-active-owner-v6",PIN_PREFIX="boss-board-pin-",CHAR_PREFIX="boss-board-active-char-",MOBILE_VIEW_KEY="boss-board-mobile-view-v1";
-const FIXED_OWNER_ORDER=["오똑","츠죠","피콕","꿈품은","달하늘의별을"];
+const FIXED_OWNER_ORDER=["오똑","츠죠","피콕","꿈품은","달하늘의별을","띵스"];
 
 let APP={owners:[]};
 let activeOwnerId=localStorage.getItem(ACTIVE_KEY)||"";
@@ -141,6 +141,7 @@ function ownerTheme(name){
   if(name==="피콕")return"peacock";
   if(name==="꿈품은")return"dream";
   if(name==="달하늘의별을")return"sky";
+  if(name==="띵스")return"ochre";
   return"default";
 }
 
