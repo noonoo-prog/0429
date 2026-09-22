@@ -3404,15 +3404,15 @@ html,body{
 }
 html[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#111318;
-  --surface:#191c22;
-  --surface-soft:#15181d;
-  --line:#2b3038;
-  --line-strong:#3b424c;
-  --text:#f0f2f5;
-  --muted:#a5acb6;
-  --muted2:#7f8792;
-  --shadow:0 4px 18px rgba(0,0,0,.22);
+  --bg:#1b1e23;
+  --surface:#23272e;
+  --surface-soft:#20242a;
+  --line:#343a43;
+  --line-strong:#424a55;
+  --text:#d7dade;
+  --muted:#9ca3ad;
+  --muted2:#858c96;
+  --shadow:0 3px 12px rgba(0,0,0,.14);
 }
 html[data-theme="dark"],
 html[data-theme="dark"] body{
@@ -3449,10 +3449,10 @@ html[data-theme="dark"] .calendar-week-summary{
   background:var(--surface-soft);
 }
 html[data-theme="dark"] .compact-boss-card.is-monthly{
-  background:#211e18;
+  background:#29261f;
 }
 html[data-theme="dark"] .page-switch{
-  background:#20242b;
+  background:#20242a;
   border-color:var(--line-strong);
 }
 html[data-theme="dark"] .page-switch-btn{
@@ -3464,17 +3464,17 @@ html[data-theme="dark"] .page-switch-btn.active{
   box-shadow:0 1px 5px rgba(0,0,0,.24);
 }
 html[data-theme="dark"] .lock-state{
-  background:#242932;
+  background:#2a2e35;
   color:#aeb5bf;
 }
 html[data-theme="dark"] .lock-state.open{
-  background:#173322;
-  color:#77c58f;
+  background:#203128;
+  color:#82b895;
 }
 html[data-theme="dark"] .desktop-board-meta span,
 html[data-theme="dark"] .checklist-status{
-  background:#242932;
-  color:#abb2bc;
+  background:#2a2e35;
+  color:#a0a7b0;
 }
 html[data-theme="dark"] .column-count,
 html[data-theme="dark"] .compact-boss-name,
@@ -3512,13 +3512,13 @@ html[data-theme="dark"] .month-day-runs em i{
 html[data-theme="dark"] .picker-search,
 html[data-theme="dark"] .party-search-box,
 html[data-theme="dark"] .party-search-box input{
-  background:#14171c;
+  background:#1e2228;
   color:var(--text);
   border-color:var(--line-strong);
 }
 html[data-theme="dark"] .picker-close{
-  background:#242932;
-  color:#c7ccd3;
+  background:#2a2e35;
+  color:#b8bdc5;
 }
 html[data-theme="dark"] .picker-owner-group,
 html[data-theme="dark"] .picker-head,
@@ -3528,7 +3528,7 @@ html[data-theme="dark"] .selected-day-head{
   border-color:var(--line);
 }
 html[data-theme="dark"] .calendar-weekdays{
-  background:#20242b;
+  background:#20242a;
   border-color:var(--line);
 }
 html[data-theme="dark"] .calendar-weekdays span{
@@ -3546,22 +3546,22 @@ html[data-theme="dark"] .boss-run-check{
 }
 html[data-theme="dark"] .month-day.outside,
 html[data-theme="dark"] .calendar-day.outside{
-  background:#14171b;
+  background:#1e2126;
 }
 html[data-theme="dark"] .month-day:hover,
 html[data-theme="dark"] .calendar-day:hover{
-  background:color-mix(in srgb,var(--owner-accent,#626a76) 12%,var(--surface));
+  background:color-mix(in srgb,var(--owner-accent,#626a76) 6%,var(--surface));
 }
 html[data-theme="dark"] .month-day.selected,
 html[data-theme="dark"] .calendar-day.selected{
-  background:color-mix(in srgb,var(--owner-accent,#626a76) 16%,var(--surface));
+  background:color-mix(in srgb,var(--owner-accent,#626a76) 8%,var(--surface));
 }
 html[data-theme="dark"] .checklist-month-meso,
 html[data-theme="dark"] .calendar-day b{
-  background:color-mix(in srgb,var(--owner-accent,#626a76) 18%,var(--surface));
+  background:color-mix(in srgb,var(--owner-accent,#626a76) 10%,var(--surface));
 }
 html[data-theme="dark"] .character-run-grid{
-  background:#12151a;
+  background:#1d2025;
 }
 html[data-theme="dark"] .boss-run-list{
   background:var(--line);
@@ -3569,11 +3569,11 @@ html[data-theme="dark"] .boss-run-list{
 html[data-theme="dark"] .boss-run-row.done,
 html[data-theme="dark"] .calendar-week-row.done .calendar-week-summary,
 html[data-theme="dark"] .checklist-week.done{
-  background:color-mix(in srgb,var(--owner-accent,#626a76) 12%,var(--surface));
+  background:color-mix(in srgb,var(--owner-accent,#626a76) 6%,var(--surface));
 }
 html[data-theme="dark"] .boss-run-check,
 html[data-theme="dark"] .checklist-checkmark{
-  background:#15181d;
+  background:#20242a;
 }
 html[data-theme="dark"] .boss-run-row.done .boss-run-check,
 html[data-theme="dark"] .checklist-week.done .checklist-checkmark{
@@ -3585,7 +3585,7 @@ html[data-theme="dark"] .calendar-day-total{
 }
 html[data-theme="dark"] .save-board-btn{
   border-color:var(--line-strong);
-  background:#242932;
+  background:#2a2e35;
   color:#aeb5bf;
 }
 html[data-theme="dark"] .save-board-btn.needs-save{
@@ -3601,7 +3601,7 @@ html[data-theme="dark"] .mobile-loading{
   color:var(--muted)!important;
 }
 html[data-theme="dark"] .column-remove:not(:disabled):hover{
-  background:#252a32;
+  background:#2b3037;
 }
 html[data-theme="dark"] select:not(.compact-difficulty),
 html[data-theme="dark"] input{
