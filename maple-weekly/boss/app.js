@@ -28,13 +28,14 @@ const BOSS_DIFFICULTIES={
 const MONTHLY=new Set(["검은 마법사"]);
 const SOLO=new Set(["데미안","루시드","윌","더스크","진힐라","듄켈"]);
 const LIMIT=12,DIFFS=["","x","이지","노말","하드","카오스","익스트림"];
-const ACTIVE_KEY="boss-board-active-owner-v6",PIN_PREFIX="boss-board-pin-",CHAR_PREFIX="boss-board-active-char-";
+const ACTIVE_KEY="boss-board-active-owner-v6",PIN_PREFIX="boss-board-pin-",CHAR_PREFIX="boss-board-active-char-",MOBILE_VIEW_KEY="boss-board-mobile-view-v1";
 
 let APP={owners:[]};
 let activeOwnerId=localStorage.getItem(ACTIVE_KEY)||"";
 let activeCharByOwner={};
 let saveTimer=null,dirty=false,saving=false,pollTimer=null;
 let PICKER=null;
+let MOBILE_VIEW=localStorage.getItem(MOBILE_VIEW_KEY)==="all"?"all":"active";
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(m){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})}
 function toast(m){var e=document.getElementById("toast");e.textContent=m;e.classList.add("show");setTimeout(function(){e.classList.remove("show")},1900)}
@@ -265,20 +266,43 @@ function mobileMemberInputs(c,bi,pi,editable){
   return h;
 }
 function renderMobile(){
-  var box=document.getElementById("mobileBoard"),st=state(),o=owner();if(!st||!o){box.innerHTML='<div class="mobile-loading">보스판이 없습니다.</div>';return}
-  var pi=activeChar(),unlocked=isUnlocked(o.id);
-  var theme=ownerTheme(o.name); var strip='<div class="character-strip">'+st.players.map(function(p,i){return'<button class="char-tab owner-themed '+(i===pi?"active":"")+'" data-theme="'+theme+'" data-char="'+i+'">'+esc(p)+'<span class="mini-count">주간 '+weekly(i)+'/'+LIMIT+'</span></button>'}).join("")+'</div>';
-  var summary='<div class="mobile-summary owner-themed" data-theme="'+theme+'"><div><strong>'+esc(st.players[pi])+'</strong><br><span class="summary-owner-name">'+esc(o.name)+'</span><span> 보유 캐릭터</span></div><div class="summary-counts"><strong>주간 '+weekly(pi)+'/'+LIMIT+'</strong><br><span>월간 '+monthly(pi)+'/1</span></div></div>';
-  var cards='<div class="mobile-boss-list">';
-  BOSSES.forEach(function(b,bi){
-    var c=st.cells[b][pi]||emptyCell(),auto=!!c._sync,editable=unlocked&&!auto,mon=MONTHLY.has(b);
-    var party="";
-    if(SOLO.has(b)){party='<div class="solo">'+(planned(c)?"1인 고정":"난이도 선택 시 1인")+'</div>'}
-    else{
+  var box=document.getElementById("mobileBoard"),st=state(),o=owner();
+  if(!st||!o){box.innerHTML='<div class="mobile-loading">보스판이 없습니다.</div>';return}
+
+  var pi=activeChar(),unlocked=isUnlocked(o.id),theme=ownerTheme(o.name);
+  var weeklyCount=weekly(pi),monthlyCount=monthly(pi);
+  var activeWeekly=BOSSES.filter(function(b){return !MONTHLY.has(b)&&planned(st.cells[b][pi])});
+  var inactiveWeekly=BOSSES.filter(function(b){return !MONTHLY.has(b)&&!planned(st.cells[b][pi])});
+
+  var strip='<div class="character-strip">'+st.players.map(function(p,i){
+    return'<button class="char-tab owner-themed '+(i===pi?"active":"")+'" data-theme="'+theme+'" data-char="'+i+'">'+
+      esc(p)+'<span class="mini-count">주간 '+weekly(i)+'/'+LIMIT+'</span></button>';
+  }).join("")+'</div>';
+
+  var progress=Math.max(0,Math.min(100,Math.round((weeklyCount/LIMIT)*100)));
+  var summary='<div class="mobile-summary owner-themed" data-theme="'+theme+'">'+
+    '<div><strong>'+esc(st.players[pi])+'</strong><br><span class="summary-owner-name">'+esc(o.name)+'</span><span> 보유 캐릭터</span>'+
+      '<div class="progress-track"><div class="progress-fill" style="width:'+progress+'%"></div></div></div>'+
+    '<div class="summary-counts"><strong>주간 '+weeklyCount+'/'+LIMIT+'</strong><br><span>월간 '+monthlyCount+'/1</span></div>'+
+  '</div>';
+
+  var viewbar='<div class="mobile-viewbar">'+
+    '<h2>보스 현황</h2>'+
+    '<div class="segmented">'+
+      '<button class="'+(MOBILE_VIEW==="active"?"active":"")+'" data-mobile-view="active">설정됨 '+activeWeekly.length+'</button>'+
+      '<button class="'+(MOBILE_VIEW==="all"?"active":"")+'" data-mobile-view="all">전체 '+(BOSSES.length-1)+'</button>'+
+    '</div>'+
+  '</div>';
+
+  function activeCard(b,bi,c){
+    var auto=!!c._sync,editable=unlocked&&!auto,mon=MONTHLY.has(b),party="";
+    if(SOLO.has(b)){
+      party='<div class="solo">'+(planned(c)?"1인 고정":"난이도 선택 시 1인")+'</div>';
+    }else{
       party='<select class="mobile-count-select" data-mobile-count="1" data-b="'+bi+'" data-p="'+pi+'" '+(editable?"":"disabled")+'>'+
         '<option value="0" '+(!c.count?"selected":"")+'>인원수</option>'+
-        [1,2,3,4,5,6].map(function(n){return'<option value="'+n+'" '+(c.count===n?"selected":"")+'>'+n+'인</option>'}).join("")+'</select>'+
-        mobileMemberInputs(c,bi,pi,editable);
+        [1,2,3,4,5,6].map(function(n){return'<option value="'+n+'" '+(c.count===n?"selected":"")+'>'+n+'인</option>'}).join("")+
+      '</select>'+mobileMemberInputs(c,bi,pi,editable);
     }
     if(auto){
       var syncOwner=c._sync.sourceOwnerName||"다른 주인";
@@ -286,10 +310,63 @@ function renderMobile(){
       party+='<div class="sync-note">↔ 원본 '+esc(syncOwner)+' · '+esc(syncPlayer)+'</div>';
     }
     var syncState=auto?'<span class="sync-neutral-pill">자동연동</span>':(unlocked?"수정 가능":"보기 전용");
-    cards+='<article class="mobile-boss-card '+(mon?"monthly ":"")+(auto?"synced ":"")+(planned(c)?"boss-active":"boss-empty")+'"><div class="mobile-boss-head"><div class="mobile-boss-name">'+esc(b)+' <span class="badge '+(mon?"monthly":"")+'">'+(mon?"월간":"주간")+'</span></div><div class="mobile-boss-state">'+syncState+'</div></div><div class="mobile-controls">'+diffOptions(c,editable,bi,pi,true)+'<div class="mobile-party">'+party+'</div></div></article>';
+    return'<article class="mobile-boss-card '+(mon?"monthly ":"")+(auto?"synced":"")+'">'+
+      '<div class="mobile-boss-head">'+
+        '<div class="mobile-boss-name">'+esc(b)+' <span class="badge '+(mon?"monthly":"")+'">'+(mon?"월간":"주간")+'</span></div>'+
+        '<div class="mobile-boss-state">'+syncState+'</div>'+
+      '</div>'+
+      '<div class="mobile-controls">'+
+        diffOptions(c,editable,bi,pi,true)+
+        '<div class="mobile-party">'+party+'</div>'+
+      '</div>'+
+    '</article>';
+  }
+
+  function compactRow(b,bi,c,monthly){
+    return'<div class="empty-boss-row '+(monthly?"empty-monthly":"")+'">'+
+      '<div class="empty-boss-name">'+esc(b)+' <span class="badge '+(monthly?"monthly":"")+'">'+(monthly?"월간":"주간")+'</span></div>'+
+      diffOptions(c,unlocked,bi,pi,true)+
+    '</div>';
+  }
+
+  var weeklyHtml='<section class="boss-section"><div class="boss-section-head"><strong>주간 보스</strong><span>'+weeklyCount+'/'+LIMIT+'</span></div><div class="mobile-boss-list">';
+  if(MOBILE_VIEW==="active"){
+    if(activeWeekly.length){
+      activeWeekly.forEach(function(b){var bi=BOSSES.indexOf(b),c=st.cells[b][pi]||emptyCell();weeklyHtml+=activeCard(b,bi,c)});
+    }else{
+      weeklyHtml+='<div class="empty-state"><strong>설정된 주간 보스가 없어요.</strong><span>전체 보스에서 난이도를 선택하면 여기에 표시됩니다.</span><br><button class="btn" data-show-all="1" style="margin-top:10px">전체 보스 보기</button></div>';
+    }
+  }else{
+    BOSSES.filter(function(b){return !MONTHLY.has(b)}).forEach(function(b){
+      var bi=BOSSES.indexOf(b),c=st.cells[b][pi]||emptyCell();
+      weeklyHtml+=planned(c)?activeCard(b,bi,c):compactRow(b,bi,c,false);
+    });
+  }
+  weeklyHtml+='</div></section>';
+
+  var monthlyBoss="검은 마법사",mbi=BOSSES.indexOf(monthlyBoss),mc=st.cells[monthlyBoss][pi]||emptyCell();
+  var monthlyHtml='<section class="boss-section"><div class="boss-section-head"><strong>월간 보스</strong><span>'+monthlyCount+'/1</span></div><div class="mobile-boss-list">'+
+    (planned(mc)?activeCard(monthlyBoss,mbi,mc):compactRow(monthlyBoss,mbi,mc,true))+
+  '</div></section>';
+
+  box.innerHTML=strip+summary+viewbar+weeklyHtml+monthlyHtml;
+
+  Array.prototype.forEach.call(box.querySelectorAll("[data-char]"),function(b){
+    b.onclick=function(){setActiveChar(+b.dataset.char)};
   });
-  cards+="</div>";box.innerHTML=strip+summary+cards;
-  Array.prototype.forEach.call(box.querySelectorAll("[data-char]"),function(b){b.onclick=function(){setActiveChar(+b.dataset.char)}});
+  Array.prototype.forEach.call(box.querySelectorAll("[data-mobile-view]"),function(b){
+    b.onclick=function(){
+      MOBILE_VIEW=b.dataset.mobileView;
+      localStorage.setItem(MOBILE_VIEW_KEY,MOBILE_VIEW);
+      renderMobile();
+    };
+  });
+  var showAll=box.querySelector("[data-show-all]");
+  if(showAll)showAll.onclick=function(){
+    MOBILE_VIEW="all";
+    localStorage.setItem(MOBILE_VIEW_KEY,MOBILE_VIEW);
+    renderMobile();
+  };
   bindCommon(box);
 }
 function render(){renderOwners();renderDesktop();renderMobile()}
