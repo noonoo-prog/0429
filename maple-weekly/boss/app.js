@@ -223,6 +223,10 @@ function ownerWeeklyIncome(){
   var st=state();if(!st)return 0;
   return st.players.reduce(function(sum,_,pi){return sum+characterWeeklyIncome(pi)},0);
 }
+function ownerMissingPriceCount(){
+  var st=state();if(!st)return 0;
+  return st.players.reduce(function(sum,_,pi){return sum+characterMissingPriceCount(pi)},0);
+}
 
 function queueSave(delay){
   if(delay==null)delay=420;
@@ -411,8 +415,8 @@ function renderDesktop(){
     if(!q||bosses.length)visible.push({p:p,pi:pi,bosses:bosses});
   });
 
-  var ownerIncome=ownerWeeklyIncome();
-  var h='<div class="desktop-board-meta"><div><strong>'+esc(o.name)+' 캐릭터 보드</strong><span>'+st.players.length+'명</span><b class="owner-weekly-total">총 주간 '+formatEok(ownerIncome)+'</b></div><div>'+(q?'검색 결과 '+searchResultCount()+'건':'주간 최대 '+LIMIT+'개 · 검은 마법사 월간')+'</div></div>';
+  var ownerIncome=ownerWeeklyIncome(),ownerMissing=ownerMissingPriceCount();
+  var h='<div class="desktop-board-meta"><div><strong>'+esc(o.name)+' 캐릭터 보드</strong><span>'+st.players.length+'명</span><b class="owner-weekly-total">총 주간 '+formatEok(ownerIncome)+(ownerMissing?' · 미등록 '+ownerMissing+'건':'')+'</b></div><div>'+(q?'검색 결과 '+searchResultCount()+'건':'주간 최대 '+LIMIT+'개 · 검은 마법사 월간')+'</div></div>';
   if(q&&!visible.length){
     root.innerHTML=h+'<div class="search-empty"><strong>일치하는 파티가 없어요.</strong><span>다른 닉네임으로 검색해 보세요.</span></div>';
     return;
@@ -432,7 +436,7 @@ function renderDesktop(){
           '<strong class="column-count '+(w>=LIMIT?"full":"")+'">'+w+'/'+LIMIT+'</strong>'+
           '<button class="remove-player column-remove" data-remove="'+pi+'" '+(unlocked?"":"disabled")+' aria-label="캐릭터 삭제">×</button>'+
         '</div>'+
-        '<div class="column-sub"><span>주간 '+formatEok(charIncome)+(missingPrices?' · 미등록 '+missingPrices+'건':'')+'</span>'+(pi===0?'<b class="representative-total">전체 '+formatEok(ownerIncome)+'</b>':'')+'</div>'+
+        '<div class="column-sub"><span>주간 '+formatEok(charIncome)+(missingPrices?' · 미등록 '+missingPrices+'건':'')+'</span>'+(pi===0?'<b class="representative-total">전체 '+formatEok(ownerIncome)+(ownerMissing?' +미등록 '+ownerMissing:'')+'</b>':'')+'</div>'+
       '</header>'+
       '<div class="character-boss-list">';
     item.bosses.forEach(function(b){
@@ -493,13 +497,13 @@ function renderMobile(){
       esc(p)+(wi>=LIMIT?'<span class="tab-complete">완료</span>':'')+'<span class="mini-count">'+wi+'/'+LIMIT+'</span></button>';
   }).join("")+(unlocked?'<button class="char-tab add-char-tab" data-add-character="1">＋ 캐릭터</button>':'')+'</div>';
 
-  var charIncome=characterWeeklyIncome(pi),ownerIncome=ownerWeeklyIncome(),missingPrices=characterMissingPriceCount(pi);
+  var charIncome=characterWeeklyIncome(pi),ownerIncome=ownerWeeklyIncome(),missingPrices=characterMissingPriceCount(pi),ownerMissing=ownerMissingPriceCount();
   var summary='<div class="mobile-character-head owner-themed" data-theme="'+theme+'">'+
     '<div><div class="mobile-character-name-line"><strong>'+esc(st.players[pi])+'</strong>'+(pi===0?'<span class="representative-badge">대표</span>':'')+(w>=LIMIT?'<span class="complete-badge">완료</span>':'')+'</div>'+
       '<span>주간 수익 <b class="mobile-income">'+formatEok(charIncome)+'</b>'+(missingPrices?' · 가격 미등록 '+missingPrices+'건':'')+(w>=LIMIT?' · 미설정 숨김':'')+'</span>'+
-      (pi===0?'<span class="mobile-owner-total">전체 주간 '+formatEok(ownerIncome)+'</span>':'')+
+      (pi===0?'<span class="mobile-owner-total">전체 주간 '+formatEok(ownerIncome)+(ownerMissing?' · 미등록 '+ownerMissing+'건':'')+'</span>':'')+
     '</div>'+
-    '<div class="mobile-char-count"><b>'+w+'/'+LIMIT+'</b><small>월간 '+m+'/1</small></div>'+
+    '<div class="mobile-char-actions"><div class="mobile-char-count"><b>'+w+'/'+LIMIT+'</b><small>월간 '+m+'/1</small></div>'+(unlocked?'<button class="mobile-remove-character" data-remove="'+pi+'" aria-label="현재 캐릭터 삭제">삭제</button>':'')+'</div>'+
   '</div>';
 
   var list='<div class="mobile-compact-list">';
