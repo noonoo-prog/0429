@@ -3616,3 +3616,60 @@ html[data-theme="dark"] input{
     display:none;
   }
 }
+
+
+/* weekly / monthly boss grouping */
+.boss-section-label{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  min-height:27px;
+  margin:5px 1px 1px;
+  padding:4px 7px;
+  border-bottom:1px solid var(--line);
+  color:var(--muted);
+}
+.boss-section-label:first-child{
+  margin-top:0;
+}
+.boss-section-label strong{
+  color:var(--text);
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:-.01em;
+}
+.boss-section-label span{
+  color:var(--owner-accent,#626a76);
+  font-size:8px;
+  font-weight:950;
+}
+.boss-section-monthly{
+  margin-top:10px;
+  border-top:1px solid var(--line);
+  border-bottom:0;
+  padding-top:8px;
+}
+.character-boss-list .compact-boss-card.is-monthly{
+  margin-top:0;
+}
+.mobile-compact-list>.boss-section-label{
+  margin-left:1px;
+  margin-right:1px;
+}
+@media(max-width:760px){
+  .boss-section-label{
+    min-height:29px;
+    margin-top:6px;
+    padding:5px 7px;
+  }
+  .boss-section-label strong{
+    font-size:9.5px;
+  }
+  .boss-section-label span{
+    font-size:8.5px;
+  }
+  .boss-section-monthly{
+    margin-top:11px;
+  }
+}
