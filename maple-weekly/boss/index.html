@@ -3,54 +3,59 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f5f6f8">
+<meta name="theme-color" content="#f4f5f7">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
 <title>보스 현황판</title>
-<link rel="stylesheet" href="./style.css?v=difficulty-colors-20260922-1">
+<link rel="stylesheet" href="./style.css?v=remake-20260922-1">
 </head>
 <body>
-<div class="page">
-<header class="topbar">
-  <div class="titlebox">
-    <h1>보스 현황판</h1>
-    <p>주간 최대 12개 · 검은 마법사는 월간</p>
-  </div>
-  <div class="top-actions">
-    <div class="toolbar">
-      <button class="btn primary" id="addPlayer">+ 캐릭터</button>
-      <button class="btn" id="shareBtn">주소 복사</button>
-      <button class="btn" id="reloadBtn">새로고침</button>
+<div class="app-shell">
+  <header class="app-header">
+    <div class="brand-row">
+      <div class="brand">
+        <h1>보스 현황판</h1>
+        <p>주간 최대 12개 · 검은 마법사는 월간</p>
+      </div>
+      <div class="save" aria-live="polite"><span></span><b id="saveText">공용 DB 연결 중…</b></div>
     </div>
-    <div class="save"><span></span><b id="saveText">공용 DB 연결 중…</b></div>
-  </div>
-</header>
 
-<nav class="ownerbar" aria-label="주인 선택">
-  <div class="owner-scroll"><div class="owners" id="ownerTabs"></div></div>
-  <button class="owner-add" id="addOwner">+ 주인</button>
-</nav>
+    <nav class="ownerbar" aria-label="주인 선택">
+      <div class="owner-scroll"><div class="owners" id="ownerTabs"></div></div>
+    </nav>
 
-<div class="owner-tools">
-  <button class="btn" id="unlockOwner">수정 잠금 해제</button>
-  <button class="btn" id="renameOwner">이름 수정</button>
-  <button class="btn danger-lite" id="removeOwner">삭제</button>
-</div>
+    <div class="context-row">
+      <div class="board-title" id="boardTitle"></div>
+      <details class="manage-menu">
+        <summary>관리</summary>
+        <div class="manage-popover">
+          <div class="manage-grid">
+            <button class="btn primary" id="unlockOwner">수정 잠금 해제</button>
+            <button class="btn" id="addPlayer">+ 캐릭터</button>
+            <button class="btn" id="addOwner">+ 주인</button>
+            <button class="btn" id="renameOwner">이름 수정</button>
+            <button class="btn" id="shareBtn">주소 복사</button>
+            <button class="btn" id="reloadBtn">새로고침</button>
+            <button class="btn danger-lite span-2" id="removeOwner">현재 주인 삭제</button>
+          </div>
+        </div>
+      </details>
+    </div>
+  </header>
 
-<div class="board-title" id="boardTitle"></div>
+  <main class="content">
+    <section class="desktop-board shell" aria-label="PC 보스 현황표">
+      <div class="scroll"><table id="board"></table></div>
+    </section>
 
-<section class="desktop-board shell" aria-label="PC 보스 현황표">
-  <div class="scroll"><table id="board"></table></div>
-</section>
+    <section class="mobile-board" id="mobileBoard" aria-label="모바일 보스 현황">
+      <div class="mobile-loading">보스판을 불러오는 중…</div>
+    </section>
 
-<section class="mobile-board" id="mobileBoard" aria-label="모바일 보스 현황">
-  <div class="mobile-loading">보스판을 불러오는 중…</div>
-</section>
-
-<p class="hint">
-  파티원 칸을 누르면 등록된 캐릭터를 주인별 색으로 선택할 수 있습니다.
-  자동 연동된 보스는 원본 파티에서만 수정됩니다.
-</p>
+    <p class="hint">
+      파티원은 등록된 캐릭터에서 선택할 수 있고, 자동 연동된 보스는 원본 파티에서만 수정됩니다.
+    </p>
+  </main>
 </div>
 
 <div class="party-picker-backdrop" id="partyPicker" hidden>
@@ -75,6 +80,6 @@
 
 <div class="toast" id="toast"></div>
 <noscript><div style="padding:24px;font-family:sans-serif">JavaScript를 켜야 보스 현황판을 사용할 수 있어요.</div></noscript>
-<script defer src="./app.js?v=mobile-final-20260922-1"></script>
+<script defer src="./app.js?v=remake-20260922-1"></script>
 </body>
 </html>
