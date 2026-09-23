@@ -1028,14 +1028,51 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
         });
       });
       var state=routeQuickState();
-      var excludedSet=new Set(state.excludedCharacters||[]);
-      var selectableKeys=keys.filter(function(key){return !excludedSet.has(key)});
-      var allOn=selectableKeys.length>0&&selectableKeys.every(function(key){return state.characters.indexOf(key)>=0});
+      var allOn=keys.length>0&&keys.every(function(key){
+        return state.characters.indexOf(key)>=0&&state.excludedCharacters.indexOf(key)<0;
+      });
       if(allOn){
-        state.characters=state.characters.filter(function(key){return selectableKeys.indexOf(key)<0});
+        state.characters=state.characters.filter(function(key){return keys.indexOf(key)<0});
       }else{
-        selectableKeys.forEach(function(key){if(state.characters.indexOf(key)<0)state.characters.push(key)});
+        state.excludedCharacters=state.excludedCharacters.filter(function(key){return keys.indexOf(key)<0});
+        keys.forEach(function(key){if(state.characters.indexOf(key)<0)state.characters.push(key)});
       }
+      saveRouteQuickState(state);
+      ROUTE_RESULT_READY=false;
+      renderPartyRoute();
+    };
+  });
+
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-owner-exclude-all]"),function(btn){
+    btn.onclick=function(){
+      var ownerName=btn.dataset.routeOwnerExcludeAll;
+      var keys=[];
+      runs.forEach(function(run){
+        run.participants.forEach(function(p){
+          if(p.owner!==ownerName||!p.character||p.character==="미정")return;
+          var key=routeCharacterSelectorKey(p.owner,p.character);
+          if(keys.indexOf(key)<0)keys.push(key);
+        });
+      });
+
+      var state=routeQuickState();
+      var allExcluded=keys.length>0&&keys.every(function(key){
+        return state.excludedCharacters.indexOf(key)>=0;
+      });
+
+      if(allExcluded){
+        state.excludedCharacters=state.excludedCharacters.filter(function(key){
+          return keys.indexOf(key)<0;
+        });
+      }else{
+        state.characters=state.characters.filter(function(key){
+          return keys.indexOf(key)<0;
+        });
+        keys.forEach(function(key){
+          if(state.excludedCharacters.indexOf(key)<0)state.excludedCharacters.push(key);
+        });
+      }
+
       saveRouteQuickState(state);
       ROUTE_RESULT_READY=false;
       renderPartyRoute();
@@ -1119,7 +1156,8 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
       groups.push({
         owner:o.name,
         items:items,
-        allOn:selectable.length>0&&selectable.every(function(item){return item.active})
+        allOn:selectable.length>0&&selectable.length===items.length&&selectable.every(function(item){return item.active}),
+        allExcluded:items.length>0&&items.every(function(item){return item.excluded})
       });
     }
   });
@@ -1128,7 +1166,7 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
 
   return '<div class="route-character-quick">'+
     '<div class="route-character-simple-head">'+
-      '<div><span>1</span><strong>갈 캐릭터 선택</strong><p>이름은 선택, 오른쪽 ×는 그 캐릭터가 포함된 파티를 한 번에 제외합니다.</p></div>'+
+      '<div><span>1</span><strong>갈 캐릭터 선택</strong><p>이름은 선택, ×는 개별 제외. 주인별 전체 선택·전체 제외도 사용할 수 있습니다.</p></div>'+
       '<button type="button" data-route-clear-characters>선택 초기화</button>'+
     '</div>'+
     '<div class="route-character-quick-groups">'+
@@ -1136,7 +1174,10 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
         return '<section class="route-character-quick-group owner-themed" data-theme="'+ownerTheme(group.owner)+'">'+
           '<div class="route-character-owner-head">'+
             '<strong>'+esc(group.owner)+'</strong>'+
-            '<button type="button" data-route-owner-all="'+esc(group.owner)+'">'+(group.allOn?'전체 해제':'전체 선택')+'</button>'+
+            '<div class="route-character-owner-actions">'+
+              '<button type="button" class="route-owner-select-all" data-route-owner-all="'+esc(group.owner)+'">'+(group.allOn?'전체 해제':'전체 선택')+'</button>'+
+              '<button type="button" class="route-owner-exclude-all '+(group.allExcluded?'active':'')+'" data-route-owner-exclude-all="'+esc(group.owner)+'">'+(group.allExcluded?'제외 취소':'전체 제외')+'</button>'+
+            '</div>'+
           '</div>'+
           '<div class="route-character-buttons">'+
             group.items.map(function(item){
