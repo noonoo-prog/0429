@@ -657,7 +657,7 @@ function routeRunKey(boss,difficulty,participants){
 function partyRouteSignature(run){
   return run.participants.map(function(p){return(p.owner||"?")+"::"+p.character}).join("|");
 }
-function collectPartyRouteRuns(focusOwner){
+function collectPartyRouteRuns(focusOwner,includeAll){
   var runs=[],seen={};
   if(!focusOwner)return runs;
   APP.owners.forEach(function(sourceOwner){
@@ -668,9 +668,14 @@ function collectPartyRouteRuns(focusOwner){
         if(MONTHLY.has(boss))return;
         var c=st.cells[boss]&&st.cells[boss][pi];
         if(!isMultiPartyCell(c)||c._sync)return;
+
         var participants=routeParticipantsForCell(sourceOwner,sourceCharacter,c);
         var focus=participants.find(function(p){return p.owner===focusOwner.name});
-        if(!focus)return;
+
+        /* Personal mode only: current owner must participate.
+           Party-wide mode: every original 2+ party from every board is included. */
+        if(!includeAll&&!focus)return;
+
         var key=routeRunKey(boss,c.difficulty,participants);
         if(seen[key])return;
         seen[key]=1;
@@ -679,20 +684,29 @@ function collectPartyRouteRuns(focusOwner){
           boss:boss,
           difficulty:c.difficulty,
           participants:participants,
-          focusCharacter:focus.character
+          focusCharacter:focus?focus.character:"",
+          sourceOwner:sourceOwner.name,
+          sourceCharacter:String(sourceCharacter||"").trim()
         });
       });
     });
   });
+
   runs.sort(function(a,b){
-    var ac=(focusOwner.board&&focusOwner.board.players||[]).indexOf(a.focusCharacter);
-    var bc=(focusOwner.board&&focusOwner.board.players||[]).indexOf(b.focusCharacter);
-    if(ac<0)ac=999;if(bc<0)bc=999;
-    return ac-bc||BOSSES.indexOf(a.boss)-BOSSES.indexOf(b.boss)||a.id.localeCompare(b.id,"ko");
+    if(!includeAll){
+      var ac=(focusOwner.board&&focusOwner.board.players||[]).indexOf(a.focusCharacter);
+      var bc=(focusOwner.board&&focusOwner.board.players||[]).indexOf(b.focusCharacter);
+      if(ac<0)ac=999;if(bc<0)bc=999;
+      return ac-bc||BOSSES.indexOf(a.boss)-BOSSES.indexOf(b.boss)||a.id.localeCompare(b.id,"ko");
+    }
+    var ai=BOSSES.indexOf(a.boss),bi=BOSSES.indexOf(b.boss);
+    return ai-bi||partyRouteSignature(a).localeCompare(partyRouteSignature(b),"ko")||a.id.localeCompare(b.id,"ko");
   });
   return runs;
 }
-function routeSelectionKey(ownerId){return ROUTE_SELECTION_PREFIX+ownerId}
+function routeSelectionKey(ownerId){
+  return ROUTE_SELECTION_PREFIX+ownerId+"-"+ROUTE_MODE;
+}
 function selectedRouteIds(focusOwner,runs){
   var raw=localStorage.getItem(routeSelectionKey(focusOwner.id));
   if(raw===null)return new Set(runs.map(function(run){return run.id}));
@@ -941,9 +955,10 @@ function renderPartyRoute(){
     return;
   }
 
-  var allRuns=collectPartyRouteRuns(focus),theme=ownerTheme(focus.name);
+  var includeAll=ROUTE_MODE==="party";
+  var allRuns=collectPartyRouteRuns(focus,includeAll),theme=ownerTheme(focus.name);
   if(!allRuns.length){
-    panel.innerHTML=routeModeSwitchHtml()+'<div class="route-empty owner-themed" data-theme="'+theme+'"><strong>'+esc(focus.name)+'의 2인 이상 주간 파티가 없어요.</strong><span>보스 현황판에서 2인 이상 파티를 등록하면 자동으로 계산됩니다.</span></div>';
+    panel.innerHTML=routeModeSwitchHtml()+'<div class="route-empty owner-themed" data-theme="'+theme+'"><strong>'+(includeAll?'전체 보스판에 2인 이상 주간 파티가 없어요.':esc(focus.name)+'이 포함된 2인 이상 주간 파티가 없어요.')+'</strong><span>보스 현황판에서 2인 이상 파티를 등록하면 자동으로 계산됩니다.</span></div>';
     return;
   }
 
@@ -955,13 +970,13 @@ function renderPartyRoute(){
   var h=routeModeSwitchHtml()+
     '<div class="route-mode-help">'+
       (ROUTE_MODE==="party"
-        ?'<strong>파티 전체 최소</strong><span>참여자 모두의 캐릭터 교체 횟수를 줄이는 순서입니다.</span>'
-        :'<strong>내 캐릭터 최소</strong><span>'+esc(focus.name)+'의 캐릭터를 한 번씩만 쓰도록 우선 계산합니다.</span>')+
+        ?'<strong>파티 전체 최소</strong><span>내 참여 여부와 상관없이 전체 보스판의 2인 이상 파티를 모두 계산합니다.</span>'
+        :'<strong>내 캐릭터 최소</strong><span>'+esc(focus.name)+'이 포함된 파티만 보고 내 캐릭터 교체를 우선 줄입니다.</span>')+
     '</div>';
 
   h+='<div class="route-picker owner-themed" data-theme="'+theme+'">'+
-    '<div class="route-picker-head"><div><span>1. 돌 파티 선택</span><strong>이번에 같이 돌 파티만 골라주세요.</strong>'+
-    '<p>선택한 파티만 기준으로 순서를 자동 계산합니다.</p></div>'+
+    '<div class="route-picker-head"><div><span>1. 돌 파티 선택</span><strong>'+(ROUTE_MODE==="party"?'전체에서 이번에 돌 파티만 골라주세요.':'내가 참여하는 파티 중 이번에 돌 파티만 골라주세요.')+'</strong>'+
+    '<p>'+(ROUTE_MODE==="party"?'현재 주인과 상관없이 모든 2인 이상 파티를 보여줍니다.':'현재 주인 '+esc(focus.name)+'이 포함된 파티만 보여줍니다.')+'</p></div>'+
     '<div class="route-picker-actions"><button type="button" data-route-select-all>전체 선택</button><button type="button" data-route-select-none>전체 해제</button></div></div>'+
     '<div class="route-choice-grid">'+
       allRuns.map(function(run){return routeChoiceHtml(run,selectedIds.has(run.id),focus.name)}).join("")+
@@ -1042,7 +1057,7 @@ function renderPartyRoute(){
     h+='</div>';
   }
 
-  h+='<p class="route-note">※ 보스 현황판의 2인 이상 주간 파티만 계산합니다. 같은 파티 구성의 보스는 한 묶음으로 처리하고, 검은 마법사와 자동 연동 복제본은 중복 계산하지 않습니다.</p>';
+  h+='<p class="route-note">※ 파티 전체 최소는 모든 주인의 2인 이상 주간 파티를, 내 캐릭터 최소는 현재 주인이 포함된 파티만 계산합니다. 같은 파티 구성은 한 묶음으로 처리하고, 검은 마법사와 자동 연동 복제본은 중복 계산하지 않습니다.</p>';
 
   panel.innerHTML=h;
   bindRouteSelection(panel,focus,allRuns,selectedIds);
