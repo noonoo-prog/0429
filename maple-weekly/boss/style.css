@@ -4788,3 +4788,39 @@ html[data-theme="dark"] .compact-count-inline-select{
     flex:0 0 auto;
   }
 }
+
+
+/* PC monthly boss bottom alignment — keep Black Mage cards level per row */
+@media(min-width:761px){
+  .character-columns{
+    align-items:stretch;
+  }
+
+  .character-column{
+    display:flex;
+    flex-direction:column;
+    align-self:stretch;
+    height:100%;
+  }
+
+  .character-column-head{
+    flex:0 0 auto;
+  }
+
+  .character-boss-list{
+    flex:1 1 auto;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* consume all leftover weekly-area height before the monthly section */
+  .character-boss-list > .boss-section-monthly{
+    margin-top:auto;
+  }
+
+  /* keep a consistent clean bottom edge under the Black Mage card */
+  .character-boss-list > .compact-boss-card.is-monthly:last-child{
+    margin-bottom:0;
+  }
+}
