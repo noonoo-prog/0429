@@ -963,10 +963,9 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
       var matches=runs.filter(function(run){
         return run.participants.some(function(p){return p.owner===ownerName});
       });
-      var allSelected=matches.length>0&&matches.every(function(run){return selectedIds.has(run.id)});
       var next=new Set(selectedIds);
       matches.forEach(function(run){
-        if(allSelected)next.delete(run.id);
+        if(next.has(run.id))next.delete(run.id);
         else next.add(run.id);
       });
       ROUTE_RESULT_READY=false;
@@ -984,10 +983,9 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
           return p.owner===ownerName&&p.character===characterName;
         });
       });
-      var allSelected=matches.length>0&&matches.every(function(run){return selectedIds.has(run.id)});
       var next=new Set(selectedIds);
       matches.forEach(function(run){
-        if(allSelected)next.delete(run.id);
+        if(next.has(run.id))next.delete(run.id);
         else next.add(run.id);
       });
       ROUTE_RESULT_READY=false;
@@ -1022,8 +1020,10 @@ function routeOwnerQuickSelectHtml(runs,selectedIds){
         var matches=runs.filter(function(run){
           return run.participants.some(function(p){return p.owner===name});
         });
-        var active=matches.length>0&&matches.every(function(run){return selectedIds.has(run.id)});
-        return '<button type="button" class="route-owner-quick-btn owner-themed '+(active?'active ':'')+(matches.length?'':'disabled')+'" data-theme="'+ownerTheme(name)+'" data-route-select-owner="'+esc(name)+'" '+(matches.length?'':'disabled')+' title="'+esc(name)+' 포함 파티 '+matches.length+'개 '+(active?'선택 해제':'선택')+'">'+
+        var selectedCount=matches.filter(function(run){return selectedIds.has(run.id)}).length;
+        var active=matches.length>0&&selectedCount===matches.length;
+        var partial=selectedCount>0&&selectedCount<matches.length;
+        return '<button type="button" class="route-owner-quick-btn owner-themed '+(active?'active ':'')+(partial?'partial ':'')+(matches.length?'':'disabled')+'" data-theme="'+ownerTheme(name)+'" data-route-select-owner="'+esc(name)+'" '+(matches.length?'':'disabled')+' title="'+esc(name)+' 포함 파티 '+matches.length+'개 · 누를 때마다 선택 반전">'+
           '<b>'+esc(name)+'</b><small>'+matches.length+'</small>'+
         '</button>';
       }).join("")+
@@ -1073,7 +1073,7 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
             group.items.map(function(item){
               return '<button type="button" class="route-character-quick-btn '+(item.active?'active ':'')+(item.partial?'partial ':'')+'" '+
                 'data-route-owner="'+esc(group.owner)+'" data-route-select-character="'+esc(item.character)+'" '+
-                'title="'+esc(item.character)+' 포함 파티 '+item.count+'개 '+(item.active?'선택 해제':'선택')+'">'+
+                'title="'+esc(item.character)+' 포함 파티 '+item.count+'개 · 누를 때마다 선택 반전">'+
                 '<b>'+esc(item.character)+'</b><small>'+item.count+'</small>'+
               '</button>';
             }).join("")+
@@ -1103,7 +1103,7 @@ function renderPartyRoute(){
   var route=ROUTE_RESULT_READY&&selectedRuns.length?buildOverallPartyRoute(selectedRuns):null;
 
   var h='<div class="route-simple-head">'+
-      '<div><span>2인 이상 파티</span><strong>이번에 돌 파티를 선택하세요.</strong><p>개별 파티, 사람별, 캐릭터별로 빠르게 선택할 수 있습니다.</p></div>'+
+      '<div><span>2인 이상 파티</span><strong>이번에 돌 파티를 선택하세요.</strong><p>개별 파티를 고르거나, 사람·캐릭터 버튼을 눌러 해당 파티의 선택 상태를 한 번에 반전할 수 있습니다.</p></div>'+
       '<div class="route-picker-actions"><button type="button" data-route-select-all>전체 선택</button><button type="button" data-route-select-none>전체 해제</button></div>'+
     '</div>';
 
