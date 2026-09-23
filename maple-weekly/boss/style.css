@@ -4283,3 +4283,72 @@ html[data-theme="dark"] .route-choice-check{background:#1c2128}
   .route-choice-grid{grid-template-columns:1fr}
   .route-choice{grid-template-columns:22px 64px minmax(0,1fr);padding:8px}
 }
+
+
+/* PC readability boost — checklist calendar + doping route */
+@media(min-width:761px){
+  /* checklist / calendar */
+  .checklist-panel{max-width:1280px}
+  .checklist-month-title strong{font-size:24px}
+  .checklist-month-title span{font-size:12px}
+  .checklist-month-meso{font-size:13px}
+  .checklist-owner-note{font-size:12px}
+  .calendar-weekdays span{font-size:12px;padding:10px 5px}
+  .month-day{min-height:145px;padding:11px 10px 10px}
+  .month-day-date{font-size:12px}
+  .month-day-runs{gap:4px;margin-top:9px}
+  .month-day-runs em{font-size:10.5px;line-height:1.3}
+  .month-day-runs em strong{font-size:9.5px}
+  .month-day-total{font-size:10.5px}
+  .week-run-head>div:first-child strong{font-size:15px}
+  .week-run-head>div:first-child span{font-size:11px}
+  .week-run-money small,
+  .week-run-money em{font-size:10px}
+  .week-run-money b{font-size:17px}
+  .character-run-head>div:first-child strong{font-size:14px}
+  .character-run-head>div:first-child span{font-size:10px}
+  .character-run-head small{font-size:9.5px}
+  .character-run-head b{font-size:14px}
+  .character-run-head em{font-size:10px}
+  .boss-run-row{min-height:48px;padding:7px 10px}
+  .boss-run-name strong{font-size:12.5px}
+  .boss-run-name small{font-size:9.5px}
+  .boss-run-meso small{font-size:9px}
+  .boss-run-meso b{font-size:12px}
+  .boss-toggle-all{font-size:11px}
+
+  /* doping route */
+  .route-picker-head>div:first-child>span{font-size:11px}
+  .route-picker-head strong{font-size:17px}
+  .route-picker-head p{font-size:11px}
+  .route-picker-actions button{min-height:36px;font-size:11px;padding:0 12px}
+  .route-choice{grid-template-columns:24px 88px minmax(0,1fr);padding:10px 11px}
+  .route-choice-check{width:21px;height:21px;font-size:11px}
+  .route-choice-main b{font-size:12px}
+  .route-choice-main i{font-size:10px}
+  .route-choice-members .route-member i{font-size:8.5px}
+  .route-choice-members .route-member b{font-size:11px}
+  .route-selection-summary{font-size:11px}
+  .route-selection-summary b{font-size:14px}
+  .route-overview-copy>span{font-size:12px}
+  .route-overview-copy>strong{font-size:22px}
+  .route-overview-copy>p{font-size:12px}
+  .route-stats>div{min-width:88px;padding:11px 12px}
+  .route-stats b{font-size:20px}
+  .route-stats span{font-size:10px}
+  .route-step{width:32px;height:32px;font-size:13px}
+  .route-character-head span{font-size:10px}
+  .route-character-head strong{font-size:18px}
+  .route-character-head em{font-size:11px}
+  .route-order{font-size:10px}
+  .route-member{padding:5px 8px}
+  .route-member i{font-size:9px}
+  .route-member b{font-size:12px}
+  .route-plus{font-size:11px}
+  .route-boss{padding:6px 9px;font-size:11px}
+  .route-boss i{font-size:10px}
+  .route-change b{font-size:11px}
+  .route-note{font-size:11px}
+  .route-empty strong{font-size:15px}
+  .route-empty span{font-size:12px}
+}
