@@ -5938,3 +5938,275 @@ html[data-theme="dark"] .route-character-owner-head>button,
 html[data-theme="dark"] .route-restore-excluded{
   background:#2d333b;
 }
+
+
+/* FINAL V5 — iPhone/Safari stable doping-route layout */
+.route-step-size,
+.route-size-filter,
+.route-size-empty{
+  display:none !important;
+}
+
+.route-panel,
+#routePanel{
+  min-width:0;
+  width:100%;
+  max-width:100%;
+  overflow:visible;
+}
+
+.route-character-quick,
+.route-character-quick-groups,
+.route-character-quick-group,
+.route-character-owner-head,
+.route-character-buttons,
+.route-step,
+.route-step-parties,
+.route-selected-list,
+.route-selected-party{
+  box-sizing:border-box;
+}
+
+.route-character-quick{
+  position:relative !important;
+  display:block !important;
+  width:100% !important;
+  height:auto !important;
+  min-height:0 !important;
+  overflow:visible !important;
+}
+
+.route-character-quick-groups{
+  position:relative !important;
+  display:block !important;
+  width:100% !important;
+  height:auto !important;
+  min-height:0 !important;
+}
+
+.route-character-quick-group{
+  position:relative !important;
+  display:block !important;
+  width:100% !important;
+  height:auto !important;
+  min-height:0 !important;
+  grid-template-columns:none !important;
+  overflow:visible !important;
+}
+
+.route-character-owner-head{
+  position:relative !important;
+  display:flex !important;
+  width:100% !important;
+  height:auto !important;
+}
+
+.route-character-buttons{
+  position:relative !important;
+  display:flex !important;
+  flex-wrap:wrap !important;
+  width:100% !important;
+  height:auto !important;
+  min-height:0 !important;
+}
+
+.route-step-parties{
+  position:relative !important;
+  display:block !important;
+  width:100% !important;
+  height:auto !important;
+  clear:both;
+}
+
+@media(max-width:760px){
+  .route-panel,
+  #routePanel{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    overflow:visible !important;
+  }
+
+  .route-simple-head{
+    display:block !important;
+    width:100% !important;
+    margin:0 0 14px !important;
+  }
+
+  .route-simple-head strong{
+    font-size:21px !important;
+    line-height:1.22 !important;
+  }
+
+  .route-simple-head p{
+    margin-top:5px !important;
+    font-size:11px !important;
+    line-height:1.45 !important;
+  }
+
+  .route-character-quick{
+    margin:0 0 14px !important;
+    padding:12px !important;
+    border-radius:12px !important;
+  }
+
+  .route-character-simple-head{
+    position:relative !important;
+    display:flex !important;
+    align-items:flex-start !important;
+    justify-content:space-between !important;
+    width:100% !important;
+    height:auto !important;
+    margin:0 0 12px !important;
+    gap:10px !important;
+  }
+
+  .route-character-simple-head>div{
+    display:grid !important;
+    grid-template-columns:24px minmax(0,1fr) !important;
+    column-gap:8px !important;
+    row-gap:1px !important;
+    flex:1 1 auto !important;
+    min-width:0 !important;
+  }
+
+  .route-character-simple-head>div>span{
+    grid-row:1 / span 2 !important;
+    width:24px !important;
+    height:24px !important;
+  }
+
+  .route-character-simple-head strong{
+    font-size:14px !important;
+    line-height:1.25 !important;
+  }
+
+  .route-character-simple-head p{
+    font-size:9.5px !important;
+    line-height:1.4 !important;
+    white-space:normal !important;
+  }
+
+  .route-character-simple-head>button{
+    flex:0 0 auto !important;
+    min-height:34px !important;
+    padding:0 10px !important;
+    white-space:nowrap !important;
+  }
+
+  .route-character-quick-group{
+    padding:10px 0 !important;
+    margin:0 !important;
+  }
+
+  .route-character-owner-head{
+    align-items:center !important;
+    margin:0 0 7px !important;
+  }
+
+  .route-character-owner-head>strong{
+    font-size:13px !important;
+    padding:0 !important;
+    margin:0 !important;
+  }
+
+  .route-character-owner-head>button{
+    min-height:32px !important;
+    padding:0 10px !important;
+    white-space:nowrap !important;
+  }
+
+  .route-character-buttons{
+    gap:6px !important;
+  }
+
+  .route-character-quick-btn{
+    flex:0 0 auto !important;
+    min-height:38px !important;
+    padding:0 11px !important;
+    border-radius:9px !important;
+  }
+
+  .route-character-quick-btn b{
+    max-width:140px !important;
+    font-size:11px !important;
+  }
+
+  .route-character-quick-btn small{
+    min-width:19px !important;
+    height:19px !important;
+    font-size:8.5px !important;
+  }
+
+  .route-step-parties{
+    margin:0 !important;
+    padding:0 !important;
+  }
+
+  .route-step-title-row{
+    display:flex !important;
+    align-items:flex-start !important;
+    justify-content:space-between !important;
+    width:100% !important;
+    margin:0 0 9px !important;
+    gap:8px !important;
+  }
+
+  .route-step-title-row>div{
+    display:flex !important;
+    align-items:flex-start !important;
+    min-width:0 !important;
+  }
+
+  .route-step-title-row>div>span{
+    flex:0 0 24px !important;
+    width:24px !important;
+    height:24px !important;
+  }
+
+  .route-step-title strong{
+    font-size:14px !important;
+    line-height:1.25 !important;
+  }
+
+  .route-step-title p{
+    font-size:9.5px !important;
+    line-height:1.4 !important;
+  }
+
+  .route-selected-list{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) !important;
+    gap:7px !important;
+    width:100% !important;
+  }
+
+  .route-selected-party{
+    display:flex !important;
+    align-items:flex-start !important;
+    width:100% !important;
+    min-width:0 !important;
+  }
+
+  .route-selected-party-main{
+    flex:1 1 auto !important;
+    min-width:0 !important;
+  }
+
+  .route-party-exclude{
+    flex:0 0 auto !important;
+    white-space:nowrap !important;
+  }
+
+  .route-simple-footer{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    width:100% !important;
+  }
+
+  .route-build-btn{
+    width:100% !important;
+    min-height:44px !important;
+  }
+}
