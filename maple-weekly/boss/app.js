@@ -2110,7 +2110,7 @@ function renderMobile(){
 
   var charIncome=characterWeeklyIncome(pi),ownerIncome=ownerWeeklyIncome(),missingPrices=characterMissingPriceCount(pi),ownerMissing=ownerMissingPriceCount();
   var summary='<div class="mobile-character-head owner-themed" data-theme="'+theme+'">'+
-    '<div><div class="mobile-character-name-line"><strong>'+esc(st.players[pi])+'</strong>'+(pi===0?'<span class="representative-badge">대표</span>':'')+(w>=LIMIT?'<span class="complete-badge">완료</span>':'')+'</div>'+
+    '<div><div class="mobile-character-name-line"><strong>'+esc(st.players[pi])+'</strong>'+(pi===0?'<span class="representative-badge">대표</span>':'')+(w>=LIMIT?'<span class="complete-badge">완료</span>':'')+(unlocked?'<button type="button" class="mobile-rename-character" data-rename-character="'+pi+'">수정</button>':'')+'</div>'+
       '<span>주간 수익 <b class="mobile-income">'+formatEok(charIncome)+'</b>'+(missingPrices?' · 가격 미등록 '+missingPrices+'건':'')+(w>=LIMIT?' · 미설정 숨김':'')+'</span>'+
     '</div>'+
     '<div class="mobile-char-actions">'+
@@ -2174,6 +2174,24 @@ function render(){
   }
 }
 
+function renameCharacter(pi){
+  var st=state(),o=owner();
+  if(!st||!o||!isUnlocked(o.id)||pi<0||pi>=st.players.length)return;
+  var current=String(st.players[pi]||"").trim();
+  var next=prompt("캐릭터 닉네임을 입력해 주세요.",current);
+  if(next===null)return;
+  next=String(next).trim();
+  if(!next){toast("닉네임을 입력해 주세요.");return}
+  if(st.players.some(function(name,i){return i!==pi&&String(name||"").trim()===next})){
+    toast("같은 보스판에 이미 같은 닉네임이 있어요.");
+    return;
+  }
+  if(next===current)return;
+  st.players[pi]=next;
+  queueSave(120);
+  render();
+  toast("닉네임을 변경했어요.");
+}
 function bindCommon(root){
   var st=state();if(!st)return;
   Array.prototype.forEach.call(root.querySelectorAll("select:not(:disabled)"),function(e){
@@ -2200,6 +2218,9 @@ function bindCommon(root){
       if(e.target&&e.target.closest&&e.target.closest("button,select,input"))return;
       toggleBoardBossCheck(+card.dataset.boardCheckBi,+card.dataset.boardCheckPi);
     };
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-rename-character]"),function(e){
+    e.onclick=function(){renameCharacter(+e.dataset.renameCharacter)};
   });
   Array.prototype.forEach.call(root.querySelectorAll("[data-move-character]:not(:disabled)"),function(e){
     e.onclick=function(){
@@ -2313,10 +2334,22 @@ document.getElementById("removeOwner").onclick=function(){
 function addCharacter(){
   var o=owner();if(!o||!isUnlocked(o.id))return;
   var st=state();
-  st.players.push("새 닉네임");
+  var name="새 닉네임";
+  if(isMobile()){
+    var entered=prompt("새 캐릭터 닉네임을 입력해 주세요.");
+    if(entered===null)return;
+    name=String(entered).trim();
+    if(!name){toast("닉네임을 입력해 주세요.");return}
+    if(st.players.some(function(player){return String(player||"").trim()===name})){
+      toast("같은 보스판에 이미 같은 닉네임이 있어요.");
+      return;
+    }
+  }
+  st.players.push(name);
   BOSSES.forEach(function(b){st.cells[b].push(emptyCell())});
   activeCharByOwner[o.id]=st.players.length-1;
   render();queueSave(120);
+  if(isMobile())toast(name+" 캐릭터를 추가했어요.");
 }
 document.getElementById("addPlayer").onclick=addCharacter;
 document.getElementById("saveBoardBtn").onclick=function(){
