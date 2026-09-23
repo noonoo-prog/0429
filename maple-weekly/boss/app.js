@@ -66,6 +66,7 @@ let THEME_MODE=localStorage.getItem(THEME_KEY)==="dark"?"dark":"light";
 const CHECKLIST_START="2026-09-24";
 const PAGE_VIEW_KEY="boss-board-page-view-v1",ROUTE_SELECTION_PREFIX="boss-board-route-selection-v1-";
 const ROUTE_MODE_KEY="boss-board-route-mode-v1";
+const ROUTE_SAVED_SLOTS_KEY="boss-board-route-saved-slots-v1";
 let PAGE_VIEW=(function(){var v=localStorage.getItem(PAGE_VIEW_KEY);return v==="checklist"||v==="route"?v:"board"})();
 let ROUTE_MODE=(function(){var v=localStorage.getItem(ROUTE_MODE_KEY);return v==="personal"?"personal":"party"})();
 let CHECKLIST_MONTH=(function(){
@@ -81,6 +82,8 @@ let CHECKLIST_LOADED=false;
 let CHECKLIST_LOADING=false;
 let CHECKLIST_SAVING="";
 let ROUTE_RESULT_READY=false;
+let ROUTE_LOADED_RUNS=null;
+let ROUTE_LOADED_SLOT=0;
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(m){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})}
 function applyTheme(mode){
@@ -909,34 +912,122 @@ function applyOverallGroupState(group,lastByOwner,seenByOwner){
     seenByOwner[p.owner][p.character]=true;
   });
 }
+function routeSavedSlots(){
+  try{
+    var raw=JSON.parse(localStorage.getItem(ROUTE_SAVED_SLOTS_KEY)||"[]");
+    var out=[null,null,null];
+    for(var i=0;i<3;i++){
+      var item=raw&&raw[i];
+      if(item&&Array.isArray(item.runs)&&item.runs.length){
+        out[i]={
+          runs:item.runs,
+          savedAt:String(item.savedAt||"")
+        };
+      }
+    }
+    return out;
+  }catch(e){
+    return [null,null,null];
+  }
+}
+function saveRouteSlots(slots){
+  localStorage.setItem(ROUTE_SAVED_SLOTS_KEY,JSON.stringify((slots||[]).slice(0,3)));
+}
+function cloneRouteRuns(runs){
+  return JSON.parse(JSON.stringify(runs||[]));
+}
+function routeSavedAtLabel(value){
+  if(!value)return "";
+  try{
+    return new Date(value).toLocaleString("ko-KR",{
+      month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"
+    });
+  }catch(e){
+    return "";
+  }
+}
+function invalidateRouteResult(){
+  ROUTE_RESULT_READY=false;
+  ROUTE_LOADED_RUNS=null;
+  ROUTE_LOADED_SLOT=0;
+}
+function routeSaveSlotsHtml(displayRuns){
+  var slots=routeSavedSlots();
+  return '<section class="route-save-section">'+
+    '<div class="route-save-head">'+
+      '<div><strong>루트 저장</strong><span>이 기기에 최대 3개까지 저장됩니다.</span></div>'+
+    '</div>'+
+    '<div class="route-save-grid">'+
+      slots.map(function(slot,index){
+        var no=index+1;
+        if(!slot){
+          return '<article class="route-save-slot empty">'+
+            '<div><b>슬롯 '+no+'</b><span>비어 있음</span></div>'+
+            '<button type="button" data-route-save-slot="'+no+'" '+((displayRuns&&displayRuns.length)?'':'disabled')+'>현재 루트 저장</button>'+
+          '</article>';
+        }
+        return '<article class="route-save-slot filled '+(ROUTE_LOADED_SLOT===no?'active':'')+'">'+
+          '<div><b>슬롯 '+no+'</b><span>'+slot.runs.length+'개 파티 · '+esc(routeSavedAtLabel(slot.savedAt))+'</span></div>'+
+          '<div class="route-save-actions">'+
+            '<button type="button" class="primary" data-route-load-slot="'+no+'">불러오기</button>'+
+            '<button type="button" data-route-save-slot="'+no+'" '+((displayRuns&&displayRuns.length)?'':'disabled')+'>덮어쓰기</button>'+
+            '<button type="button" class="danger" data-route-delete-slot="'+no+'" aria-label="저장 루트 '+no+' 삭제">삭제</button>'+
+          '</div>'+
+        '</article>';
+      }).join("")+
+    '</div>'+
+  '</section>';
+}
+function routeParticipantKey(p){
+  return String(p&&p.owner||"")+"\u0001"+String(p&&p.character||"");
+}
+function routeGroupOverlap(a,b){
+  if(!a||!b)return 0;
+  var prev=new Set((a.participants||[]).map(routeParticipantKey));
+  return (b.participants||[]).reduce(function(n,p){
+    return n+(prev.has(routeParticipantKey(p))?1:0);
+  },0);
+}
 function buildOverallPartyRoute(runs){
   var left=groupPartyRouteRuns(runs||[]),groups=[];
   var lastByOwner={},seenByOwner={},totalChanges=0,totalRevisits=0;
+  var previous=null;
 
   while(left.length){
     left.sort(function(a,b){
-      /* 1순위: 파티 인원 많은 순. 같은 인원일 때만 교체 최소화. */
-      var d=b.participants.length-a.participants.length;
-      if(d)return d;
-      var am=overallGroupMetrics(a,lastByOwner,seenByOwner);
-      var bm=overallGroupMetrics(b,lastByOwner,seenByOwner);
-      d=am.score-bm.score;
-      if(d)return d;
-      d=b.bosses.length-a.bosses.length;
-      if(d)return d;
+      var d;
+      if(!previous){
+        /* 시작은 가장 많은 인원. 같은 인원이면 보스를 많이 묶은 파티 우선. */
+        d=b.participants.length-a.participants.length;
+        if(d)return d;
+        d=b.bosses.length-a.bosses.length;
+        if(d)return d;
+      }else{
+        /* 이후는 직전 파티와 같은 캐릭터가 많이 남는 순. */
+        d=routeGroupOverlap(previous,b)-routeGroupOverlap(previous,a);
+        if(d)return d;
+        /* 겹치는 수가 같을 때만 인원 많은 파티 우선. */
+        d=b.participants.length-a.participants.length;
+        if(d)return d;
+        d=b.bosses.length-a.bosses.length;
+        if(d)return d;
+      }
       return a.signature.localeCompare(b.signature,"ko");
     });
+
     var group=left.shift();
     var metrics=overallGroupMetrics(group,lastByOwner,seenByOwner);
     group.routeTransition={
       changed:metrics.changed.slice(),
       same:metrics.same.slice(),
-      revisited:metrics.revisited.slice()
+      revisited:metrics.revisited.slice(),
+      overlap:previous?routeGroupOverlap(previous,group):0
     };
     totalChanges+=metrics.changed.length;
     totalRevisits+=metrics.revisited.length;
     groups.push(group);
     applyOverallGroupState(group,lastByOwner,seenByOwner);
+    previous=group;
   }
 
   return{
@@ -993,7 +1084,7 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
       if(i>=0)state.characters.splice(i,1);
       else state.characters.push(key);
       saveRouteQuickState(state);
-      ROUTE_RESULT_READY=false;
+      invalidateRouteResult();
       renderPartyRoute();
     };
   });
@@ -1011,7 +1102,7 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
         state.excludedCharacters.push(key);
       }
       saveRouteQuickState(state);
-      ROUTE_RESULT_READY=false;
+      invalidateRouteResult();
       renderPartyRoute();
     };
   });
@@ -1038,7 +1129,7 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
         keys.forEach(function(key){if(state.characters.indexOf(key)<0)state.characters.push(key)});
       }
       saveRouteQuickState(state);
-      ROUTE_RESULT_READY=false;
+      invalidateRouteResult();
       renderPartyRoute();
     };
   });
@@ -1074,7 +1165,7 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
       }
 
       saveRouteQuickState(state);
-      ROUTE_RESULT_READY=false;
+      invalidateRouteResult();
       renderPartyRoute();
     };
   });
@@ -1085,7 +1176,7 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
       var state=routeQuickState();
       if(state.excludedRuns.indexOf(id)<0)state.excludedRuns.push(id);
       saveRouteQuickState(state);
-      ROUTE_RESULT_READY=false;
+      invalidateRouteResult();
       renderPartyRoute();
     };
   });
@@ -1095,20 +1186,68 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
     var state=routeQuickState();
     state.excludedRuns=[];
     saveRouteQuickState(state);
-    ROUTE_RESULT_READY=false;
+    invalidateRouteResult();
     renderPartyRoute();
   };
 
   var clear=panel.querySelector("[data-route-clear-characters]");
   if(clear)clear.onclick=function(){
     saveRouteQuickState(emptyRouteQuickState());
-    ROUTE_RESULT_READY=false;
+    invalidateRouteResult();
     renderPartyRoute();
   };
+
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-save-slot]"),function(btn){
+    btn.onclick=function(){
+      var slotNo=Math.max(1,Math.min(3,Number(btn.dataset.routeSaveSlot)||1));
+      var displayRuns=ROUTE_LOADED_RUNS&&ROUTE_LOADED_RUNS.length?ROUTE_LOADED_RUNS:runs.filter(function(run){return selectedIds.has(run.id)});
+      if(!displayRuns.length)return;
+      var slots=routeSavedSlots();
+      slots[slotNo-1]={runs:cloneRouteRuns(displayRuns),savedAt:new Date().toISOString()};
+      saveRouteSlots(slots);
+      ROUTE_LOADED_SLOT=slotNo;
+      toast("루트 "+slotNo+"에 저장했어요.");
+      renderPartyRoute();
+    };
+  });
+
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-load-slot]"),function(btn){
+    btn.onclick=function(){
+      var slotNo=Math.max(1,Math.min(3,Number(btn.dataset.routeLoadSlot)||1));
+      var slot=routeSavedSlots()[slotNo-1];
+      if(!slot||!slot.runs||!slot.runs.length)return;
+      ROUTE_LOADED_RUNS=cloneRouteRuns(slot.runs);
+      ROUTE_LOADED_SLOT=slotNo;
+      ROUTE_RESULT_READY=true;
+      renderPartyRoute();
+      setTimeout(function(){
+        var result=document.querySelector(".route-simple-result");
+        if(result&&result.scrollIntoView)result.scrollIntoView({behavior:"smooth",block:"start"});
+      },0);
+    };
+  });
+
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-delete-slot]"),function(btn){
+    btn.onclick=function(){
+      var slotNo=Math.max(1,Math.min(3,Number(btn.dataset.routeDeleteSlot)||1));
+      var slots=routeSavedSlots();
+      slots[slotNo-1]=null;
+      saveRouteSlots(slots);
+      if(ROUTE_LOADED_SLOT===slotNo){
+        ROUTE_LOADED_SLOT=0;
+        ROUTE_LOADED_RUNS=null;
+        ROUTE_RESULT_READY=false;
+      }
+      toast("루트 "+slotNo+" 저장을 삭제했어요.");
+      renderPartyRoute();
+    };
+  });
 
   var make=panel.querySelector("[data-route-build]");
   if(make)make.onclick=function(){
     if(!selectedIds.size)return;
+    ROUTE_LOADED_RUNS=null;
+    ROUTE_LOADED_SLOT=0;
     ROUTE_RESULT_READY=true;
     renderPartyRoute();
     setTimeout(function(){
@@ -1219,7 +1358,8 @@ function renderPartyRoute(){
 
   var selectedIds=selectedRouteIds(focus,allRuns);
   var selectedRuns=allRuns.filter(function(run){return selectedIds.has(run.id)});
-  var route=ROUTE_RESULT_READY&&selectedRuns.length?buildOverallPartyRoute(selectedRuns):null;
+  var displayRuns=ROUTE_LOADED_RUNS&&ROUTE_LOADED_RUNS.length?ROUTE_LOADED_RUNS:selectedRuns;
+  var route=ROUTE_RESULT_READY&&displayRuns.length?buildOverallPartyRoute(displayRuns):null;
   var state=routeQuickState();
   var excludedVisible=(state.excludedRuns||[]).filter(function(id){
     return allRuns.some(function(run){return run.id===id});
@@ -1258,7 +1398,7 @@ function renderPartyRoute(){
 
   if(ROUTE_RESULT_READY&&route){
     h+='<section class="route-simple-result owner-themed" data-theme="'+theme+'">'+
-      '<header><span>추천 루트</span><strong>이 순서대로 돌면 됩니다.</strong></header>'+
+      '<header><span>'+(ROUTE_LOADED_SLOT?'저장 루트 '+ROUTE_LOADED_SLOT:'추천 루트')+'</span><strong>이 순서대로 돌면 됩니다.</strong></header>'+
       '<div class="route-flow route-party-flow">';
 
     route.groups.forEach(function(group,index){
@@ -1275,9 +1415,10 @@ function renderPartyRoute(){
       h+='</div></section>';
     });
 
-    h+='</div><p class="route-note">파티 인원이 많은 순으로 먼저 배치하고, 같은 인원수에서는 캐릭터 교체가 적은 순서로 정리했습니다.</p></section>';
+    h+='</div><p class="route-note">첫 파티는 인원이 많은 파티로 시작하고, 이후에는 직전 파티와 같은 캐릭터가 가장 많이 남는 순서로 이어집니다. 같은 파티 구성의 보스는 한 번에 묶습니다.</p></section>';
   }
 
+  h+=routeSaveSlotsHtml(ROUTE_RESULT_READY&&displayRuns.length?displayRuns:[]);
   panel.innerHTML=h;
   bindRouteSelection(panel,focus,allRuns,selectedIds);
 }
