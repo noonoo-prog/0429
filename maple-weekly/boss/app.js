@@ -861,9 +861,12 @@ function buildOverallPartyRoute(runs){
 
   while(left.length){
     left.sort(function(a,b){
+      /* 1순위: 파티 인원 많은 순. 같은 인원일 때만 교체 최소화. */
+      var d=b.participants.length-a.participants.length;
+      if(d)return d;
       var am=overallGroupMetrics(a,lastByOwner,seenByOwner);
       var bm=overallGroupMetrics(b,lastByOwner,seenByOwner);
-      var d=am.score-bm.score;
+      d=am.score-bm.score;
       if(d)return d;
       d=b.bosses.length-a.bosses.length;
       if(d)return d;
@@ -1131,7 +1134,7 @@ function renderPartyRoute(){
       h+='</div></section>';
     });
 
-    h+='</div><p class="route-note">같은 파티 구성의 보스는 한 번에 묶고, 다음 파티로 넘어갈 때 바꾸는 캐릭터 수가 적도록 정리했습니다.</p></section>';
+    h+='</div><p class="route-note">파티 인원이 많은 순으로 먼저 배치하고, 같은 인원수에서는 캐릭터 교체가 적은 순서로 정리했습니다.</p></section>';
   }
 
   panel.innerHTML=h;
