@@ -4722,3 +4722,69 @@ html[data-theme="dark"] .compact-count-inline-select{
   border-color:var(--line-strong);
   color:var(--text);
 }
+
+
+/* FIX inline party label shrinking boss names */
+@media(min-width:761px){
+  .character-boss-list .compact-title-line{
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    gap:4px;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    white-space:nowrap;
+  }
+
+  /* Boss name keeps its natural width first. Party count uses remaining space. */
+  .character-boss-list .compact-boss-name{
+    flex:0 0 auto;
+    width:max-content;
+    min-width:max-content;
+    max-width:none;
+    overflow:visible;
+    text-overflow:clip;
+    white-space:nowrap;
+  }
+
+  .character-boss-list .compact-party-count{
+    flex:0 0 auto;
+    font-size:10px;
+    letter-spacing:-.02em;
+  }
+
+  .character-boss-list .compact-party-count-edit{
+    flex:0 0 auto;
+  }
+
+  .character-boss-list .compact-count-inline-select{
+    width:37px;
+    min-width:37px;
+    max-width:37px;
+    padding:0 2px;
+    font-size:9.5px;
+  }
+}
+
+@media(max-width:760px){
+  .mobile-compact-list .compact-title-line{
+    overflow:hidden;
+  }
+
+  .mobile-compact-list .compact-boss-name{
+    flex:0 0 auto;
+    width:max-content;
+    min-width:max-content;
+    max-width:none;
+    overflow:visible;
+    text-overflow:clip;
+    white-space:nowrap;
+  }
+
+  .mobile-compact-list .compact-party-count,
+  .mobile-compact-list .compact-party-count-edit{
+    flex:0 0 auto;
+  }
+}
