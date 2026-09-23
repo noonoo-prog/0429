@@ -65,7 +65,7 @@ let PARTY_ONLY=localStorage.getItem(PARTY_FILTER_KEY)==="1";
 let THEME_MODE=localStorage.getItem(THEME_KEY)==="dark"?"dark":"light";
 const CHECKLIST_START="2026-09-24";
 const PAGE_VIEW_KEY="boss-board-page-view-v1",ROUTE_SELECTION_PREFIX="boss-board-route-selection-v1-";
-const ROUTE_MODE_KEY="boss-board-route-mode-v1";
+const ROUTE_MODE_KEY="boss-board-route-mode-v1",ROUTE_SIZE_FILTER_KEY="boss-board-route-size-filter-v1";
 let PAGE_VIEW=(function(){var v=localStorage.getItem(PAGE_VIEW_KEY);return v==="checklist"||v==="route"?v:"board"})();
 let ROUTE_MODE=(function(){var v=localStorage.getItem(ROUTE_MODE_KEY);return v==="personal"?"personal":"party"})();
 let CHECKLIST_MONTH=(function(){
@@ -684,6 +684,7 @@ function collectPartyRouteRuns(focusOwner,includeAll){
           id:key,
           boss:boss,
           difficulty:c.difficulty,
+          partyCount:Math.max(2,Number(c.count)||participants.length),
           participants:participants,
           focusCharacter:focus?focus.character:"",
           sourceOwner:sourceOwner.name,
@@ -704,6 +705,46 @@ function collectPartyRouteRuns(focusOwner,includeAll){
     return ai-bi||partyRouteSignature(a).localeCompare(partyRouteSignature(b),"ko")||a.id.localeCompare(b.id,"ko");
   });
   return runs;
+}
+function routePartySizeFilters(){
+  var allowed=["2","3","4p"];
+  try{
+    var raw=localStorage.getItem(ROUTE_SIZE_FILTER_KEY);
+    if(raw===null)return new Set(allowed);
+    var parsed=JSON.parse(raw);
+    if(!Array.isArray(parsed))return new Set(allowed);
+    return new Set(parsed.filter(function(x){return allowed.indexOf(x)>=0}));
+  }catch(e){
+    return new Set(allowed);
+  }
+}
+function saveRoutePartySizeFilters(set){
+  localStorage.setItem(ROUTE_SIZE_FILTER_KEY,JSON.stringify(Array.from(set)));
+}
+function routePartySizeBucket(run){
+  var n=Math.max(2,Number(run&&run.partyCount)||Number(run&&run.participants&&run.participants.length)||2);
+  if(n>=4)return "4p";
+  return String(n);
+}
+function routePartySizeFilterHtml(allRuns,filters){
+  var defs=[
+    {key:"2",label:"2인 파티"},
+    {key:"3",label:"3인 파티"},
+    {key:"4p",label:"4인 이상"}
+  ];
+  return '<div class="route-size-filter">'+
+    '<span class="route-size-filter-title">파티 인원</span>'+
+    '<div class="route-size-filter-buttons">'+
+      defs.map(function(def){
+        var count=allRuns.filter(function(run){return routePartySizeBucket(run)===def.key}).length;
+        var active=filters.has(def.key);
+        return '<button type="button" class="route-size-filter-btn '+(active?'active':'')+'" '+
+          'data-route-size-filter="'+def.key+'" aria-pressed="'+(active?'true':'false')+'">'+
+          '<b>'+def.label+'</b><small>'+count+'</small>'+
+        '</button>';
+      }).join("")+
+    '</div>'+
+  '</div>';
 }
 function routeSelectionKey(){
   return ROUTE_SELECTION_PREFIX+"simple-global-v3";
@@ -1057,6 +1098,18 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
     };
   });
 
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-size-filter]"),function(btn){
+    btn.onclick=function(){
+      var key=btn.dataset.routeSizeFilter;
+      var filters=routePartySizeFilters();
+      if(filters.has(key))filters.delete(key);
+      else filters.add(key);
+      saveRoutePartySizeFilters(filters);
+      ROUTE_RESULT_READY=false;
+      renderPartyRoute();
+    };
+  });
+
   var make=panel.querySelector("[data-route-build]");
   if(make)make.onclick=function(){
     if(!selectedIds.size)return;
@@ -1176,8 +1229,10 @@ function renderPartyRoute(){
     return;
   }
 
-  var selectedIds=selectedRouteIds(focus,allRuns);
-  var selectedRuns=allRuns.filter(function(run){return selectedIds.has(run.id)});
+  var sizeFilters=routePartySizeFilters();
+  var visibleRuns=allRuns.filter(function(run){return sizeFilters.has(routePartySizeBucket(run))});
+  var selectedIds=selectedRouteIds(focus,visibleRuns);
+  var selectedRuns=visibleRuns.filter(function(run){return selectedIds.has(run.id)});
   var route=ROUTE_RESULT_READY&&selectedRuns.length?buildOverallPartyRoute(selectedRuns):null;
 
   var h='<div class="route-simple-head">'+
@@ -1192,18 +1247,24 @@ function renderPartyRoute(){
       '<span><em>4</em> 루트 만들기</span>'+
     '</div>';
 
-  h+=routeOwnerQuickSelectHtml(allRuns,selectedIds);
-  h+=routeCharacterQuickSelectHtml(allRuns,selectedIds);
+  h+=routePartySizeFilterHtml(allRuns,sizeFilters);
 
-  h+='<div class="route-picker route-simple-picker owner-themed" data-theme="'+theme+'">'+
-    '<div class="route-choice-grid">'+
-      allRuns.map(function(run){return routeChoiceHtml(run,selectedIds.has(run.id),focus.name)}).join("")+
-    '</div>'+
-    '<div class="route-simple-footer">'+
-      '<div class="route-selection-summary"><b>'+selectedRuns.length+'</b> / '+allRuns.length+'개 파티 선택</div>'+
-      '<button type="button" class="route-build-btn" data-route-build '+(selectedRuns.length?'':'disabled')+'>선택한 파티로 루트 만들기</button>'+
-    '</div>'+
-  '</div>';
+  if(visibleRuns.length){
+    h+=routeOwnerQuickSelectHtml(visibleRuns,selectedIds);
+    h+=routeCharacterQuickSelectHtml(visibleRuns,selectedIds);
+
+    h+='<div class="route-picker route-simple-picker owner-themed" data-theme="'+theme+'">'+
+      '<div class="route-choice-grid">'+
+        visibleRuns.map(function(run){return routeChoiceHtml(run,selectedIds.has(run.id),focus.name)}).join("")+
+      '</div>'+
+      '<div class="route-simple-footer">'+
+        '<div class="route-selection-summary"><b>'+selectedRuns.length+'</b> / '+visibleRuns.length+'개 파티 선택</div>'+
+        '<button type="button" class="route-build-btn" data-route-build '+(selectedRuns.length?'':'disabled')+'>선택한 파티로 루트 만들기</button>'+
+      '</div>'+
+    '</div>';
+  }else{
+    h+='<div class="route-size-empty"><strong>표시할 파티 인원을 선택하세요.</strong><span>2인, 3인, 4인 이상을 여러 개 동시에 선택할 수 있습니다.</span></div>';
+  }
 
   if(ROUTE_RESULT_READY&&route){
     h+='<section class="route-simple-result owner-themed" data-theme="'+theme+'">'+
@@ -1228,7 +1289,7 @@ function renderPartyRoute(){
   }
 
   panel.innerHTML=h;
-  bindRouteSelection(panel,focus,allRuns,selectedIds);
+  bindRouteSelection(panel,focus,visibleRuns,selectedIds);
 }
 function updatePageView(){
   var checklist=PAGE_VIEW==="checklist",route=PAGE_VIEW==="route",board=PAGE_VIEW==="board";
