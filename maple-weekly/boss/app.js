@@ -65,7 +65,7 @@ let PARTY_ONLY=localStorage.getItem(PARTY_FILTER_KEY)==="1";
 let THEME_MODE=localStorage.getItem(THEME_KEY)==="dark"?"dark":"light";
 const CHECKLIST_START="2026-09-24";
 const PAGE_VIEW_KEY="boss-board-page-view-v1",ROUTE_SELECTION_PREFIX="boss-board-route-selection-v1-";
-const ROUTE_MODE_KEY="boss-board-route-mode-v1",ROUTE_SIZE_FILTER_KEY="boss-board-route-size-filter-v1";
+const ROUTE_MODE_KEY="boss-board-route-mode-v1";
 let PAGE_VIEW=(function(){var v=localStorage.getItem(PAGE_VIEW_KEY);return v==="checklist"||v==="route"?v:"board"})();
 let ROUTE_MODE=(function(){var v=localStorage.getItem(ROUTE_MODE_KEY);return v==="personal"?"personal":"party"})();
 let CHECKLIST_MONTH=(function(){
@@ -706,46 +706,6 @@ function collectPartyRouteRuns(focusOwner,includeAll){
   });
   return runs;
 }
-function routePartySizeFilters(){
-  var allowed=["2","3","4p"];
-  try{
-    var raw=localStorage.getItem(ROUTE_SIZE_FILTER_KEY);
-    if(raw===null)return new Set(allowed);
-    var parsed=JSON.parse(raw);
-    if(!Array.isArray(parsed))return new Set(allowed);
-    return new Set(parsed.filter(function(x){return allowed.indexOf(x)>=0}));
-  }catch(e){
-    return new Set(allowed);
-  }
-}
-function saveRoutePartySizeFilters(set){
-  localStorage.setItem(ROUTE_SIZE_FILTER_KEY,JSON.stringify(Array.from(set)));
-}
-function routePartySizeBucket(run){
-  var n=Math.max(2,Number(run&&run.partyCount)||Number(run&&run.participants&&run.participants.length)||2);
-  if(n>=4)return "4p";
-  return String(n);
-}
-function routePartySizeFilterHtml(allRuns,filters){
-  var defs=[
-    {key:"2",label:"2인 파티"},
-    {key:"3",label:"3인 파티"},
-    {key:"4p",label:"4인 이상"}
-  ];
-  return '<div class="route-size-filter">'+
-    '<span class="route-size-filter-title">파티 인원</span>'+
-    '<div class="route-size-filter-buttons">'+
-      defs.map(function(def){
-        var count=allRuns.filter(function(run){return routePartySizeBucket(run)===def.key}).length;
-        var active=filters.has(def.key);
-        return '<button type="button" class="route-size-filter-btn '+(active?'active':'')+'" '+
-          'data-route-size-filter="'+def.key+'" aria-pressed="'+(active?'true':'false')+'">'+
-          '<b>'+def.label+'</b><small>'+count+'</small>'+
-        '</button>';
-      }).join("")+
-    '</div>'+
-  '</div>';
-}
 function routeSelectionKey(){
   return ROUTE_SELECTION_PREFIX+"simple-v4";
 }
@@ -1069,18 +1029,6 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
     renderPartyRoute();
   };
 
-  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-size-filter]"),function(btn){
-    btn.onclick=function(){
-      var key=btn.dataset.routeSizeFilter;
-      var filters=routePartySizeFilters();
-      if(filters.has(key))filters.delete(key);
-      else filters.add(key);
-      saveRoutePartySizeFilters(filters);
-      ROUTE_RESULT_READY=false;
-      renderPartyRoute();
-    };
-  });
-
   var make=panel.querySelector("[data-route-build]");
   if(make)make.onclick=function(){
     if(!selectedIds.size)return;
@@ -1155,7 +1103,7 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
 
   return '<div class="route-character-quick">'+
     '<div class="route-character-simple-head">'+
-      '<div><span>2</span><strong>갈 캐릭터 선택</strong><p>갈 캐릭터만 눌러 주세요. 선택된 캐릭터가 포함된 파티가 아래에 자동으로 모입니다.</p></div>'+
+      '<div><span>1</span><strong>갈 캐릭터 선택</strong><p>갈 캐릭터만 눌러 주세요. 포함된 파티가 아래에 자동으로 모입니다.</p></div>'+
       '<button type="button" data-route-clear-characters>선택 초기화</button>'+
     '</div>'+
     '<div class="route-character-quick-groups">'+
@@ -1193,37 +1141,23 @@ function renderPartyRoute(){
     return;
   }
 
-  var sizeFilters=routePartySizeFilters();
-  var visibleRuns=allRuns.filter(function(run){return sizeFilters.has(routePartySizeBucket(run))});
-  var selectedIds=selectedRouteIds(focus,visibleRuns);
-  var selectedRuns=visibleRuns.filter(function(run){return selectedIds.has(run.id)});
+  var selectedIds=selectedRouteIds(focus,allRuns);
+  var selectedRuns=allRuns.filter(function(run){return selectedIds.has(run.id)});
   var route=ROUTE_RESULT_READY&&selectedRuns.length?buildOverallPartyRoute(selectedRuns):null;
   var state=routeQuickState();
   var excludedVisible=(state.excludedRuns||[]).filter(function(id){
-    return visibleRuns.some(function(run){return run.id===id});
+    return allRuns.some(function(run){return run.id===id});
   }).length;
 
   var h='<div class="route-simple-head">'+
-      '<div><span>도핑 최소 루트</span><strong>갈 파티만 빠르게 고르세요.</strong><p>인원 → 캐릭터 → 필요 없는 파티 제외. 세 단계만 거치면 됩니다.</p></div>'+
+      '<div><span>도핑 최소 루트</span><strong>갈 파티만 빠르게 고르세요.</strong><p>캐릭터 선택 → 필요 없는 파티 제외. 두 단계면 됩니다.</p></div>'+
     '</div>';
 
-  h+='<section class="route-step route-step-size">'+
-    '<div class="route-step-title"><span>1</span><div><strong>파티 인원 선택</strong><p>여러 개를 동시에 선택할 수 있습니다.</p></div></div>'+
-    routePartySizeFilterHtml(allRuns,sizeFilters)+
-  '</section>';
-
-  if(!visibleRuns.length){
-    h+='<div class="route-size-empty"><strong>표시할 파티 인원을 선택하세요.</strong><span>2인, 3인, 4인 이상을 여러 개 동시에 선택할 수 있습니다.</span></div>';
-    panel.innerHTML=h;
-    bindRouteSelection(panel,focus,visibleRuns,selectedIds);
-    return;
-  }
-
-  h+=routeCharacterQuickSelectHtml(visibleRuns,selectedIds);
+  h+=routeCharacterQuickSelectHtml(allRuns,selectedIds);
 
   h+='<section class="route-step route-step-parties">'+
     '<div class="route-step-title route-step-title-row">'+
-      '<div><span>3</span><div><strong>갈 파티 확인</strong><p>필요 없는 파티만 × 제외하세요.</p></div></div>'+
+      '<div><span>2</span><div><strong>갈 파티 확인</strong><p>필요 없는 파티만 × 제외하세요.</p></div></div>'+
       (excludedVisible?'<button type="button" class="route-restore-excluded" data-route-restore-excluded>제외한 파티 '+excludedVisible+'개 복구</button>':'')+
     '</div>';
 
@@ -1237,8 +1171,8 @@ function renderPartyRoute(){
     '</div>';
   }else{
     var hasCharacters=(state.characters||[]).length>0;
-    h+='<div class="route-selection-empty"><strong>'+(hasCharacters?'선택한 캐릭터에 해당하는 파티가 없어요.':'먼저 갈 캐릭터를 선택하세요.')+'</strong>'+
-      '<span>'+(hasCharacters?'파티 인원 필터를 바꾸거나 다른 캐릭터를 선택해 보세요.':'캐릭터를 누르면 해당 파티가 자동으로 여기에 모입니다.')+'</span></div>';
+    h+='<div class="route-selection-empty"><strong>'+(hasCharacters?'선택한 캐릭터의 파티를 모두 제외했어요.':'먼저 갈 캐릭터를 선택하세요.')+'</strong>'+
+      '<span>'+(hasCharacters?'제외한 파티를 복구하거나 다른 캐릭터를 선택해 보세요.':'캐릭터를 누르면 해당 파티가 자동으로 여기에 모입니다.')+'</span></div>';
   }
   h+='</section>';
 
@@ -1265,7 +1199,7 @@ function renderPartyRoute(){
   }
 
   panel.innerHTML=h;
-  bindRouteSelection(panel,focus,visibleRuns,selectedIds);
+  bindRouteSelection(panel,focus,allRuns,selectedIds);
 }
 function updatePageView(){
   var checklist=PAGE_VIEW==="checklist",route=PAGE_VIEW==="route",board=PAGE_VIEW==="board";
