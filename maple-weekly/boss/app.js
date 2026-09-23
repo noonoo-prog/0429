@@ -1305,6 +1305,122 @@ function boardBossChecked(bossName,pi){
   if(!o||!st||!CHECKLIST_LOADED||!st.players[pi])return false;
   return !!bossRunItem(o.id,currentBossWeekStart(),String(st.players[pi]),bossName).completed;
 }
+function sharedPartyBossTargets(bossName,pi){
+  var currentOwner=owner(),st=state();
+  if(!currentOwner||!st)return[];
+  var cell=st.cells[bossName]&&st.cells[bossName][pi];
+  var selfName=String(st.players[pi]||"").trim();
+  if(!cell||!selfName||!isMultiPartyCell(cell))return[];
+
+  var participantNames=[selfName].concat(
+    (cell.names||[]).slice(0,Math.max(0,Number(cell.count||0)-1))
+  );
+  var targets=[],seen={};
+
+  participantNames.forEach(function(rawName){
+    var characterName=String(rawName||"").trim();
+    if(!characterName||characterName==="미정")return;
+
+    var targetOwner=characterName===selfName?currentOwner:characterOwner(characterName);
+    if(!targetOwner||!targetOwner.board)return;
+
+    var targetPi=(targetOwner.board.players||[]).findIndex(function(name){
+      return String(name||"").trim()===characterName;
+    });
+    if(targetPi<0)return;
+
+    var targetCell=targetOwner.board.cells[bossName]&&targetOwner.board.cells[bossName][targetPi];
+    if(!planned(targetCell))return;
+
+    var key=targetOwner.id+"|"+characterName;
+    if(seen[key])return;
+    seen[key]=1;
+    targets.push({
+      ownerId:targetOwner.id,
+      ownerName:targetOwner.name,
+      characterName:characterName,
+      pi:targetPi,
+      cell:targetCell,
+      payout:Math.round(bossWeeklyIncome(bossName,targetCell))
+    });
+  });
+
+  return targets;
+}
+function saveSharedPartyBossCheck(bossName,pi,completed){
+  var weekStart=currentBossWeekStart(),runDate=koreaDateKey();
+  var targets=sharedPartyBossTargets(bossName,pi);
+  if(targets.length<=1){
+    var o=owner(),st=state();
+    if(!o||!st)return;
+    saveBossRunCheck(weekStart,runDate,String(st.players[pi]||""),bossName,pi,completed);
+    return;
+  }
+
+  var before=targets.map(function(t){
+    return {
+      target:t,
+      item:JSON.parse(JSON.stringify(bossRunItem(t.ownerId,weekStart,t.characterName,bossName)))
+    };
+  });
+
+  before.forEach(function(x){
+    setBossRunItem(x.target.ownerId,weekStart,x.target.characterName,bossName,{
+      completed:completed,
+      meso:completed?x.target.payout:0,
+      runDate:completed?runDate:(x.item.runDate||weekStart)
+    });
+  });
+
+  var groups={};
+  targets.forEach(function(t){
+    if(!groups[t.ownerId])groups[t.ownerId]=[];
+    groups[t.ownerId].push({
+      characterName:t.characterName,
+      bossName:bossName,
+      completed:completed,
+      mesoEarned:completed?t.payout:0
+    });
+  });
+
+  CHECKLIST_SAVING="party|"+weekStart+"|"+bossName+"|"+targets.map(function(t){return t.characterName}).join(",");
+  renderBossCheckState();
+
+  Promise.all(Object.keys(groups).map(function(ownerId){
+    return callApi("save_boss_run_bulk",{
+      ownerId:ownerId,
+      weekStart:weekStart,
+      runDate:runDate,
+      items:groups[ownerId]
+    });
+  })).then(function(responses){
+    responses.forEach(function(data){
+      (data.items||[]).forEach(function(item){
+        setBossRunItem(
+          item.owner_id,
+          item.week_start,
+          String(item.character_name||""),
+          String(item.boss_name||""),
+          {
+            completed:!!item.completed,
+            meso:Math.max(0,Number(item.meso_earned)||0),
+            runDate:String(item.run_date||runDate)
+          }
+        );
+      });
+    });
+    toast(bossName+" · 공용 파티 "+targets.length+"명 "+(completed?"같이 체크했어요.":"같이 해제했어요."));
+  }).catch(function(e){
+    before.forEach(function(x){
+      setBossRunItem(x.target.ownerId,weekStart,x.target.characterName,bossName,x.item);
+    });
+    toast(e.message||"공용 파티 체크를 저장하지 못했습니다.");
+    loadChecklist(false);
+  }).finally(function(){
+    CHECKLIST_SAVING="";
+    renderBossCheckState();
+  });
+}
 function toggleBoardBossCheck(bi,pi){
   var o=owner(),st=state();
   if(!o||!st||isUnlocked(o.id)||CHECKLIST_SAVING)return;
@@ -1319,7 +1435,11 @@ function toggleBoardBossCheck(bi,pi){
   if(!characterName)return;
   var weekStart=currentBossWeekStart(),runDate=koreaDateKey();
   var completed=!!bossRunItem(o.id,weekStart,characterName,boss).completed;
-  saveBossRunCheck(weekStart,runDate,characterName,boss,pi,!completed);
+  if(isMultiPartyCell(cell)){
+    saveSharedPartyBossCheck(boss,pi,!completed);
+  }else{
+    saveBossRunCheck(weekStart,runDate,characterName,boss,pi,!completed);
+  }
 }
 function compactBossCard(b,bi,c,pi,unlocked){
   var auto=!!c._sync,editable=unlocked&&!auto,mon=MONTHLY.has(b);
@@ -1739,8 +1859,14 @@ function startPolling(){
   clearInterval(pollTimer);
   pollTimer=setInterval(function(){
     if(document.hidden||dirty||saving||SELECT_ACTIVE)return;
-    if(PAGE_VIEW==="checklist")loadChecklist(false);
-    else loadRemote(false);
+    if(PAGE_VIEW==="checklist"){
+      loadChecklist(false);
+    }else if(PAGE_VIEW==="board"){
+      loadRemote(false);
+      loadChecklist(false);
+    }else{
+      loadRemote(false);
+    }
   },4000);
 }
 loadRemote(true).then(function(){
