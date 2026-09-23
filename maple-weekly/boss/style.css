@@ -5504,3 +5504,26 @@ html[data-theme="dark"] .route-character-quick-btn:not(.active):not(.partial){
   border-color:#444c56 !important;
   color:#909dab !important;
 }
+
+
+/* FINAL v2: character button itself is the ON/OFF source */
+.route-character-quick-group.owner-themed .route-character-quick-btn.selector-on,
+.route-character-quick-group.owner-themed .route-character-quick-btn.active{
+  background:var(--owner-accent,#68707c) !important;
+  border:2px solid var(--owner-accent,#68707c) !important;
+  color:#fff !important;
+}
+.route-character-quick-group.owner-themed .route-character-quick-btn.selector-on b,
+.route-character-quick-group.owner-themed .route-character-quick-btn.active b{
+  color:#fff !important;
+}
+.route-character-quick-group.owner-themed .route-character-quick-btn.selector-on small,
+.route-character-quick-group.owner-themed .route-character-quick-btn.active small{
+  background:rgba(255,255,255,.22) !important;
+  color:#fff !important;
+}
+.route-character-quick-group.owner-themed .route-character-quick-btn.partial:not(.selector-on){
+  border:2px dashed var(--owner-accent,#7d8792) !important;
+  background:color-mix(in srgb,var(--owner-accent,#7d8792) 6%,var(--surface)) !important;
+  color:var(--owner-accent,#7d8792) !important;
+}
