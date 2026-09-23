@@ -65,7 +65,9 @@ let PARTY_ONLY=localStorage.getItem(PARTY_FILTER_KEY)==="1";
 let THEME_MODE=localStorage.getItem(THEME_KEY)==="dark"?"dark":"light";
 const CHECKLIST_START="2026-09-24";
 const PAGE_VIEW_KEY="boss-board-page-view-v1",ROUTE_SELECTION_PREFIX="boss-board-route-selection-v1-";
+const ROUTE_MODE_KEY="boss-board-route-mode-v1";
 let PAGE_VIEW=(function(){var v=localStorage.getItem(PAGE_VIEW_KEY);return v==="checklist"||v==="route"?v:"board"})();
+let ROUTE_MODE=(function(){var v=localStorage.getItem(ROUTE_MODE_KEY);return v==="personal"?"personal":"party"})();
 let CHECKLIST_MONTH=(function(){
   var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1;
   if(y<2026||(y===2026&&m<9))return "2026-09";
@@ -810,6 +812,90 @@ function buildPartyRoute(focusOwner,runs){
     focusSwitches:Math.max(0,blocks.length-1)
   };
 }
+function overallGroupMetrics(group,lastByOwner,seenByOwner){
+  var changed=[],same=[],revisited=[];
+  group.participants.forEach(function(p){
+    if(!p.owner||!p.character||p.character==="미정")return;
+    var last=lastByOwner[p.owner];
+    if(last){
+      if(last===p.character)same.push(p.owner);
+      else{
+        changed.push(p.owner);
+        if(seenByOwner[p.owner]&&seenByOwner[p.owner][p.character])revisited.push(p.owner);
+      }
+    }
+  });
+  return{
+    changed:changed,
+    same:same,
+    revisited:revisited,
+    score:changed.length*100+revisited.length*260-same.length*12-group.bosses.length
+  };
+}
+function applyOverallGroupState(group,lastByOwner,seenByOwner){
+  group.participants.forEach(function(p){
+    if(!p.owner||!p.character||p.character==="미정")return;
+    lastByOwner[p.owner]=p.character;
+    if(!seenByOwner[p.owner])seenByOwner[p.owner]={};
+    seenByOwner[p.owner][p.character]=true;
+  });
+}
+function buildOverallPartyRoute(runs){
+  var left=groupPartyRouteRuns(runs||[]),groups=[];
+  var lastByOwner={},seenByOwner={},totalChanges=0,totalRevisits=0;
+
+  while(left.length){
+    left.sort(function(a,b){
+      var am=overallGroupMetrics(a,lastByOwner,seenByOwner);
+      var bm=overallGroupMetrics(b,lastByOwner,seenByOwner);
+      var d=am.score-bm.score;
+      if(d)return d;
+      d=b.bosses.length-a.bosses.length;
+      if(d)return d;
+      return a.signature.localeCompare(b.signature,"ko");
+    });
+    var group=left.shift();
+    var metrics=overallGroupMetrics(group,lastByOwner,seenByOwner);
+    group.routeTransition={
+      changed:metrics.changed.slice(),
+      same:metrics.same.slice(),
+      revisited:metrics.revisited.slice()
+    };
+    totalChanges+=metrics.changed.length;
+    totalRevisits+=metrics.revisited.length;
+    groups.push(group);
+    applyOverallGroupState(group,lastByOwner,seenByOwner);
+  }
+
+  return{
+    runs:runs||[],
+    groups:groups,
+    bossCount:(runs||[]).length,
+    groupCount:groups.length,
+    totalChanges:totalChanges,
+    totalRevisits:totalRevisits
+  };
+}
+function setRouteMode(mode){
+  ROUTE_MODE=mode==="personal"?"personal":"party";
+  localStorage.setItem(ROUTE_MODE_KEY,ROUTE_MODE);
+  renderPartyRoute();
+}
+function routeModeSwitchHtml(){
+  return '<div class="route-mode-wrap">'+
+    '<span>계산 방식</span>'+
+    '<div class="route-mode-switch" role="group" aria-label="도핑 최소 계산 방식">'+
+      '<button type="button" data-route-mode="party" class="'+(ROUTE_MODE==="party"?"active":"")+'">파티 전체 최소</button>'+
+      '<button type="button" data-route-mode="personal" class="'+(ROUTE_MODE==="personal"?"active":"")+'">내 캐릭터 최소</button>'+
+    '</div>'+
+  '</div>';
+}
+function routeTransitionHtml(transition,isFirst){
+  if(isFirst)return '<div class="route-transition start"><span>시작</span></div>';
+  var changed=(transition&&transition.changed)||[];
+  if(!changed.length)return '<div class="route-transition keep"><span>↓</span><b>모두 현재 캐릭터 유지</b></div>';
+  return '<div class="route-transition change"><span>↓</span><b>'+changed.map(esc).join(' · ')+' 교체</b></div>';
+}
 function routeParticipantHtml(p,focusOwnerName){
   var theme=ownerTheme(p.owner);
   return '<span class="route-member owner-themed '+(p.owner===focusOwnerName?'focus':'')+'" data-theme="'+theme+'">'+
@@ -824,6 +910,9 @@ function routeChoiceHtml(run,selected,focusOwnerName){
   '</label>';
 }
 function bindRouteSelection(panel,focus,runs,selectedIds){
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-mode]"),function(btn){
+    btn.onclick=function(){setRouteMode(btn.dataset.routeMode)};
+  });
   Array.prototype.forEach.call(panel.querySelectorAll("[data-route-run]"),function(input){
     input.onchange=function(){
       if(input.checked)selectedIds.add(input.dataset.routeRun);
@@ -854,17 +943,25 @@ function renderPartyRoute(){
 
   var allRuns=collectPartyRouteRuns(focus),theme=ownerTheme(focus.name);
   if(!allRuns.length){
-    panel.innerHTML='<div class="route-empty owner-themed" data-theme="'+theme+'"><strong>'+esc(focus.name)+'의 2인 이상 주간 파티가 없어요.</strong><span>보스 현황판에서 2인 이상 파티를 등록하면 자동으로 계산됩니다.</span></div>';
+    panel.innerHTML=routeModeSwitchHtml()+'<div class="route-empty owner-themed" data-theme="'+theme+'"><strong>'+esc(focus.name)+'의 2인 이상 주간 파티가 없어요.</strong><span>보스 현황판에서 2인 이상 파티를 등록하면 자동으로 계산됩니다.</span></div>';
     return;
   }
 
   var selectedIds=selectedRouteIds(focus,allRuns);
   var selectedRuns=allRuns.filter(function(run){return selectedIds.has(run.id)});
-  var route=buildPartyRoute(focus,selectedRuns);
+  var personalRoute=ROUTE_MODE==="personal"?buildPartyRoute(focus,selectedRuns):null;
+  var partyRoute=ROUTE_MODE==="party"?buildOverallPartyRoute(selectedRuns):null;
 
-  var h='<div class="route-picker owner-themed" data-theme="'+theme+'">'+
+  var h=routeModeSwitchHtml()+
+    '<div class="route-mode-help">'+
+      (ROUTE_MODE==="party"
+        ?'<strong>파티 전체 최소</strong><span>참여자 모두의 캐릭터 교체 횟수를 줄이는 순서입니다.</span>'
+        :'<strong>내 캐릭터 최소</strong><span>'+esc(focus.name)+'의 캐릭터를 한 번씩만 쓰도록 우선 계산합니다.</span>')+
+    '</div>';
+
+  h+='<div class="route-picker owner-themed" data-theme="'+theme+'">'+
     '<div class="route-picker-head"><div><span>1. 돌 파티 선택</span><strong>이번에 같이 돌 파티만 골라주세요.</strong>'+
-    '<p>선택한 파티만 가지고 캐릭터 교체가 가장 적은 순서를 다시 계산합니다.</p></div>'+
+    '<p>선택한 파티만 기준으로 순서를 자동 계산합니다.</p></div>'+
     '<div class="route-picker-actions"><button type="button" data-route-select-all>전체 선택</button><button type="button" data-route-select-none>전체 해제</button></div></div>'+
     '<div class="route-choice-grid">'+
       allRuns.map(function(run){return routeChoiceHtml(run,selectedIds.has(run.id),focus.name)}).join("")+
@@ -873,50 +970,79 @@ function renderPartyRoute(){
   '</div>';
 
   if(!selectedRuns.length){
-    h+='<div class="route-empty route-selected-empty owner-themed" data-theme="'+theme+'"><strong>선택한 파티가 없어요.</strong><span>위에서 이번에 돌 파티를 하나 이상 체크하면 최소 교체 루트를 계산합니다.</span></div>';
+    h+='<div class="route-empty route-selected-empty owner-themed" data-theme="'+theme+'"><strong>선택한 파티가 없어요.</strong><span>위에서 이번에 돌 파티를 하나 이상 체크해 주세요.</span></div>';
     panel.innerHTML=h;
     bindRouteSelection(panel,focus,allRuns,selectedIds);
     return;
   }
 
-  h+='<div class="route-overview owner-themed" data-theme="'+theme+'">'+
-    '<div class="route-overview-copy"><span>2. 선택한 파티 최소 루트</span><strong>'+esc(focus.name)+' · 도핑 최소 순서</strong>'+
-    '<p>같은 캐릭터에서 가능한 보스를 모두 끝낸 뒤 다음 캐릭터로 이동합니다. 끝낸 캐릭터로 다시 돌아오지 않습니다.</p></div>'+
-    '<div class="route-stats">'+
-      '<div><b>'+route.characterSessions+'</b><span>사용 캐릭터</span></div>'+
-      '<div><b>'+route.focusSwitches+'</b><span>내 캐릭터 교체</span></div>'+
-      '<div><b>'+route.bossCount+'</b><span>선택 파티</span></div>'+
-    '</div>'+
-  '</div>';
+  if(ROUTE_MODE==="party"){
+    h+='<div class="route-overview owner-themed" data-theme="'+theme+'">'+
+      '<div class="route-overview-copy"><span>2. 추천 순서</span><strong>파티 전체 · 도핑 최소 순서</strong>'+
+      '<p>같은 파티 구성은 한 번에 묶고, 다음 보스로 갈 때 캐릭터를 바꾸는 사람 수가 적도록 계산했습니다.</p></div>'+
+      '<div class="route-stats">'+
+        '<div><b>'+partyRoute.totalChanges+'</b><span>전체 교체</span></div>'+
+        '<div><b>'+partyRoute.groupCount+'</b><span>파티 조합</span></div>'+
+        '<div><b>'+partyRoute.bossCount+'</b><span>선택 파티</span></div>'+
+      '</div>'+
+    '</div>';
 
-  h+='<div class="route-flow">';
-  route.blocks.forEach(function(block,blockIndex){
-    h+='<section class="route-character-block owner-themed" data-theme="'+theme+'">'+
-      '<header class="route-character-head">'+
-        '<div class="route-step">'+(blockIndex+1)+'</div>'+
-        '<div><span>'+esc(focus.name)+' 캐릭터</span><strong>'+esc(block.character)+'</strong></div>'+
-        '<em>이 캐릭터에서 '+block.groups.reduce(function(n,g){return n+g.bosses.length},0)+'개</em>'+
-      '</header>'+
-      '<div class="route-groups">';
-
-    block.groups.forEach(function(group,groupIndex){
-      h+='<article class="route-group">'+
-        '<div class="route-group-top"><span class="route-order">'+(blockIndex+1)+'-'+(groupIndex+1)+'</span>'+
-        '<div class="route-members">'+group.participants.map(function(p){return routeParticipantHtml(p,focus.name)}).join('<span class="route-plus">+</span>')+'</div></div>'+
+    h+='<div class="route-flow route-party-flow">';
+    partyRoute.groups.forEach(function(group,index){
+      h+=routeTransitionHtml(group.routeTransition,index===0);
+      h+='<section class="route-group route-party-group owner-themed" data-theme="'+theme+'">'+
+        '<div class="route-group-top">'+
+          '<span class="route-order">'+(index+1)+'</span>'+
+          '<div class="route-members">'+group.participants.map(function(p){return routeParticipantHtml(p,focus.name)}).join('<span class="route-plus">+</span>')+'</div>'+
+        '</div>'+
         '<div class="route-bosses">';
       group.bosses.forEach(function(b){
         h+='<span class="route-boss"><b>'+esc(b.name)+'</b><i>'+esc(b.difficulty)+'</i></span>';
       });
-      h+='</div></article>';
+      h+='</div></section>';
     });
+    h+='</div>';
+  }else{
+    h+='<div class="route-overview owner-themed" data-theme="'+theme+'">'+
+      '<div class="route-overview-copy"><span>2. 추천 순서</span><strong>'+esc(focus.name)+' · 내 캐릭터 최소</strong>'+
+      '<p>같은 캐릭터에서 가능한 보스를 끝낸 뒤 다음 캐릭터로 이동하고, 끝낸 캐릭터로 다시 돌아오지 않습니다.</p></div>'+
+      '<div class="route-stats">'+
+        '<div><b>'+personalRoute.characterSessions+'</b><span>사용 캐릭터</span></div>'+
+        '<div><b>'+personalRoute.focusSwitches+'</b><span>내 캐릭터 교체</span></div>'+
+        '<div><b>'+personalRoute.bossCount+'</b><span>선택 파티</span></div>'+
+      '</div>'+
+    '</div>';
 
-    h+='</div></section>';
-    if(blockIndex<route.blocks.length-1){
-      h+='<div class="route-change"><span>↓</span><b>'+esc(block.character)+' 완료 · 다음 캐릭터로 교체</b></div>';
-    }
-  });
-  h+='</div>'+
-    '<p class="route-note">※ 보스 현황판의 2인 이상 주간 파티만 선택 목록에 나옵니다. 검은 마법사와 자동 연동 복제본은 중복 계산하지 않습니다.</p>';
+    h+='<div class="route-flow">';
+    personalRoute.blocks.forEach(function(block,blockIndex){
+      h+='<section class="route-character-block owner-themed" data-theme="'+theme+'">'+
+        '<header class="route-character-head">'+
+          '<div class="route-step">'+(blockIndex+1)+'</div>'+
+          '<div><span>'+esc(focus.name)+' 캐릭터</span><strong>'+esc(block.character)+'</strong></div>'+
+          '<em>이 캐릭터에서 '+block.groups.reduce(function(n,g){return n+g.bosses.length},0)+'개</em>'+
+        '</header>'+
+        '<div class="route-groups">';
+
+      block.groups.forEach(function(group,groupIndex){
+        h+='<article class="route-group">'+
+          '<div class="route-group-top"><span class="route-order">'+(blockIndex+1)+'-'+(groupIndex+1)+'</span>'+
+          '<div class="route-members">'+group.participants.map(function(p){return routeParticipantHtml(p,focus.name)}).join('<span class="route-plus">+</span>')+'</div></div>'+
+          '<div class="route-bosses">';
+        group.bosses.forEach(function(b){
+          h+='<span class="route-boss"><b>'+esc(b.name)+'</b><i>'+esc(b.difficulty)+'</i></span>';
+        });
+        h+='</div></article>';
+      });
+
+      h+='</div></section>';
+      if(blockIndex<personalRoute.blocks.length-1){
+        h+='<div class="route-change"><span>↓</span><b>'+esc(block.character)+' 완료 · 다음 캐릭터로 교체</b></div>';
+      }
+    });
+    h+='</div>';
+  }
+
+  h+='<p class="route-note">※ 보스 현황판의 2인 이상 주간 파티만 계산합니다. 같은 파티 구성의 보스는 한 묶음으로 처리하고, 검은 마법사와 자동 연동 복제본은 중복 계산하지 않습니다.</p>';
 
   panel.innerHTML=h;
   bindRouteSelection(panel,focus,allRuns,selectedIds);
@@ -941,7 +1067,7 @@ function updatePageView(){
 
   var pageTitle=document.getElementById("pageTitle"),pageSub=document.getElementById("pageSub");
   if(pageTitle)pageTitle.textContent=checklist?"보스 체크리스트":(route?"도핑 최소 루트":"보스 현황판");
-  if(pageSub)pageSub.textContent=checklist?"달력은 일~토 · 보스 초기화는 목요일~수요일":(route?"2인 이상 파티 · 캐릭터 재진입 최소화":"주간 최대 12개 · 검은 마법사는 월간");
+  if(pageSub)pageSub.textContent=checklist?"달력은 일~토 · 보스 초기화는 목요일~수요일":(route?"파티 전체 / 내 캐릭터 · 도핑 최소 순서":"주간 최대 12개 · 검은 마법사는 월간");
 
   Array.prototype.forEach.call(document.querySelectorAll("[data-page-view]"),function(btn){
     btn.classList.toggle("active",btn.dataset.pageView===PAGE_VIEW);
