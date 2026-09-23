@@ -706,68 +706,76 @@ function collectPartyRouteRuns(focusOwner,includeAll){
   return runs;
 }
 function routeSelectionKey(){
-  return ROUTE_SELECTION_PREFIX+"simple-global-v2";
-}
-function selectedRouteIds(focusOwner,runs){
-  var raw=localStorage.getItem(routeSelectionKey());
-  if(raw===null)return new Set();
-  try{
-    var parsed=JSON.parse(raw);
-    if(!Array.isArray(parsed))throw new Error("bad route selection");
-    var valid=new Set(runs.map(function(run){return run.id}));
-    return new Set(parsed.filter(function(id){return valid.has(id)}));
-  }catch(e){
-    return new Set();
-  }
-}
-function saveRouteSelection(focusOwner,ids){
-  localStorage.setItem(routeSelectionKey(),JSON.stringify(Array.from(ids)));
+  return ROUTE_SELECTION_PREFIX+"simple-global-v3";
 }
 function routeQuickStateKey(){
-  return ROUTE_SELECTION_PREFIX+"quick-groups-v2";
+  return ROUTE_SELECTION_PREFIX+"quick-groups-v3";
 }
 function routeCharacterSelectorKey(ownerName,characterName){
   return String(ownerName||"")+"\u0001"+String(characterName||"");
+}
+function emptyRouteQuickState(){
+  return{owners:[],characters:[],excludedCharacters:[],manualInclude:[],manualExclude:[]};
 }
 function routeQuickState(){
   try{
     var raw=JSON.parse(localStorage.getItem(routeQuickStateKey())||"{}");
     return{
       owners:Array.isArray(raw.owners)?raw.owners.filter(Boolean):[],
-      characters:Array.isArray(raw.characters)?raw.characters.filter(Boolean):[]
+      characters:Array.isArray(raw.characters)?raw.characters.filter(Boolean):[],
+      excludedCharacters:Array.isArray(raw.excludedCharacters)?raw.excludedCharacters.filter(Boolean):[],
+      manualInclude:Array.isArray(raw.manualInclude)?raw.manualInclude.filter(Boolean):[],
+      manualExclude:Array.isArray(raw.manualExclude)?raw.manualExclude.filter(Boolean):[]
     };
   }catch(e){
-    return{owners:[],characters:[]};
+    return emptyRouteQuickState();
   }
 }
 function saveRouteQuickState(state){
   localStorage.setItem(routeQuickStateKey(),JSON.stringify({
     owners:(state.owners||[]).slice(),
-    characters:(state.characters||[]).slice()
+    characters:(state.characters||[]).slice(),
+    excludedCharacters:(state.excludedCharacters||[]).slice(),
+    manualInclude:(state.manualInclude||[]).slice(),
+    manualExclude:(state.manualExclude||[]).slice()
   }));
 }
-function routeQuickCoverage(runs,state){
-  var out=new Set();
-  var ownerSet=new Set((state&&state.owners)||[]);
-  var characterSet=new Set((state&&state.characters)||[]);
+function routeSelectedFromState(runs,state){
+  state=state||emptyRouteQuickState();
+  var ownerSet=new Set(state.owners||[]);
+  var characterSet=new Set(state.characters||[]);
+  var excludedSet=new Set(state.excludedCharacters||[]);
+  var selected=new Set();
+
   (runs||[]).forEach(function(run){
-    var hit=run.participants.some(function(p){
-      if(ownerSet.has(p.owner))return true;
-      return characterSet.has(routeCharacterSelectorKey(p.owner,p.character));
+    var included=run.participants.some(function(p){
+      return ownerSet.has(p.owner)||characterSet.has(routeCharacterSelectorKey(p.owner,p.character));
     });
-    if(hit)out.add(run.id);
+    if(included)selected.add(run.id);
   });
-  return out;
+
+  if(excludedSet.size){
+    (runs||[]).forEach(function(run){
+      var excluded=run.participants.some(function(p){
+        return excludedSet.has(routeCharacterSelectorKey(p.owner,p.character));
+      });
+      if(excluded)selected.delete(run.id);
+    });
+  }
+
+  (state.manualInclude||[]).forEach(function(id){selected.add(id)});
+  (state.manualExclude||[]).forEach(function(id){selected.delete(id)});
+
+  var valid=new Set((runs||[]).map(function(run){return run.id}));
+  return new Set(Array.from(selected).filter(function(id){return valid.has(id)}));
 }
-function routeSelectionAfterQuickToggle(runs,selectedIds,beforeState,afterState){
-  var beforeCoverage=routeQuickCoverage(runs,beforeState);
-  var manual=new Set();
-  selectedIds.forEach(function(id){
-    if(!beforeCoverage.has(id))manual.add(id);
-  });
-  var afterCoverage=routeQuickCoverage(runs,afterState);
-  afterCoverage.forEach(function(id){manual.add(id)});
-  return manual;
+function selectedRouteIds(focusOwner,runs){
+  return routeSelectedFromState(runs,routeQuickState());
+}
+function saveRouteSelection(focusOwner,ids){
+  var state=emptyRouteQuickState();
+  state.manualInclude=Array.from(ids||[]);
+  saveRouteQuickState(state);
 }
 function groupPartyRouteRuns(runs){
   var map={},order=[];
@@ -976,43 +984,43 @@ function routeChoiceHtml(run,selected,focusOwnerName){
 function bindRouteSelection(panel,focus,runs,selectedIds){
   Array.prototype.forEach.call(panel.querySelectorAll("[data-route-run]"),function(input){
     input.onchange=function(){
-      if(input.checked)selectedIds.add(input.dataset.routeRun);
-      else selectedIds.delete(input.dataset.routeRun);
+      var state=routeQuickState();
+      var id=input.dataset.routeRun;
+      state.manualInclude=(state.manualInclude||[]).filter(function(x){return x!==id});
+      state.manualExclude=(state.manualExclude||[]).filter(function(x){return x!==id});
+      if(input.checked)state.manualInclude.push(id);
+      else state.manualExclude.push(id);
+      saveRouteQuickState(state);
       ROUTE_RESULT_READY=false;
-      saveRouteSelection(focus,selectedIds);
       renderPartyRoute();
     };
   });
 
   var all=panel.querySelector("[data-route-select-all]");
   if(all)all.onclick=function(){
+    var state=emptyRouteQuickState();
+    state.manualInclude=runs.map(function(run){return run.id});
+    saveRouteQuickState(state);
     ROUTE_RESULT_READY=false;
-    saveRouteQuickState({owners:[],characters:[]});
-    saveRouteSelection(focus,new Set(runs.map(function(run){return run.id})));
     renderPartyRoute();
   };
 
   var none=panel.querySelector("[data-route-select-none]");
   if(none)none.onclick=function(){
+    saveRouteQuickState(emptyRouteQuickState());
     ROUTE_RESULT_READY=false;
-    saveRouteQuickState({owners:[],characters:[]});
-    saveRouteSelection(focus,new Set());
     renderPartyRoute();
   };
 
   Array.prototype.forEach.call(panel.querySelectorAll("[data-route-select-owner]"),function(btn){
     btn.onclick=function(){
       var ownerName=btn.dataset.routeSelectOwner;
-      var before=routeQuickState();
-      var after={owners:before.owners.slice(),characters:before.characters.slice()};
-      var oi=after.owners.indexOf(ownerName);
-      if(oi>=0)after.owners.splice(oi,1);
-      else after.owners.push(ownerName);
-
-      var next=routeSelectionAfterQuickToggle(runs,selectedIds,before,after);
-      saveRouteQuickState(after);
+      var state=routeQuickState();
+      var i=state.owners.indexOf(ownerName);
+      if(i>=0)state.owners.splice(i,1);
+      else state.owners.push(ownerName);
+      saveRouteQuickState(state);
       ROUTE_RESULT_READY=false;
-      saveRouteSelection(focus,next);
       renderPartyRoute();
     };
   });
@@ -1022,16 +1030,29 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
       var ownerName=btn.dataset.routeOwner;
       var characterName=btn.dataset.routeSelectCharacter;
       var key=routeCharacterSelectorKey(ownerName,characterName);
-      var before=routeQuickState();
-      var after={owners:before.owners.slice(),characters:before.characters.slice()};
-      var ci=after.characters.indexOf(key);
-      if(ci>=0)after.characters.splice(ci,1);
-      else after.characters.push(key);
+      var state=routeQuickState();
+      var includeIndex=state.characters.indexOf(key);
+      var excludeIndex=state.excludedCharacters.indexOf(key);
+      var selectedCount=Number(btn.dataset.selectedCount||0);
 
-      var next=routeSelectionAfterQuickToggle(runs,selectedIds,before,after);
-      saveRouteQuickState(after);
+      if(includeIndex>=0){
+        state.characters.splice(includeIndex,1);
+      }else if(excludeIndex>=0){
+        state.excludedCharacters.splice(excludeIndex,1);
+      }else if(selectedCount>0){
+        state.excludedCharacters.push(key);
+        var matchingIds=new Set(runs.filter(function(run){
+          return run.participants.some(function(p){
+            return routeCharacterSelectorKey(p.owner,p.character)===key;
+          });
+        }).map(function(run){return run.id}));
+        state.manualInclude=(state.manualInclude||[]).filter(function(id){return !matchingIds.has(id)});
+      }else{
+        state.characters.push(key);
+      }
+
+      saveRouteQuickState(state);
       ROUTE_RESULT_READY=false;
-      saveRouteSelection(focus,next);
       renderPartyRoute();
     };
   });
@@ -1042,7 +1063,7 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
     ROUTE_RESULT_READY=true;
     renderPartyRoute();
     setTimeout(function(){
-      var result=panel.querySelector(".route-simple-result");
+      var result=document.querySelector(".route-simple-result");
       if(result&&result.scrollIntoView)result.scrollIntoView({behavior:"smooth",block:"start"});
     },0);
   };
@@ -1094,14 +1115,17 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
 
       var selectedCount=matches.filter(function(run){return selectedIds.has(run.id)}).length;
       var quick=routeQuickState();
-      var selectorOn=quick.characters.indexOf(routeCharacterSelectorKey(o.name,character))>=0;
+      var key=routeCharacterSelectorKey(o.name,character);
+      var selectorOn=quick.characters.indexOf(key)>=0;
+      var excluded=quick.excludedCharacters.indexOf(key)>=0;
       items.push({
         character:character,
         count:matches.length,
         selectedCount:selectedCount,
         active:selectorOn,
-        partial:!selectorOn&&selectedCount>0,
-        selectorOn:selectorOn
+        partial:!selectorOn&&!excluded&&selectedCount>0,
+        selectorOn:selectorOn,
+        excluded:excluded
       });
     });
 
@@ -1114,9 +1138,9 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
     '<div class="route-character-quick-head">'+
       '<span class="route-character-quick-title">캐릭터별 선택</span>'+
       '<div class="route-character-legend" aria-label="캐릭터 선택 상태">'+
-        '<span class="none"><i></i>미선택</span>'+
-        '<span class="partial"><i></i>일부 선택</span>'+
-        '<span class="full"><i></i>전체 선택</span>'+
+        '<span class="none"><i></i>미선택·제외</span>'+
+        '<span class="partial"><i></i>같이 포함됨</span>'+
+        '<span class="full"><i></i>직접 선택</span>'+
       '</div>'+
     '</div>'+
     '<div class="route-character-quick-groups">'+
@@ -1125,9 +1149,9 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
           '<strong>'+esc(group.owner)+'</strong>'+
           '<div>'+
             group.items.map(function(item){
-              return '<button type="button" class="route-character-quick-btn '+(item.active?'active ':'')+(item.partial?'partial ':'')+(item.selectorOn?'selector-on ':'')+'" '+
+              return '<button type="button" class="route-character-quick-btn '+(item.active?'active ':'')+(item.partial?'partial ':'')+(item.selectorOn?'selector-on ':'')+(item.excluded?'excluded ':'')+'" '+
                 'data-route-owner="'+esc(group.owner)+'" data-route-select-character="'+esc(item.character)+'" data-selected-count="'+item.selectedCount+'" '+
-                'title="'+esc(item.character)+' 포함 파티 '+item.selectedCount+'/'+item.count+'개 선택 · '+(item.selectorOn?'다시 누르면 이 선택 묶음 해제':'누르면 선택 묶음 추가')+'">'+
+                'title="'+esc(item.character)+' · '+(item.selectorOn?'선택 중 · 누르면 해제':(item.excluded?'제외 중 · 누르면 제외 취소':(item.partial?'같이 포함됨 · 누르면 이 캐릭터 파티 제외':'누르면 이 캐릭터 파티 선택')))+'">'+
                 '<b>'+esc(item.character)+'</b><small>'+item.count+'</small>'+
               '</button>';
             }).join("")+
@@ -1157,14 +1181,15 @@ function renderPartyRoute(){
   var route=ROUTE_RESULT_READY&&selectedRuns.length?buildOverallPartyRoute(selectedRuns):null;
 
   var h='<div class="route-simple-head">'+
-      '<div><span>2인 이상 파티</span><strong>이번에 돌 파티를 선택하세요.</strong><p>캐릭터 버튼을 켜면 그 캐릭터 파티가 추가되고, 다시 누르면 그 캐릭터만 담당하던 파티가 빠집니다. 다른 선택 캐릭터와 겹치는 파티는 유지됩니다.</p></div>'+
+      '<div><span>2인 이상 파티</span><strong>이번에 돌 파티를 선택하세요.</strong><p>선택색은 직접 선택, 점선은 다른 선택 때문에 같이 포함된 캐릭터입니다. 점선을 누르면 그 캐릭터가 들어간 파티를 제외합니다.</p></div>'+
       '<div class="route-picker-actions"><button type="button" data-route-select-all>전체 선택</button><button type="button" data-route-select-none>전체 해제</button></div>'+
     '</div>'+
     '<div class="route-mini-guide" aria-label="도핑 최소 루트 사용법">'+
       '<b>사용법</b>'+
-      '<span><em>1</em> 사람·캐릭터로 파티 선택</span>'+
-      '<span><em>2</em> 여러 캐릭터 선택은 합쳐서 유지</span>'+
-      '<span><em>3</em> 다시 누르면 그 캐릭터 몫만 해제</span><span><em>4</em> 루트 만들기</span>'+
+      '<span><em>1</em> 캐릭터 선택</span>'+
+      '<span><em>2</em> 점선 캐릭터 클릭 = 제외</span>'+
+      '<span><em>3</em> 선택색 다시 클릭 = 해제</span>'+
+      '<span><em>4</em> 루트 만들기</span>'+
     '</div>';
 
   h+=routeOwnerQuickSelectHtml(allRuns,selectedIds);
