@@ -6585,3 +6585,440 @@ html[data-theme="dark"] .route-save-slot>button,
 html[data-theme="dark"] .route-save-actions button{
   background:#2d333b;
 }
+
+
+/* FINAL V9 — visual hierarchy cleanup */
+#routePanel{
+  --route-soft:#f7f8fa;
+  --route-soft-2:#f1f3f5;
+  --route-line:#e1e5e9;
+  --route-muted:#7b8490;
+}
+
+/* 1. Configuration area: quieter, flatter */
+.route-character-quick{
+  margin:0 0 18px !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+}
+.route-character-simple-head{
+  margin-bottom:12px !important;
+  padding-bottom:10px;
+  border-bottom:1px solid var(--route-line);
+}
+.route-character-simple-head strong{
+  font-size:15px !important;
+  letter-spacing:-.02em;
+}
+.route-character-simple-head p{
+  color:var(--route-muted) !important;
+  font-size:10px !important;
+  line-height:1.45 !important;
+}
+.route-character-simple-head>button{
+  min-height:30px !important;
+  padding:0 9px !important;
+  border:1px solid var(--route-line) !important;
+  border-radius:8px !important;
+  background:transparent !important;
+  color:var(--route-muted) !important;
+  font-size:9px !important;
+  font-weight:850 !important;
+}
+
+.route-character-quick-group{
+  padding:12px 0 !important;
+  border-top:1px solid var(--route-line) !important;
+}
+.route-character-quick-group:first-child{
+  padding-top:0 !important;
+  border-top:0 !important;
+}
+.route-character-owner-head{
+  margin:0 0 8px !important;
+}
+.route-character-owner-head>strong{
+  color:var(--owner-accent,#68707c) !important;
+  font-size:13px !important;
+  font-weight:950 !important;
+  letter-spacing:-.02em;
+}
+
+/* Owner actions: visually secondary segmented controls */
+.route-character-owner-actions{
+  gap:4px !important;
+}
+.route-character-owner-actions>button{
+  min-height:28px !important;
+  padding:0 8px !important;
+  border-radius:7px !important;
+  background:transparent !important;
+  font-size:8.5px !important;
+  font-weight:850 !important;
+}
+.route-character-owner-actions .route-owner-select-all{
+  border:1px solid color-mix(in srgb,var(--owner-accent,#68707c) 42%,var(--route-line)) !important;
+  color:var(--owner-accent,#68707c) !important;
+}
+.route-character-owner-actions .route-owner-exclude-all,
+.route-character-owner-actions .route-owner-exclude-all.active{
+  border:1px solid var(--route-line) !important;
+  background:transparent !important;
+  color:var(--route-muted) !important;
+}
+
+/* Character chips: only selected items get strong color */
+.route-character-buttons{
+  gap:7px !important;
+}
+.route-character-chip{
+  min-height:38px;
+  border:1px solid var(--route-line) !important;
+  border-radius:9px !important;
+  background:#fff !important;
+  box-shadow:none !important;
+}
+.route-character-chip .route-character-quick-btn{
+  min-height:38px !important;
+  padding:0 10px !important;
+  background:#fff !important;
+  color:#5f6874 !important;
+}
+.route-character-chip .route-character-quick-btn b{
+  color:inherit !important;
+  font-size:10.5px !important;
+  font-weight:900 !important;
+}
+.route-character-chip .route-character-quick-btn small{
+  min-width:18px !important;
+  height:18px !important;
+  background:var(--route-soft-2) !important;
+  color:#8a929d !important;
+  font-size:8px !important;
+}
+.route-character-chip .route-character-exclude-btn{
+  flex-basis:34px !important;
+  width:34px !important;
+  min-height:38px !important;
+  border-left:1px solid var(--route-line) !important;
+  background:#fafbfc !important;
+  color:#a1a8b1 !important;
+  font-size:14px !important;
+}
+
+/* Selected: strongest state */
+.route-character-chip.active{
+  border-color:var(--owner-accent,#68707c) !important;
+  background:var(--owner-accent,#68707c) !important;
+}
+.route-character-chip.active .route-character-quick-btn{
+  background:var(--owner-accent,#68707c) !important;
+  color:#fff !important;
+}
+.route-character-chip.active .route-character-quick-btn b{
+  color:#fff !important;
+}
+.route-character-chip.active .route-character-quick-btn small{
+  background:rgba(255,255,255,.2) !important;
+  color:#fff !important;
+}
+.route-character-chip.active .route-character-exclude-btn{
+  border-left-color:color-mix(in srgb,var(--owner-accent,#68707c) 55%,#fff) !important;
+  background:#fff !important;
+  color:var(--owner-accent,#68707c) !important;
+}
+
+/* Excluded: neutral, not alarming */
+.route-character-chip.excluded{
+  border-color:#d9dde2 !important;
+  background:#f4f5f6 !important;
+}
+.route-character-chip.excluded .route-character-quick-btn{
+  background:#f4f5f6 !important;
+  color:#989fa8 !important;
+}
+.route-character-chip.excluded .route-character-quick-btn b{
+  color:#989fa8 !important;
+}
+.route-character-chip.excluded .route-character-quick-btn em{
+  height:18px !important;
+  padding:0 5px !important;
+  margin-left:2px !important;
+  background:#e7e9ec !important;
+  color:#858d97 !important;
+  font-size:7.5px !important;
+}
+.route-character-chip.excluded .route-character-exclude-btn{
+  border-left-color:#d9dde2 !important;
+  background:#eceef0 !important;
+  color:#858d97 !important;
+}
+
+/* 2. Party confirmation: more prominent than settings */
+.route-step-parties{
+  margin-top:4px !important;
+  padding-top:16px !important;
+  border-top:2px solid var(--text) !important;
+}
+.route-step-title-row{
+  margin-bottom:12px !important;
+}
+.route-step-title strong{
+  font-size:15px !important;
+}
+.route-step-title p{
+  margin-top:3px !important;
+  color:var(--route-muted) !important;
+  font-size:10px !important;
+}
+.route-exclude-summary>b{
+  min-height:26px !important;
+  padding:0 8px !important;
+  background:var(--route-soft-2) !important;
+  color:var(--route-muted) !important;
+  font-size:8.5px !important;
+}
+.route-restore-excluded{
+  border-color:var(--route-line) !important;
+  background:#fff !important;
+  color:var(--route-muted) !important;
+}
+
+.route-selected-list{
+  gap:9px !important;
+}
+.route-selected-party{
+  padding:12px 12px !important;
+  border:1px solid #d9dee4 !important;
+  border-radius:11px !important;
+  background:#fff !important;
+  box-shadow:0 1px 0 rgba(16,24,40,.02);
+}
+.route-selected-party .route-choice-main b{
+  font-size:13px !important;
+  font-weight:950 !important;
+}
+.route-selected-party .route-choice-main i{
+  color:var(--route-muted) !important;
+}
+.route-party-exclude{
+  min-height:30px !important;
+  padding:0 9px !important;
+  border:1px solid var(--route-line) !important;
+  background:#fff !important;
+  color:#9299a2 !important;
+  font-size:9px !important;
+}
+.route-simple-footer{
+  margin-top:12px !important;
+  padding-top:12px !important;
+}
+.route-selection-summary{
+  color:var(--route-muted) !important;
+}
+.route-selection-summary b{
+  color:var(--text) !important;
+}
+.route-build-btn{
+  min-height:42px !important;
+  border-radius:10px !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.08);
+}
+
+/* 3. Generated route: strongest content block */
+.route-simple-result{
+  margin-top:18px !important;
+  padding:15px !important;
+  border:1px solid #cfd5dc !important;
+  border-top:3px solid var(--accent) !important;
+  border-radius:13px !important;
+  background:#fff !important;
+  box-shadow:0 3px 12px rgba(16,24,40,.05);
+}
+.route-simple-result>header{
+  margin-bottom:10px !important;
+}
+.route-simple-result>header span{
+  color:var(--accent) !important;
+  font-size:9px !important;
+}
+.route-simple-result>header strong{
+  margin-top:2px !important;
+  font-size:18px !important;
+  letter-spacing:-.025em;
+}
+.route-party-group{
+  border:1px solid var(--route-line) !important;
+  border-left:3px solid var(--owner-accent,#9aa1aa) !important;
+  border-radius:10px !important;
+  background:#fff !important;
+}
+.route-transition{
+  color:var(--route-muted) !important;
+}
+.route-transition.change b{
+  color:#5f6874 !important;
+}
+.route-note{
+  margin-top:10px !important;
+  color:var(--route-muted) !important;
+  line-height:1.55 !important;
+}
+
+/* 4. Saved routes: deliberately quieter than result */
+.route-save-section{
+  margin-top:16px !important;
+  padding:14px 0 0 !important;
+  border:0 !important;
+  border-top:1px solid var(--route-line) !important;
+  border-radius:0 !important;
+  background:transparent !important;
+}
+.route-save-head{
+  margin-bottom:8px !important;
+}
+.route-save-head strong{
+  font-size:11px !important;
+}
+.route-save-head span{
+  color:var(--route-muted) !important;
+  font-size:8.5px !important;
+}
+.route-save-grid{
+  gap:6px !important;
+}
+.route-save-slot{
+  padding:8px 9px !important;
+  border:1px solid var(--route-line) !important;
+  border-radius:9px !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+.route-save-slot.active{
+  border-color:#b8c0c9 !important;
+  background:var(--route-soft) !important;
+  box-shadow:none !important;
+}
+.route-save-slot>div:first-child b{
+  font-size:9.5px !important;
+}
+.route-save-slot>div:first-child span{
+  color:var(--route-muted) !important;
+  font-size:8px !important;
+}
+.route-save-slot>button,
+.route-save-actions button{
+  min-height:28px !important;
+  border-color:var(--route-line) !important;
+  background:#fff !important;
+  color:var(--route-muted) !important;
+  font-size:8px !important;
+}
+.route-save-actions .primary{
+  border-color:#c9d0d8 !important;
+  color:#4e5966 !important;
+  font-weight:900 !important;
+}
+.route-save-actions .danger{
+  border-color:var(--route-line) !important;
+  color:#9a7070 !important;
+}
+
+/* Mobile: preserve touch size without making every control visually heavy */
+@media(max-width:760px){
+  .route-character-simple-head{
+    margin-bottom:10px !important;
+  }
+  .route-character-simple-head strong{
+    font-size:15px !important;
+  }
+  .route-character-simple-head p{
+    font-size:9px !important;
+  }
+  .route-character-owner-head{
+    margin-bottom:8px !important;
+  }
+  .route-character-owner-head>strong{
+    font-size:13px !important;
+  }
+  .route-character-owner-actions>button{
+    min-height:30px !important;
+    padding:0 7px !important;
+    font-size:8.5px !important;
+  }
+  .route-character-chip{
+    min-height:44px !important;
+  }
+  .route-character-chip .route-character-quick-btn{
+    min-height:44px !important;
+    padding:0 10px !important;
+  }
+  .route-character-chip .route-character-exclude-btn{
+    flex-basis:40px !important;
+    width:40px !important;
+    min-height:44px !important;
+  }
+  .route-selected-party{
+    padding:11px !important;
+  }
+  .route-simple-result{
+    padding:13px !important;
+  }
+  .route-save-section{
+    padding-top:12px !important;
+  }
+  .route-save-slot{
+    padding:8px 9px !important;
+  }
+  .route-save-slot>button,
+  .route-save-actions button{
+    min-height:34px !important;
+  }
+}
+
+/* Dark mode equivalents */
+html[data-theme="dark"] #routePanel{
+  --route-soft:#2a3038;
+  --route-soft-2:#30363d;
+  --route-line:#444c56;
+  --route-muted:#909dab;
+}
+html[data-theme="dark"] .route-character-chip,
+html[data-theme="dark"] .route-character-chip .route-character-quick-btn,
+html[data-theme="dark"] .route-character-chip .route-character-exclude-btn,
+html[data-theme="dark"] .route-selected-party,
+html[data-theme="dark"] .route-party-exclude,
+html[data-theme="dark"] .route-restore-excluded,
+html[data-theme="dark"] .route-simple-result,
+html[data-theme="dark"] .route-party-group,
+html[data-theme="dark"] .route-save-slot>button,
+html[data-theme="dark"] .route-save-actions button{
+  background:#2d333b !important;
+}
+html[data-theme="dark"] .route-character-chip.active,
+html[data-theme="dark"] .route-character-chip.active .route-character-quick-btn{
+  background:var(--owner-accent,#909dab) !important;
+}
+html[data-theme="dark"] .route-character-chip.active .route-character-exclude-btn{
+  background:#2d333b !important;
+  color:var(--owner-accent,#909dab) !important;
+}
+html[data-theme="dark"] .route-character-chip.excluded,
+html[data-theme="dark"] .route-character-chip.excluded .route-character-quick-btn,
+html[data-theme="dark"] .route-character-chip.excluded .route-character-exclude-btn{
+  background:#30363d !important;
+  border-color:#444c56 !important;
+  color:#909dab !important;
+}
+html[data-theme="dark"] .route-character-chip.excluded .route-character-quick-btn b{
+  color:#909dab !important;
+}
+html[data-theme="dark"] .route-character-chip.excluded .route-character-quick-btn em{
+  background:#3a414a !important;
+  color:#909dab !important;
+}
+html[data-theme="dark"] .route-save-slot.active{
+  background:#272d35 !important;
+}
