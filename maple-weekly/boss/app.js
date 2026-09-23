@@ -64,7 +64,7 @@ let MOBILE_VIEW=localStorage.getItem(MOBILE_VIEW_KEY)==="all"?"all":"active";
 let PARTY_ONLY=localStorage.getItem(PARTY_FILTER_KEY)==="1";
 let THEME_MODE=localStorage.getItem(THEME_KEY)==="dark"?"dark":"light";
 const CHECKLIST_START="2026-09-24";
-const PAGE_VIEW_KEY="boss-board-page-view-v1";
+const PAGE_VIEW_KEY="boss-board-page-view-v1",ROUTE_SELECTION_PREFIX="boss-board-route-selection-v1-";
 let PAGE_VIEW=(function(){var v=localStorage.getItem(PAGE_VIEW_KEY);return v==="checklist"||v==="route"?v:"board"})();
 let CHECKLIST_MONTH=(function(){
   var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1;
@@ -628,6 +628,9 @@ function routeParticipantsForCell(sourceOwner,sourceCharacter,c){
   }
   return people.sort(routeParticipantSort);
 }
+function routeRunKey(boss,difficulty,participants){
+  return boss+"|"+difficulty+"|"+participants.map(function(p){return(p.owner||"?")+":"+p.character}).join("|");
+}
 function partyRouteSignature(run){
   return run.participants.map(function(p){return(p.owner||"?")+"::"+p.character}).join("|");
 }
@@ -645,10 +648,11 @@ function collectPartyRouteRuns(focusOwner){
         var participants=routeParticipantsForCell(sourceOwner,sourceCharacter,c);
         var focus=participants.find(function(p){return p.owner===focusOwner.name});
         if(!focus)return;
-        var key=boss+"|"+c.difficulty+"|"+participants.map(function(p){return(p.owner||"?")+":"+p.character}).join("|");
+        var key=routeRunKey(boss,c.difficulty,participants);
         if(seen[key])return;
         seen[key]=1;
         runs.push({
+          id:key,
           boss:boss,
           difficulty:c.difficulty,
           participants:participants,
@@ -657,7 +661,29 @@ function collectPartyRouteRuns(focusOwner){
       });
     });
   });
+  runs.sort(function(a,b){
+    var ac=(focusOwner.board&&focusOwner.board.players||[]).indexOf(a.focusCharacter);
+    var bc=(focusOwner.board&&focusOwner.board.players||[]).indexOf(b.focusCharacter);
+    if(ac<0)ac=999;if(bc<0)bc=999;
+    return ac-bc||BOSSES.indexOf(a.boss)-BOSSES.indexOf(b.boss)||a.id.localeCompare(b.id,"ko");
+  });
   return runs;
+}
+function routeSelectionKey(ownerId){return ROUTE_SELECTION_PREFIX+ownerId}
+function selectedRouteIds(focusOwner,runs){
+  var raw=localStorage.getItem(routeSelectionKey(focusOwner.id));
+  if(raw===null)return new Set(runs.map(function(run){return run.id}));
+  try{
+    var parsed=JSON.parse(raw);
+    if(!Array.isArray(parsed))throw new Error("bad route selection");
+    var valid=new Set(runs.map(function(run){return run.id}));
+    return new Set(parsed.filter(function(id){return valid.has(id)}));
+  }catch(e){
+    return new Set(runs.map(function(run){return run.id}));
+  }
+}
+function saveRouteSelection(focusOwner,ids){
+  localStorage.setItem(routeSelectionKey(focusOwner.id),JSON.stringify(Array.from(ids)));
 }
 function groupPartyRouteRuns(runs){
   var map={},order=[];
@@ -667,7 +693,7 @@ function groupPartyRouteRuns(runs){
       map[sig]={signature:sig,participants:run.participants,bosses:[]};
       order.push(sig);
     }
-    map[sig].bosses.push({name:run.boss,difficulty:run.difficulty});
+    map[sig].bosses.push({name:run.boss,difficulty:run.difficulty,id:run.id});
   });
   return order.map(function(sig){
     var g=map[sig];
@@ -705,27 +731,55 @@ function orderRouteGroups(groups,lastByOwner,focusOwnerName){
   }
   return out;
 }
-function buildPartyRoute(focusOwner){
-  var runs=collectPartyRouteRuns(focusOwner);
+function simulateCharacterRoute(runs,lastByOwner,focusOwnerName){
+  var before=Object.assign({},lastByOwner);
+  var next=Object.assign({},lastByOwner);
+  var groups=orderRouteGroups(groupPartyRouteRuns(runs),next,focusOwnerName);
+  var scan=Object.assign({},before),changes=0,same=0;
+  groups.forEach(function(group){
+    group.participants.forEach(function(p){
+      if(!p.owner||p.owner===focusOwnerName)return;
+      if(scan[p.owner]){
+        if(scan[p.owner]===p.character)same++;
+        else changes++;
+      }
+      scan[p.owner]=p.character;
+    });
+  });
+  return{groups:groups,nextLast:next,score:changes*100-same*8-runs.length};
+}
+function buildPartyRoute(focusOwner,runs){
+  runs=runs||[];
   var byCharacter={};
   runs.forEach(function(run){
     if(!byCharacter[run.focusCharacter])byCharacter[run.focusCharacter]=[];
     byCharacter[run.focusCharacter].push(run);
   });
 
-  var characterOrder=[];
-  (focusOwner.board&&focusOwner.board.players||[]).forEach(function(name){
-    if(byCharacter[name]&&characterOrder.indexOf(name)<0)characterOrder.push(name);
-  });
-  Object.keys(byCharacter).forEach(function(name){
-    if(characterOrder.indexOf(name)<0)characterOrder.push(name);
-  });
-
-  var lastByOwner={},blocks=[];
-  characterOrder.forEach(function(character){
-    var groups=orderRouteGroups(groupPartyRouteRuns(byCharacter[character]||[]),lastByOwner,focusOwner.name);
-    blocks.push({character:character,groups:groups});
-  });
+  var remaining=Object.keys(byCharacter),lastByOwner={},blocks=[];
+  while(remaining.length){
+    var best=null;
+    remaining.forEach(function(character){
+      var sim=simulateCharacterRoute(byCharacter[character],lastByOwner,focusOwner.name);
+      var candidate={
+        character:character,
+        groups:sim.groups,
+        nextLast:sim.nextLast,
+        score:sim.score,
+        count:byCharacter[character].length,
+        boardIndex:(focusOwner.board&&focusOwner.board.players||[]).indexOf(character)
+      };
+      if(candidate.boardIndex<0)candidate.boardIndex=999;
+      if(!best||
+        candidate.score<best.score||
+        (candidate.score===best.score&&candidate.count>best.count)||
+        (candidate.score===best.score&&candidate.count===best.count&&candidate.boardIndex<best.boardIndex)
+      )best=candidate;
+    });
+    blocks.push({character:best.character,groups:best.groups});
+    lastByOwner=best.nextLast;
+    remaining=remaining.filter(function(name){return name!==best.character});
+  }
 
   return{
     runs:runs,
@@ -740,6 +794,34 @@ function routeParticipantHtml(p,focusOwnerName){
   return '<span class="route-member owner-themed '+(p.owner===focusOwnerName?'focus':'')+'" data-theme="'+theme+'">'+
     (p.owner?'<i>'+esc(p.owner)+'</i>':'')+'<b>'+esc(p.character)+'</b></span>';
 }
+function routeChoiceHtml(run,selected,focusOwnerName){
+  return '<label class="route-choice '+(selected?'selected':'')+'">'+
+    '<input type="checkbox" class="route-choice-input" data-route-run="'+esc(run.id)+'" '+(selected?'checked':'')+'>'+
+    '<span class="route-choice-check">✓</span>'+
+    '<span class="route-choice-main"><b>'+esc(run.boss)+'</b><i>'+esc(run.difficulty)+'</i></span>'+
+    '<span class="route-choice-members">'+run.participants.map(function(p){return routeParticipantHtml(p,focusOwnerName)}).join('<span class="route-plus">+</span>')+'</span>'+
+  '</label>';
+}
+function bindRouteSelection(panel,focus,runs,selectedIds){
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-run]"),function(input){
+    input.onchange=function(){
+      if(input.checked)selectedIds.add(input.dataset.routeRun);
+      else selectedIds.delete(input.dataset.routeRun);
+      saveRouteSelection(focus,selectedIds);
+      renderPartyRoute();
+    };
+  });
+  var all=panel.querySelector("[data-route-select-all]");
+  if(all)all.onclick=function(){
+    saveRouteSelection(focus,new Set(runs.map(function(run){return run.id})));
+    renderPartyRoute();
+  };
+  var none=panel.querySelector("[data-route-select-none]");
+  if(none)none.onclick=function(){
+    saveRouteSelection(focus,new Set());
+    renderPartyRoute();
+  };
+}
 function renderPartyRoute(){
   var panel=document.getElementById("routePanel");
   if(!panel)return;
@@ -748,19 +830,41 @@ function renderPartyRoute(){
     panel.innerHTML='<div class="route-empty">주인이 없습니다.</div>';
     return;
   }
-  var route=buildPartyRoute(focus),theme=ownerTheme(focus.name);
-  if(!route.runs.length){
+
+  var allRuns=collectPartyRouteRuns(focus),theme=ownerTheme(focus.name);
+  if(!allRuns.length){
     panel.innerHTML='<div class="route-empty owner-themed" data-theme="'+theme+'"><strong>'+esc(focus.name)+'의 2인 이상 주간 파티가 없어요.</strong><span>보스 현황판에서 2인 이상 파티를 등록하면 자동으로 계산됩니다.</span></div>';
     return;
   }
 
-  var h='<div class="route-overview owner-themed" data-theme="'+theme+'">'+
-    '<div class="route-overview-copy"><span>2인 이상 파티 기준</span><strong>'+esc(focus.name)+' · 도핑 최소 루트</strong>'+
-    '<p>같은 캐릭터로 갈 수 있는 보스를 한 번에 몰아서 돌고, 완료한 캐릭터로 다시 돌아오지 않도록 묶었습니다.</p></div>'+
+  var selectedIds=selectedRouteIds(focus,allRuns);
+  var selectedRuns=allRuns.filter(function(run){return selectedIds.has(run.id)});
+  var route=buildPartyRoute(focus,selectedRuns);
+
+  var h='<div class="route-picker owner-themed" data-theme="'+theme+'">'+
+    '<div class="route-picker-head"><div><span>1. 돌 파티 선택</span><strong>이번에 같이 돌 파티만 골라주세요.</strong>'+
+    '<p>선택한 파티만 가지고 캐릭터 교체가 가장 적은 순서를 다시 계산합니다.</p></div>'+
+    '<div class="route-picker-actions"><button type="button" data-route-select-all>전체 선택</button><button type="button" data-route-select-none>전체 해제</button></div></div>'+
+    '<div class="route-choice-grid">'+
+      allRuns.map(function(run){return routeChoiceHtml(run,selectedIds.has(run.id),focus.name)}).join("")+
+    '</div>'+
+    '<div class="route-selection-summary"><b>'+selectedRuns.length+'</b> / '+allRuns.length+'개 파티 선택</div>'+
+  '</div>';
+
+  if(!selectedRuns.length){
+    h+='<div class="route-empty route-selected-empty owner-themed" data-theme="'+theme+'"><strong>선택한 파티가 없어요.</strong><span>위에서 이번에 돌 파티를 하나 이상 체크하면 최소 교체 루트를 계산합니다.</span></div>';
+    panel.innerHTML=h;
+    bindRouteSelection(panel,focus,allRuns,selectedIds);
+    return;
+  }
+
+  h+='<div class="route-overview owner-themed" data-theme="'+theme+'">'+
+    '<div class="route-overview-copy"><span>2. 선택한 파티 최소 루트</span><strong>'+esc(focus.name)+' · 도핑 최소 순서</strong>'+
+    '<p>같은 캐릭터에서 가능한 보스를 모두 끝낸 뒤 다음 캐릭터로 이동합니다. 끝낸 캐릭터로 다시 돌아오지 않습니다.</p></div>'+
     '<div class="route-stats">'+
       '<div><b>'+route.characterSessions+'</b><span>사용 캐릭터</span></div>'+
       '<div><b>'+route.focusSwitches+'</b><span>내 캐릭터 교체</span></div>'+
-      '<div><b>'+route.bossCount+'</b><span>파티 보스</span></div>'+
+      '<div><b>'+route.bossCount+'</b><span>선택 파티</span></div>'+
     '</div>'+
   '</div>';
 
@@ -791,8 +895,10 @@ function renderPartyRoute(){
     }
   });
   h+='</div>'+
-    '<p class="route-note">※ 검은 마법사는 월간 보스라 주간 도핑 루트 계산에서 제외됩니다. 자동 연동 복제본은 중복 계산하지 않습니다.</p>';
+    '<p class="route-note">※ 보스 현황판의 2인 이상 주간 파티만 선택 목록에 나옵니다. 검은 마법사와 자동 연동 복제본은 중복 계산하지 않습니다.</p>';
+
   panel.innerHTML=h;
+  bindRouteSelection(panel,focus,allRuns,selectedIds);
 }
 
 function updatePageView(){
