@@ -1064,7 +1064,14 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
   if(!groups.length)return "";
 
   return '<div class="route-character-quick">'+
-    '<span class="route-character-quick-title">캐릭터별 선택</span>'+
+    '<div class="route-character-quick-head">'+
+      '<span class="route-character-quick-title">캐릭터별 선택</span>'+
+      '<div class="route-character-legend" aria-label="캐릭터 선택 상태">'+
+        '<span class="none"><i></i>미선택</span>'+
+        '<span class="partial"><i></i>일부 선택</span>'+
+        '<span class="full"><i></i>전체 선택</span>'+
+      '</div>'+
+    '</div>'+
     '<div class="route-character-quick-groups">'+
       groups.map(function(group){
         return '<section class="route-character-quick-group owner-themed" data-theme="'+ownerTheme(group.owner)+'">'+
@@ -1105,6 +1112,12 @@ function renderPartyRoute(){
   var h='<div class="route-simple-head">'+
       '<div><span>2인 이상 파티</span><strong>이번에 돌 파티를 선택하세요.</strong><p>개별 파티를 고르거나, 사람·캐릭터 버튼을 눌러 해당 파티의 선택 상태를 한 번에 반전할 수 있습니다.</p></div>'+
       '<div class="route-picker-actions"><button type="button" data-route-select-all>전체 선택</button><button type="button" data-route-select-none>전체 해제</button></div>'+
+    '</div>'+
+    '<div class="route-mini-guide" aria-label="도핑 최소 루트 사용법">'+
+      '<b>사용법</b>'+
+      '<span><em>1</em> 사람·캐릭터로 파티 선택</span>'+
+      '<span><em>2</em> 다시 누르면 해당 파티 선택 반전</span>'+
+      '<span><em>3</em> 루트 만들기</span>'+
     '</div>';
 
   h+=routeOwnerQuickSelectHtml(allRuns,selectedIds);
