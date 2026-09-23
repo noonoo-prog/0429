@@ -705,11 +705,16 @@ function collectPartyRouteRuns(focusOwner,includeAll){
   });
   return runs;
 }
-function routeSelectionKey(ownerId){
-  return ROUTE_SELECTION_PREFIX+ownerId+"-simple";
+function routeSelectionKey(){
+  return ROUTE_SELECTION_PREFIX+"simple-global";
 }
 function selectedRouteIds(focusOwner,runs){
-  var raw=localStorage.getItem(routeSelectionKey(focusOwner.id));
+  var raw=localStorage.getItem(routeSelectionKey());
+  if(raw===null&&focusOwner){
+    var legacyKey=ROUTE_SELECTION_PREFIX+focusOwner.id+"-simple";
+    raw=localStorage.getItem(legacyKey);
+    if(raw!==null)localStorage.setItem(routeSelectionKey(),raw);
+  }
   if(raw===null)return new Set();
   try{
     var parsed=JSON.parse(raw);
@@ -721,7 +726,7 @@ function selectedRouteIds(focusOwner,runs){
   }
 }
 function saveRouteSelection(focusOwner,ids){
-  localStorage.setItem(routeSelectionKey(focusOwner.id),JSON.stringify(Array.from(ids)));
+  localStorage.setItem(routeSelectionKey(),JSON.stringify(Array.from(ids)));
 }
 function groupPartyRouteRuns(runs){
   var map={},order=[];
@@ -1148,6 +1153,7 @@ function updatePageView(){
   var panel=document.getElementById("checklistPanel");
   var routePanel=document.getElementById("routePanel");
   var partyFilter=document.getElementById("partyFilterRow");
+  var ownerbar=document.querySelector(".ownerbar");
   var save=document.querySelector(".save-controls");
   if(desktop)desktop.hidden=!board;
   if(mobile)mobile.hidden=!board;
@@ -1156,6 +1162,7 @@ function updatePageView(){
   if(routePanel)routePanel.hidden=!route;
   if(save)save.hidden=!board;
   if(partyFilter)partyFilter.hidden=!board;
+  if(ownerbar)ownerbar.hidden=route;
 
   var pageTitle=document.getElementById("pageTitle"),pageSub=document.getElementById("pageSub");
   if(pageTitle)pageTitle.textContent=checklist?"보스 체크리스트":(route?"도핑 최소 루트":"보스 현황판");
@@ -1360,9 +1367,13 @@ function renderOwners(){
   }});
   var o=owner(),unlocked=o&&isUnlocked(o.id),title=document.getElementById("boardTitle");
   title.className="board-title owner-themed"; if(o)title.setAttribute("data-theme",ownerTheme(o.name)); else title.removeAttribute("data-theme");
-  title.innerHTML=o?esc(o.name)+(PAGE_VIEW==="checklist"?'의 보스 체크리스트':'의 보스 현황')+
-    ' <span class="lock-state '+((PAGE_VIEW==="checklist"||unlocked)?"open":"")+'">'+
-    (PAGE_VIEW==="checklist"?"비밀번호 없이 체크":(unlocked?"수정 가능":"보기 전용"))+'</span>':"";
+  if(PAGE_VIEW==="route"){
+    title.innerHTML='전체 2인 이상 파티 <span class="lock-state open">루트 선택</span>';
+  }else{
+    title.innerHTML=o?esc(o.name)+(PAGE_VIEW==="checklist"?'의 보스 체크리스트':'의 보스 현황')+
+      ' <span class="lock-state '+((PAGE_VIEW==="checklist"||unlocked)?"open":"")+'">'+
+      (PAGE_VIEW==="checklist"?"비밀번호 없이 체크":(unlocked?"수정 가능":"보기 전용"))+'</span>':"";
+  }
   var ownerUnlock=document.getElementById("unlockOwner");
   ownerUnlock.textContent=ADMIN_UNLOCKED?"관리자 모드 중":(unlocked?"수정 잠그기":"수정 잠금 해제");
   ownerUnlock.disabled=ADMIN_UNLOCKED;
