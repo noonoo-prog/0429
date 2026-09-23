@@ -1305,7 +1305,7 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
 
   return '<div class="route-character-quick">'+
     '<div class="route-character-simple-head">'+
-      '<div><span>1</span><strong>갈 캐릭터 선택</strong><p>이름은 선택, ×는 개별 제외. 주인별 전체 선택·전체 제외도 사용할 수 있습니다.</p></div>'+
+      '<div><span>1</span><strong>갈 캐릭터 선택</strong><p>이름을 누르면 선택 · ×를 누르면 그 캐릭터 파티 전체 제외</p></div>'+
       '<button type="button" data-route-clear-characters>선택 초기화</button>'+
     '</div>'+
     '<div class="route-character-quick-groups">'+
@@ -1367,7 +1367,7 @@ function renderPartyRoute(){
   var excludedCharacterCount=(state.excludedCharacters||[]).length;
 
   var h='<div class="route-simple-head">'+
-      '<div><span>도핑 최소 루트</span><strong>갈 파티만 빠르게 고르세요.</strong><p>캐릭터 선택 → 필요 없으면 캐릭터 × 또는 파티 ×로 제외하세요.</p></div>'+
+      '<div><span>도핑 최소 루트</span><strong>갈 파티만 빠르게 고르세요.</strong><p>캐릭터 선택 → 파티 확인 → 루트 만들기</p></div>'+
     '</div>';
 
   h+=routeCharacterQuickSelectHtml(allRuns,selectedIds);
