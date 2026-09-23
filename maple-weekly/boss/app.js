@@ -65,7 +65,7 @@ let PARTY_ONLY=localStorage.getItem(PARTY_FILTER_KEY)==="1";
 let THEME_MODE=localStorage.getItem(THEME_KEY)==="dark"?"dark":"light";
 const CHECKLIST_START="2026-09-24";
 const PAGE_VIEW_KEY="boss-board-page-view-v1";
-let PAGE_VIEW=localStorage.getItem(PAGE_VIEW_KEY)==="checklist"?"checklist":"board";
+let PAGE_VIEW=(function(){var v=localStorage.getItem(PAGE_VIEW_KEY);return v==="checklist"||v==="route"?v:"board"})();
 let CHECKLIST_MONTH=(function(){
   var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1;
   if(y<2026||(y===2026&&m<9))return "2026-09";
@@ -607,34 +607,224 @@ function renderChecklist(){
     };
   });
 }
+
+function routeOwnerRank(name){
+  var i=FIXED_OWNER_ORDER.indexOf(name);
+  return i<0?999:i;
+}
+function routeParticipantSort(a,b){
+  var ar=routeOwnerRank(a.owner),br=routeOwnerRank(b.owner);
+  if(ar!==br)return ar-br;
+  if(a.owner!==b.owner)return String(a.owner||"").localeCompare(String(b.owner||""),"ko");
+  return String(a.character||"").localeCompare(String(b.character||""),"ko");
+}
+function routeParticipantsForCell(sourceOwner,sourceCharacter,c){
+  var people=[{owner:sourceOwner.name,character:String(sourceCharacter||"").trim()}];
+  var need=Math.max(0,Number(c.count||0)-1);
+  for(var i=0;i<need;i++){
+    var character=String((c.names&&c.names[i])||"").trim()||"미정";
+    var owned=character!=="미정"?characterOwner(character):null;
+    people.push({owner:owned?owned.name:"",character:character});
+  }
+  return people.sort(routeParticipantSort);
+}
+function partyRouteSignature(run){
+  return run.participants.map(function(p){return(p.owner||"?")+"::"+p.character}).join("|");
+}
+function collectPartyRouteRuns(focusOwner){
+  var runs=[],seen={};
+  if(!focusOwner)return runs;
+  APP.owners.forEach(function(sourceOwner){
+    var st=sourceOwner.board;
+    if(!st)return;
+    st.players.forEach(function(sourceCharacter,pi){
+      BOSSES.forEach(function(boss){
+        if(MONTHLY.has(boss))return;
+        var c=st.cells[boss]&&st.cells[boss][pi];
+        if(!isMultiPartyCell(c)||c._sync)return;
+        var participants=routeParticipantsForCell(sourceOwner,sourceCharacter,c);
+        var focus=participants.find(function(p){return p.owner===focusOwner.name});
+        if(!focus)return;
+        var key=boss+"|"+c.difficulty+"|"+participants.map(function(p){return(p.owner||"?")+":"+p.character}).join("|");
+        if(seen[key])return;
+        seen[key]=1;
+        runs.push({
+          boss:boss,
+          difficulty:c.difficulty,
+          participants:participants,
+          focusCharacter:focus.character
+        });
+      });
+    });
+  });
+  return runs;
+}
+function groupPartyRouteRuns(runs){
+  var map={},order=[];
+  runs.forEach(function(run){
+    var sig=partyRouteSignature(run);
+    if(!map[sig]){
+      map[sig]={signature:sig,participants:run.participants,bosses:[]};
+      order.push(sig);
+    }
+    map[sig].bosses.push({name:run.boss,difficulty:run.difficulty});
+  });
+  return order.map(function(sig){
+    var g=map[sig];
+    g.bosses.sort(function(a,b){
+      var ai=BOSSES.indexOf(a.name),bi=BOSSES.indexOf(b.name);
+      return ai-bi||String(a.difficulty).localeCompare(String(b.difficulty),"ko");
+    });
+    return g;
+  });
+}
+function routeGroupScore(group,lastByOwner,focusOwnerName){
+  var changes=0,same=0;
+  group.participants.forEach(function(p){
+    if(!p.owner||p.owner===focusOwnerName)return;
+    if(lastByOwner[p.owner]){
+      if(lastByOwner[p.owner]===p.character)same++;
+      else changes++;
+    }
+  });
+  return changes*100-same*10-group.bosses.length;
+}
+function orderRouteGroups(groups,lastByOwner,focusOwnerName){
+  var left=groups.slice(),out=[];
+  while(left.length){
+    left.sort(function(a,b){
+      var d=routeGroupScore(a,lastByOwner,focusOwnerName)-routeGroupScore(b,lastByOwner,focusOwnerName);
+      if(d)return d;
+      d=b.bosses.length-a.bosses.length;
+      if(d)return d;
+      return a.signature.localeCompare(b.signature,"ko");
+    });
+    var g=left.shift();
+    out.push(g);
+    g.participants.forEach(function(p){if(p.owner)lastByOwner[p.owner]=p.character});
+  }
+  return out;
+}
+function buildPartyRoute(focusOwner){
+  var runs=collectPartyRouteRuns(focusOwner);
+  var byCharacter={};
+  runs.forEach(function(run){
+    if(!byCharacter[run.focusCharacter])byCharacter[run.focusCharacter]=[];
+    byCharacter[run.focusCharacter].push(run);
+  });
+
+  var characterOrder=[];
+  (focusOwner.board&&focusOwner.board.players||[]).forEach(function(name){
+    if(byCharacter[name]&&characterOrder.indexOf(name)<0)characterOrder.push(name);
+  });
+  Object.keys(byCharacter).forEach(function(name){
+    if(characterOrder.indexOf(name)<0)characterOrder.push(name);
+  });
+
+  var lastByOwner={},blocks=[];
+  characterOrder.forEach(function(character){
+    var groups=orderRouteGroups(groupPartyRouteRuns(byCharacter[character]||[]),lastByOwner,focusOwner.name);
+    blocks.push({character:character,groups:groups});
+  });
+
+  return{
+    runs:runs,
+    blocks:blocks,
+    bossCount:runs.length,
+    characterSessions:blocks.length,
+    focusSwitches:Math.max(0,blocks.length-1)
+  };
+}
+function routeParticipantHtml(p,focusOwnerName){
+  var theme=ownerTheme(p.owner);
+  return '<span class="route-member owner-themed '+(p.owner===focusOwnerName?'focus':'')+'" data-theme="'+theme+'">'+
+    (p.owner?'<i>'+esc(p.owner)+'</i>':'')+'<b>'+esc(p.character)+'</b></span>';
+}
+function renderPartyRoute(){
+  var panel=document.getElementById("routePanel");
+  if(!panel)return;
+  var focus=owner();
+  if(!focus){
+    panel.innerHTML='<div class="route-empty">주인이 없습니다.</div>';
+    return;
+  }
+  var route=buildPartyRoute(focus),theme=ownerTheme(focus.name);
+  if(!route.runs.length){
+    panel.innerHTML='<div class="route-empty owner-themed" data-theme="'+theme+'"><strong>'+esc(focus.name)+'의 2인 이상 주간 파티가 없어요.</strong><span>보스 현황판에서 2인 이상 파티를 등록하면 자동으로 계산됩니다.</span></div>';
+    return;
+  }
+
+  var h='<div class="route-overview owner-themed" data-theme="'+theme+'">'+
+    '<div class="route-overview-copy"><span>2인 이상 파티 기준</span><strong>'+esc(focus.name)+' · 도핑 최소 루트</strong>'+
+    '<p>같은 캐릭터로 갈 수 있는 보스를 한 번에 몰아서 돌고, 완료한 캐릭터로 다시 돌아오지 않도록 묶었습니다.</p></div>'+
+    '<div class="route-stats">'+
+      '<div><b>'+route.characterSessions+'</b><span>사용 캐릭터</span></div>'+
+      '<div><b>'+route.focusSwitches+'</b><span>내 캐릭터 교체</span></div>'+
+      '<div><b>'+route.bossCount+'</b><span>파티 보스</span></div>'+
+    '</div>'+
+  '</div>';
+
+  h+='<div class="route-flow">';
+  route.blocks.forEach(function(block,blockIndex){
+    h+='<section class="route-character-block owner-themed" data-theme="'+theme+'">'+
+      '<header class="route-character-head">'+
+        '<div class="route-step">'+(blockIndex+1)+'</div>'+
+        '<div><span>'+esc(focus.name)+' 캐릭터</span><strong>'+esc(block.character)+'</strong></div>'+
+        '<em>이 캐릭터에서 '+block.groups.reduce(function(n,g){return n+g.bosses.length},0)+'개</em>'+
+      '</header>'+
+      '<div class="route-groups">';
+
+    block.groups.forEach(function(group,groupIndex){
+      h+='<article class="route-group">'+
+        '<div class="route-group-top"><span class="route-order">'+(blockIndex+1)+'-'+(groupIndex+1)+'</span>'+
+        '<div class="route-members">'+group.participants.map(function(p){return routeParticipantHtml(p,focus.name)}).join('<span class="route-plus">+</span>')+'</div></div>'+
+        '<div class="route-bosses">';
+      group.bosses.forEach(function(b){
+        h+='<span class="route-boss"><b>'+esc(b.name)+'</b><i>'+esc(b.difficulty)+'</i></span>';
+      });
+      h+='</div></article>';
+    });
+
+    h+='</div></section>';
+    if(blockIndex<route.blocks.length-1){
+      h+='<div class="route-change"><span>↓</span><b>'+esc(block.character)+' 완료 · 다음 캐릭터로 교체</b></div>';
+    }
+  });
+  h+='</div>'+
+    '<p class="route-note">※ 검은 마법사는 월간 보스라 주간 도핑 루트 계산에서 제외됩니다. 자동 연동 복제본은 중복 계산하지 않습니다.</p>';
+  panel.innerHTML=h;
+}
+
 function updatePageView(){
-  var checklist=PAGE_VIEW==="checklist";
+  var checklist=PAGE_VIEW==="checklist",route=PAGE_VIEW==="route",board=PAGE_VIEW==="board";
   var desktop=document.querySelector(".desktop-board");
   var mobile=document.getElementById("mobileBoard");
   var hint=document.getElementById("boardHint");
   var panel=document.getElementById("checklistPanel");
+  var routePanel=document.getElementById("routePanel");
   var partyFilter=document.getElementById("partyFilterRow");
   var save=document.querySelector(".save-controls");
-  if(desktop)desktop.hidden=checklist;
-  if(mobile)mobile.hidden=checklist;
-  if(hint)hint.hidden=checklist;
+  if(desktop)desktop.hidden=!board;
+  if(mobile)mobile.hidden=!board;
+  if(hint)hint.hidden=!board;
   if(panel)panel.hidden=!checklist;
-  if(save)save.hidden=checklist;
-  if(partyFilter)partyFilter.hidden=checklist;
+  if(routePanel)routePanel.hidden=!route;
+  if(save)save.hidden=!board;
+  if(partyFilter)partyFilter.hidden=!board;
 
   var pageTitle=document.getElementById("pageTitle"),pageSub=document.getElementById("pageSub");
-  if(pageTitle)pageTitle.textContent=checklist?"보스 체크리스트":"보스 현황판";
-  if(pageSub)pageSub.textContent=checklist?"달력은 일~토 · 보스 초기화는 목요일~수요일":"주간 최대 12개 · 검은 마법사는 월간";
+  if(pageTitle)pageTitle.textContent=checklist?"보스 체크리스트":(route?"도핑 최소 루트":"보스 현황판");
+  if(pageSub)pageSub.textContent=checklist?"달력은 일~토 · 보스 초기화는 목요일~수요일":(route?"2인 이상 파티 · 캐릭터 재진입 최소화":"주간 최대 12개 · 검은 마법사는 월간");
 
   Array.prototype.forEach.call(document.querySelectorAll("[data-page-view]"),function(btn){
     btn.classList.toggle("active",btn.dataset.pageView===PAGE_VIEW);
   });
 
   var boardOnlyIds=["addPlayer","renameOwner","changePinOwner","removeOwner"];
-  boardOnlyIds.forEach(function(id){var el=document.getElementById(id);if(el)el.hidden=checklist});
+  boardOnlyIds.forEach(function(id){var el=document.getElementById(id);if(el)el.hidden=!board});
 }
 function setPageView(view){
-  PAGE_VIEW=view==="checklist"?"checklist":"board";
+  PAGE_VIEW=view==="checklist"?"checklist":(view==="route"?"route":"board");
   localStorage.setItem(PAGE_VIEW_KEY,PAGE_VIEW);
   updatePageView();
   render();
@@ -1219,6 +1409,8 @@ function render(){
   updatePageView();
   if(PAGE_VIEW==="checklist"){
     renderChecklist();
+  }else if(PAGE_VIEW==="route"){
+    renderPartyRoute();
   }else{
     renderDesktop();renderMobile();updatePartyFilterUI();
   }
