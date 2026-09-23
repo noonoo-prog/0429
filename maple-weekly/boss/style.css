@@ -4530,3 +4530,195 @@ html[data-theme="dark"] .route-choice-check{background:#1c2128}
     max-width:0;
   }
 }
+
+
+/* FINAL boss-row layout — difficulty | boss · party count | crystal */
+@media(min-width:761px){
+  .character-boss-list .compact-main{
+    display:grid;
+    grid-template-columns:58px minmax(0,1fr) 44px;
+    column-gap:6px;
+    align-items:center;
+    width:100%;
+    min-width:0;
+  }
+
+  .character-boss-list .compact-name-wrap{
+    width:100%;
+    min-width:0;
+    max-width:none;
+    overflow:visible;
+  }
+
+  .character-boss-list .compact-title-line{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    width:100%;
+    min-width:0;
+    white-space:nowrap;
+  }
+
+  .character-boss-list .compact-boss-name{
+    display:block;
+    width:auto;
+    min-width:0;
+    max-width:none;
+    flex:0 1 auto;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .character-boss-list .compact-party-count{
+    flex:none;
+    color:var(--muted);
+    font-size:10.5px;
+    font-weight:900;
+    white-space:nowrap;
+  }
+
+  .character-boss-list .compact-party-count-edit{
+    flex:none;
+    display:inline-flex;
+    align-items:center;
+    gap:3px;
+    min-width:0;
+  }
+
+  .character-boss-list .compact-party-dot{
+    color:var(--muted);
+    font-size:11px;
+    font-weight:900;
+  }
+
+  .character-boss-list .compact-count-inline-select{
+    appearance:none;
+    -webkit-appearance:none;
+    width:39px;
+    min-width:39px;
+    max-width:39px;
+    height:24px;
+    margin:0;
+    padding:0 3px;
+    border:1px solid var(--line-strong);
+    border-radius:6px;
+    background:var(--surface);
+    color:var(--text);
+    font-size:10px;
+    font-weight:900;
+    line-height:24px;
+    text-align:center;
+    text-align-last:center;
+  }
+
+  .character-boss-list .compact-count-inline-select:focus{
+    border-color:#6d63db;
+    outline:2px solid rgba(109,99,219,.12);
+    outline-offset:0;
+  }
+
+  .character-boss-list .compact-income-slot{
+    width:44px;
+    min-width:44px;
+    max-width:44px;
+    justify-self:end;
+  }
+
+  /* second line starts exactly under the boss name */
+  .character-boss-list .compact-party-members{
+    padding-left:64px;
+    padding-right:0;
+    margin-top:4px;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    white-space:nowrap;
+  }
+}
+
+@media(max-width:760px){
+  .mobile-compact-list .compact-main{
+    display:grid;
+    grid-template-columns:68px minmax(0,1fr) 54px;
+    column-gap:6px;
+    align-items:center;
+    width:100%;
+    min-width:0;
+  }
+
+  .mobile-compact-list .compact-title-line{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    width:100%;
+    min-width:0;
+    white-space:nowrap;
+  }
+
+  .mobile-compact-list .compact-boss-name{
+    width:auto;
+    min-width:0;
+    max-width:none;
+    flex:0 1 auto;
+  }
+
+  .mobile-compact-list .compact-party-count{
+    flex:none;
+    color:var(--muted);
+    font-size:10.5px;
+    font-weight:900;
+    white-space:nowrap;
+  }
+
+  .mobile-compact-list .compact-party-count-edit{
+    flex:none;
+    display:inline-flex;
+    align-items:center;
+    gap:3px;
+  }
+
+  .mobile-compact-list .compact-party-dot{
+    color:var(--muted);
+    font-weight:900;
+  }
+
+  .mobile-compact-list .compact-count-inline-select{
+    appearance:none;
+    -webkit-appearance:none;
+    width:42px;
+    min-width:42px;
+    max-width:42px;
+    height:26px;
+    margin:0;
+    padding:0 3px;
+    border:1px solid var(--line-strong);
+    border-radius:6px;
+    background:var(--surface);
+    color:var(--text);
+    font-size:10.5px;
+    font-weight:900;
+    line-height:26px;
+    text-align:center;
+    text-align-last:center;
+  }
+
+  .mobile-compact-list .compact-income-slot{
+    width:54px;
+    min-width:54px;
+    max-width:54px;
+    justify-self:end;
+  }
+
+  .mobile-compact-list .compact-party-members{
+    padding-left:74px;
+    padding-right:0;
+  }
+}
+
+html[data-theme="dark"] .compact-count-inline-select{
+  background:#1c2128;
+  border-color:var(--line-strong);
+  color:var(--text);
+}
