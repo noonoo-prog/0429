@@ -967,6 +967,27 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
     };
   });
 
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-select-character]"),function(btn){
+    btn.onclick=function(){
+      var ownerName=btn.dataset.routeOwner;
+      var characterName=btn.dataset.routeSelectCharacter;
+      var matches=runs.filter(function(run){
+        return run.participants.some(function(p){
+          return p.owner===ownerName&&p.character===characterName;
+        });
+      });
+      var allSelected=matches.length>0&&matches.every(function(run){return selectedIds.has(run.id)});
+      var next=new Set(selectedIds);
+      matches.forEach(function(run){
+        if(allSelected)next.delete(run.id);
+        else next.add(run.id);
+      });
+      ROUTE_RESULT_READY=false;
+      saveRouteSelection(focus,next);
+      renderPartyRoute();
+    };
+  });
+
   var make=panel.querySelector("[data-route-build]");
   if(make)make.onclick=function(){
     if(!selectedIds.size)return;
@@ -1001,6 +1022,59 @@ function routeOwnerQuickSelectHtml(runs,selectedIds){
     '</div>'+
   '</div>';
 }
+function routeCharacterQuickSelectHtml(runs,selectedIds){
+  var groups=[];
+
+  APP.owners.slice().sort(function(a,b){
+    var ar=routeOwnerRank(a.name),br=routeOwnerRank(b.name);
+    if(ar!==br)return ar-br;
+    return String(a.name||"").localeCompare(String(b.name||""),"ko");
+  }).forEach(function(o){
+    var characters=(o.board&&o.board.players||[]).map(function(name){return String(name||"").trim()}).filter(Boolean);
+    var items=[];
+
+    characters.forEach(function(character){
+      var matches=runs.filter(function(run){
+        return run.participants.some(function(p){
+          return p.owner===o.name&&p.character===character;
+        });
+      });
+      if(!matches.length)return;
+
+      var selectedCount=matches.filter(function(run){return selectedIds.has(run.id)}).length;
+      items.push({
+        character:character,
+        count:matches.length,
+        active:selectedCount===matches.length,
+        partial:selectedCount>0&&selectedCount<matches.length
+      });
+    });
+
+    if(items.length)groups.push({owner:o.name,items:items});
+  });
+
+  if(!groups.length)return "";
+
+  return '<div class="route-character-quick">'+
+    '<span class="route-character-quick-title">캐릭터별 선택</span>'+
+    '<div class="route-character-quick-groups">'+
+      groups.map(function(group){
+        return '<section class="route-character-quick-group owner-themed" data-theme="'+ownerTheme(group.owner)+'">'+
+          '<strong>'+esc(group.owner)+'</strong>'+
+          '<div>'+
+            group.items.map(function(item){
+              return '<button type="button" class="route-character-quick-btn '+(item.active?'active ':'')+(item.partial?'partial ':'')+'" '+
+                'data-route-owner="'+esc(group.owner)+'" data-route-select-character="'+esc(item.character)+'" '+
+                'title="'+esc(item.character)+' 포함 파티 '+item.count+'개 '+(item.active?'선택 해제':'선택')+'">'+
+                '<b>'+esc(item.character)+'</b><small>'+item.count+'</small>'+
+              '</button>';
+            }).join("")+
+          '</div>'+
+        '</section>';
+      }).join("")+
+    '</div>'+
+  '</div>';
+}
 function renderPartyRoute(){
   var panel=document.getElementById("routePanel");
   if(!panel)return;
@@ -1021,11 +1095,12 @@ function renderPartyRoute(){
   var route=ROUTE_RESULT_READY&&selectedRuns.length?buildOverallPartyRoute(selectedRuns):null;
 
   var h='<div class="route-simple-head">'+
-      '<div><span>2인 이상 파티</span><strong>이번에 돌 파티를 선택하세요.</strong><p>개별 파티를 눌러도 되고, 사람 이름을 눌러 한 번에 선택할 수도 있습니다.</p></div>'+
+      '<div><span>2인 이상 파티</span><strong>이번에 돌 파티를 선택하세요.</strong><p>개별 파티, 사람별, 캐릭터별로 빠르게 선택할 수 있습니다.</p></div>'+
       '<div class="route-picker-actions"><button type="button" data-route-select-all>전체 선택</button><button type="button" data-route-select-none>전체 해제</button></div>'+
     '</div>';
 
   h+=routeOwnerQuickSelectHtml(allRuns,selectedIds);
+  h+=routeCharacterQuickSelectHtml(allRuns,selectedIds);
 
   h+='<div class="route-picker route-simple-picker owner-themed" data-theme="'+theme+'">'+
     '<div class="route-choice-grid">'+
