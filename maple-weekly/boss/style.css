@@ -5588,3 +5588,37 @@ html[data-theme="dark"] .route-character-chip.excluded .route-character-quick-bt
 html[data-theme="dark"] .route-save-slot.active{
   background:#272d35;
 }
+
+
+/* Mobile character nickname edit */
+.mobile-character-name-line .mobile-rename-character{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:26px;
+  padding:0 7px;
+  border:1px solid var(--line-strong);
+  border-radius:7px;
+  background:var(--surface);
+  color:var(--muted);
+  font-family:inherit;
+  font-size:8.5px;
+  font-weight:900;
+  line-height:1;
+  cursor:pointer;
+}
+@media(max-width:760px){
+  .mobile-character-name-line{
+    flex-wrap:wrap;
+  }
+  .mobile-character-name-line .mobile-rename-character{
+    min-height:30px;
+    padding:0 8px;
+    font-size:9px;
+  }
+}
+html[data-theme="dark"] .mobile-character-name-line .mobile-rename-character{
+  background:#2d333b;
+  border-color:#444c56;
+  color:#909dab;
+}
