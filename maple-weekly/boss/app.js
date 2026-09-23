@@ -1253,15 +1253,15 @@ function compactDifficultySelect(c,editable,bi,pi){
   '</select>';
 }
 function compactCountSelect(c,editable,bi,pi){
-  if(!planned(c))return "";
-  if(SOLO.has(BOSSES[bi]))return '<span class="compact-solo" aria-label="1인"></span>';
+  if(!planned(c)||SOLO.has(BOSSES[bi]))return "";
   if(!editable){
-    return '<span class="compact-solo">'+(c.count>1?c.count+"인":"")+'</span>';
+    return c.count>1?'<span class="compact-party-count">· '+c.count+'인</span>':"";
   }
-  return '<select class="compact-count" aria-label="파티 인원" data-mobile-count="1" data-b="'+bi+'" data-p="'+pi+'">'+
-    '<option value="0" '+(!c.count?"selected":"")+'>인원</option>'+
-    [1,2,3,4,5,6].map(function(n){return '<option value="'+n+'" '+(c.count===n?"selected":"")+'>'+n+'인</option>'}).join("")+
-  '</select>';
+  return '<span class="compact-party-count-edit"><span class="compact-party-dot">·</span>'+
+    '<select class="compact-count compact-count-inline-select" aria-label="파티 인원" data-mobile-count="1" data-b="'+bi+'" data-p="'+pi+'">'+
+      '<option value="0" '+(!c.count?"selected":"")+'>인원</option>'+
+      [1,2,3,4,5,6].map(function(n){return '<option value="'+n+'" '+(c.count===n?"selected":"")+'>'+n+'인</option>'}).join("")+
+    '</select></span>';
 }
 function compactPartyMembers(c,bi,pi,editable){
   if(!planned(c)||!c.count||c.count<=1)return "";
@@ -1297,8 +1297,7 @@ function compactBossCard(b,bi,c,pi,unlocked){
   return '<article class="compact-boss-card '+(planned(c)?"is-set ":"is-empty ")+(auto?"is-sync ":"")+(mon?"is-monthly":"")+'">'+
     '<div class="compact-main">'+
       compactDifficultySelect(c,editable,bi,pi)+
-      '<div class="compact-name-wrap"><strong class="compact-boss-name">'+esc(b)+'</strong>'+sync+'</div>'+
-      '<div class="compact-count-slot">'+compactCountSelect(c,editable,bi,pi)+'</div>'+
+      '<div class="compact-name-wrap"><div class="compact-title-line"><strong class="compact-boss-name">'+esc(b)+'</strong>'+compactCountSelect(c,editable,bi,pi)+'</div>'+sync+'</div>'+
       income+
     '</div>'+
     compactPartyMembers(c,bi,pi,editable)+
