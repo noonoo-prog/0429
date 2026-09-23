@@ -5668,3 +5668,273 @@ html[data-theme="dark"] .route-size-filter-btn{
 html[data-theme="dark"] .route-size-filter-btn.active{
   background:color-mix(in srgb,var(--accent) 14%,#2d333b);
 }
+
+
+/* FINAL V4 — simplified doping route */
+.route-step{
+  margin:0 0 12px;
+}
+.route-step-title{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin:0 0 8px;
+}
+.route-step-title>span,
+.route-character-simple-head>div>span{
+  display:inline-grid;
+  place-items:center;
+  flex:none;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  background:var(--accent);
+  color:#fff;
+  font-size:10px;
+  font-weight:950;
+}
+.route-step-title strong,
+.route-character-simple-head strong{
+  display:block;
+  color:var(--text);
+  font-size:12px;
+  font-weight:950;
+}
+.route-step-title p,
+.route-character-simple-head p{
+  margin:2px 0 0;
+  color:var(--muted);
+  font-size:9.5px;
+  font-weight:700;
+}
+.route-step-title-row{
+  justify-content:space-between;
+}
+.route-step-title-row>div{
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+.route-size-filter{
+  margin-bottom:0;
+}
+.route-size-filter-title{
+  display:none;
+}
+.route-character-quick{
+  margin:0 0 12px;
+}
+.route-character-simple-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+.route-character-simple-head>div{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  column-gap:9px;
+  align-items:center;
+}
+.route-character-simple-head>div>span{
+  grid-row:1 / span 2;
+}
+.route-character-simple-head>button,
+.route-character-owner-head>button,
+.route-restore-excluded{
+  min-height:28px;
+  padding:0 9px;
+  border:1px solid var(--line-strong);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--muted);
+  font-family:inherit;
+  font-size:9px;
+  font-weight:900;
+  cursor:pointer;
+}
+.route-character-quick-group{
+  display:block;
+  padding:8px 0;
+  border-top:1px solid var(--line);
+}
+.route-character-quick-group:first-child{
+  padding-top:0;
+  border-top:0;
+}
+.route-character-owner-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:6px;
+}
+.route-character-owner-head>strong{
+  color:var(--owner-accent,#68707c);
+  font-size:10px;
+  font-weight:950;
+}
+.route-character-owner-head>button{
+  color:var(--owner-accent,#68707c);
+  border-color:var(--owner-line,var(--line-strong));
+}
+.route-character-buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+}
+.route-character-quick-btn{
+  background:#eef0f3 !important;
+  border:1px solid #d1d6dc !important;
+  color:#7b8490 !important;
+  box-shadow:none !important;
+}
+.route-character-quick-group.owner-themed .route-character-quick-btn.active{
+  background:var(--owner-accent,#68707c) !important;
+  border:1px solid var(--owner-accent,#68707c) !important;
+  color:#fff !important;
+}
+.route-character-quick-group.owner-themed .route-character-quick-btn.active b{
+  color:#fff !important;
+}
+.route-character-quick-group.owner-themed .route-character-quick-btn.active small{
+  background:rgba(255,255,255,.22) !important;
+  color:#fff !important;
+}
+.route-selected-list{
+  display:grid;
+  gap:7px;
+}
+.route-selected-party{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:9px 10px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface);
+}
+.route-selected-party-main{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.route-selected-party .route-choice-main{
+  flex:none;
+}
+.route-selected-party .route-choice-members{
+  min-width:0;
+}
+.route-party-exclude{
+  flex:none;
+  min-height:28px;
+  padding:0 9px;
+  border:1px solid var(--line-strong);
+  border-radius:8px;
+  background:var(--surface-soft);
+  color:var(--muted);
+  font-family:inherit;
+  font-size:9px;
+  font-weight:900;
+  cursor:pointer;
+}
+.route-party-exclude:hover{
+  color:var(--text);
+}
+.route-restore-excluded{
+  flex:none;
+}
+.route-selection-empty,
+.route-character-empty{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:4px;
+  min-height:92px;
+  padding:16px;
+  border:1px dashed var(--line-strong);
+  border-radius:10px;
+  background:var(--surface);
+  text-align:center;
+}
+.route-selection-empty strong{
+  color:var(--text);
+  font-size:11px;
+}
+.route-selection-empty span,
+.route-character-empty{
+  color:var(--muted);
+  font-size:9.5px;
+}
+.route-simple-footer{
+  margin-top:10px;
+}
+.route-simple-head .route-picker-actions,
+.route-owner-quick,
+.route-character-legend,
+.route-mini-guide{
+  display:none !important;
+}
+@media(min-width:761px){
+  .route-step-title>span,
+  .route-character-simple-head>div>span{
+    width:24px;
+    height:24px;
+    font-size:10.5px;
+  }
+  .route-step-title strong,
+  .route-character-simple-head strong{font-size:13px}
+  .route-step-title p,
+  .route-character-simple-head p{font-size:10px}
+  .route-character-owner-head>strong{font-size:11px}
+  .route-character-simple-head>button,
+  .route-character-owner-head>button,
+  .route-restore-excluded,
+  .route-party-exclude{font-size:10px}
+}
+@media(max-width:760px){
+  .route-character-simple-head{
+    align-items:flex-start;
+  }
+  .route-character-simple-head>button{
+    flex:none;
+  }
+  .route-selected-party{
+    align-items:flex-start;
+  }
+  .route-selected-party-main{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:5px;
+  }
+  .route-step-title-row{
+    align-items:flex-start;
+    gap:8px;
+  }
+  .route-restore-excluded{
+    max-width:120px;
+    height:auto;
+    padding:5px 8px;
+  }
+}
+html[data-theme="dark"] .route-character-quick-btn{
+  background:#30363d !important;
+  border-color:#444c56 !important;
+  color:#909dab !important;
+}
+html[data-theme="dark"] .route-character-quick-group.owner-themed .route-character-quick-btn.active{
+  background:var(--owner-accent,#909dab) !important;
+  border-color:var(--owner-accent,#909dab) !important;
+  color:#fff !important;
+}
+html[data-theme="dark"] .route-selected-party,
+html[data-theme="dark"] .route-party-exclude,
+html[data-theme="dark"] .route-character-simple-head>button,
+html[data-theme="dark"] .route-character-owner-head>button,
+html[data-theme="dark"] .route-restore-excluded{
+  background:#2d333b;
+}
