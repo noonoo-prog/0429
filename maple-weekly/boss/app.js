@@ -203,6 +203,22 @@ function weekStartForDate(dateKey){
   var delta=(d.getUTCDay()-4+7)%7;
   return dateKeyUTC(addDaysUTC(d,-delta));
 }
+function koreaDateKey(){
+  try{
+    var parts=new Intl.DateTimeFormat("en-US",{
+      timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"
+    }).formatToParts(new Date());
+    var values={};
+    parts.forEach(function(p){if(p.type!=="literal")values[p.type]=p.value});
+    return values.year+"-"+values.month+"-"+values.day;
+  }catch(e){
+    var now=new Date(Date.now()+9*60*60*1000);
+    return now.getUTCFullYear()+"-"+pad2(now.getUTCMonth()+1)+"-"+pad2(now.getUTCDate());
+  }
+}
+function currentBossWeekStart(){
+  return weekStartForDate(koreaDateKey());
+}
 function monthGridDates(monthKey){
   var p=monthKey.split("-").map(Number),y=p[0],m=p[1]-1;
   var first=new Date(Date.UTC(y,m,1));
@@ -334,9 +350,14 @@ function loadChecklist(show){
     });
     CHECKLIST_LOADED=true;
     if(PAGE_VIEW==="checklist")renderChecklist();
+    else if(PAGE_VIEW==="board"){renderDesktop();renderMobile()}
   }).catch(function(e){
     toast(e.message||"체크리스트를 불러오지 못했습니다.");
   }).finally(function(){CHECKLIST_LOADING=false});
+}
+function renderBossCheckState(){
+  if(PAGE_VIEW==="checklist")renderChecklist();
+  else if(PAGE_VIEW==="board"){renderDesktop();renderMobile()}
 }
 function saveBossRunCheck(weekStart,runDate,characterName,bossName,pi,completed){
   var o=owner(),st=state();if(!o||!st)return;
@@ -352,7 +373,7 @@ function saveBossRunCheck(weekStart,runDate,characterName,bossName,pi,completed)
       runDate:completed?runDate:(before.runDate||weekStart)
     });
     CHECKLIST_SAVING=saveKey;
-    renderChecklist();
+    renderBossCheckState();
 
     callApi("save_boss_run_check",{
       ownerId:o.id,
@@ -377,7 +398,7 @@ function saveBossRunCheck(weekStart,runDate,characterName,bossName,pi,completed)
       toast(e.message||"보스 체크를 저장하지 못했습니다.");
     }).finally(function(){
       CHECKLIST_SAVING="";
-      renderChecklist();
+      renderBossCheckState();
     });
   }
 
@@ -934,7 +955,7 @@ function setPageView(view){
   localStorage.setItem(PAGE_VIEW_KEY,PAGE_VIEW);
   updatePageView();
   render();
-  if(PAGE_VIEW==="checklist"&&!CHECKLIST_LOADED)loadChecklist(true);
+  if((PAGE_VIEW==="checklist"||PAGE_VIEW==="board")&&!CHECKLIST_LOADED)loadChecklist(PAGE_VIEW==="checklist");
 }
 
 function ownerTheme(name){
@@ -1115,7 +1136,7 @@ function renderOwners(){
   Array.prototype.forEach.call(el.querySelectorAll("[data-owner]"),function(b){b.onclick=function(){
     if(dirty){toast("저장 버튼을 눌러 변경사항을 먼저 저장해 주세요.");return}
     activeOwnerId=b.dataset.owner;localStorage.setItem(ACTIVE_KEY,activeOwnerId);render();
-    if(PAGE_VIEW==="checklist"&&!CHECKLIST_LOADED)loadChecklist(false);
+    if((PAGE_VIEW==="checklist"||PAGE_VIEW==="board")&&!CHECKLIST_LOADED)loadChecklist(false);
     document.documentElement.scrollLeft=0;document.body.scrollLeft=0;
     var mb=document.getElementById("mobileBoard");if(mb)mb.scrollLeft=0;
   }});
@@ -1279,8 +1300,30 @@ function compactPartyMembers(c,bi,pi,editable){
   }
   return h+'</div>';
 }
+function boardBossChecked(bossName,pi){
+  var o=owner(),st=state();
+  if(!o||!st||!CHECKLIST_LOADED||!st.players[pi])return false;
+  return !!bossRunItem(o.id,currentBossWeekStart(),String(st.players[pi]),bossName).completed;
+}
+function toggleBoardBossCheck(bi,pi){
+  var o=owner(),st=state();
+  if(!o||!st||isUnlocked(o.id)||CHECKLIST_SAVING)return;
+  var boss=BOSSES[bi],cell=st.cells[boss]&&st.cells[boss][pi];
+  if(!boss||!planned(cell))return;
+  if(!CHECKLIST_LOADED){
+    toast("보스 체크 상태를 불러오는 중이에요.");
+    loadChecklist(false);
+    return;
+  }
+  var characterName=String(st.players[pi]||"");
+  if(!characterName)return;
+  var weekStart=currentBossWeekStart(),runDate=koreaDateKey();
+  var completed=!!bossRunItem(o.id,weekStart,characterName,boss).completed;
+  saveBossRunCheck(weekStart,runDate,characterName,boss,pi,!completed);
+}
 function compactBossCard(b,bi,c,pi,unlocked){
   var auto=!!c._sync,editable=unlocked&&!auto,mon=MONTHLY.has(b);
+  var checkable=!unlocked&&planned(c),checked=checkable&&boardBossChecked(b,pi);
   var sync="";
   if(auto&&unlocked){
     var so=c._sync.sourceOwnerName||"";
@@ -1294,7 +1337,7 @@ function compactBossCard(b,bi,c,pi,unlocked){
       ?'<span class="compact-income-slot"><span class="compact-income">'+formatEok(bossWeeklyIncome(b,c))+'</span></span>'
       :'<span class="compact-income-slot"><span class="compact-income missing">미등록</span></span>';
   }
-  return '<article class="compact-boss-card '+(planned(c)?"is-set ":"is-empty ")+(auto?"is-sync ":"")+(mon?"is-monthly":"")+'">'+
+  return '<article class="compact-boss-card '+(planned(c)?"is-set ":"is-empty ")+(auto?"is-sync ":"")+(mon?"is-monthly ":"")+(checkable?"is-checkable ":"")+(checked?"is-cleared":"")+'" '+(checkable?'data-board-check-bi="'+bi+'" data-board-check-pi="'+pi+'" aria-pressed="'+(checked?"true":"false")+'" title="클릭해서 이번 주 보스 체크"':"")+'>'+
     '<div class="compact-main">'+
       compactDifficultySelect(c,editable,bi,pi)+
       '<div class="compact-name-wrap"><div class="compact-title-line"><strong class="compact-boss-name">'+esc(b)+'</strong>'+compactCountSelect(c,editable,bi,pi)+'</div>'+sync+'</div>'+
@@ -1542,6 +1585,12 @@ function bindCommon(root){
   Array.prototype.forEach.call(root.querySelectorAll("[data-count]:not(:disabled)"),function(e){e.onchange=function(){if(!e.checked)return;SELECT_ACTIVE=false;PENDING_RENDER=false;changeCount(+e.dataset.b,+e.dataset.p,+e.dataset.count)}});
   Array.prototype.forEach.call(root.querySelectorAll("[data-mobile-count]:not(:disabled)"),function(e){e.onchange=function(){SELECT_ACTIVE=false;PENDING_RENDER=false;changeCount(+e.dataset.b,+e.dataset.p,+e.value)}});
   Array.prototype.forEach.call(root.querySelectorAll(".party-picker-trigger:not(:disabled)"),function(e){e.onclick=function(){openPartyPicker(+e.dataset.b,+e.dataset.p,+e.dataset.m)}});
+  Array.prototype.forEach.call(root.querySelectorAll("[data-board-check-bi]"),function(card){
+    card.onclick=function(e){
+      if(e.target&&e.target.closest&&e.target.closest("button,select,input"))return;
+      toggleBoardBossCheck(+card.dataset.boardCheckBi,+card.dataset.boardCheckPi);
+    };
+  });
   Array.prototype.forEach.call(root.querySelectorAll("[data-move-character]:not(:disabled)"),function(e){
     e.onclick=function(){
       var from=activeChar(),delta=Number(e.dataset.moveCharacter)||0;
@@ -1697,5 +1746,6 @@ function startPolling(){
 loadRemote(true).then(function(){
   updatePageView();
   if(PAGE_VIEW==="checklist")return loadChecklist(true);
+  if(PAGE_VIEW==="board")return loadChecklist(false);
 }).then(startPolling);
 })();
