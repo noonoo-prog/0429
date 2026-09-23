@@ -706,15 +706,10 @@ function collectPartyRouteRuns(focusOwner,includeAll){
   return runs;
 }
 function routeSelectionKey(){
-  return ROUTE_SELECTION_PREFIX+"simple-global";
+  return ROUTE_SELECTION_PREFIX+"simple-global-v2";
 }
 function selectedRouteIds(focusOwner,runs){
   var raw=localStorage.getItem(routeSelectionKey());
-  if(raw===null&&focusOwner){
-    var legacyKey=ROUTE_SELECTION_PREFIX+focusOwner.id+"-simple";
-    raw=localStorage.getItem(legacyKey);
-    if(raw!==null)localStorage.setItem(routeSelectionKey(),raw);
-  }
   if(raw===null)return new Set();
   try{
     var parsed=JSON.parse(raw);
@@ -729,7 +724,7 @@ function saveRouteSelection(focusOwner,ids){
   localStorage.setItem(routeSelectionKey(),JSON.stringify(Array.from(ids)));
 }
 function routeQuickStateKey(){
-  return ROUTE_SELECTION_PREFIX+"quick-groups-v1";
+  return ROUTE_SELECTION_PREFIX+"quick-groups-v2";
 }
 function routeCharacterSelectorKey(ownerName,characterName){
   return String(ownerName||"")+"\u0001"+String(characterName||"");
@@ -1104,8 +1099,8 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
         character:character,
         count:matches.length,
         selectedCount:selectedCount,
-        active:matches.length>0&&selectedCount===matches.length,
-        partial:selectedCount>0&&selectedCount<matches.length,
+        active:selectorOn,
+        partial:!selectorOn&&selectedCount>0,
         selectorOn:selectorOn
       });
     });
@@ -1162,14 +1157,14 @@ function renderPartyRoute(){
   var route=ROUTE_RESULT_READY&&selectedRuns.length?buildOverallPartyRoute(selectedRuns):null;
 
   var h='<div class="route-simple-head">'+
-      '<div><span>2인 이상 파티</span><strong>이번에 돌 파티를 선택하세요.</strong><p>사람·캐릭터 버튼을 여러 개 켜면 파티가 합쳐지고, 같은 버튼을 다시 누르면 그 버튼이 추가한 선택만 빠집니다.</p></div>'+
+      '<div><span>2인 이상 파티</span><strong>이번에 돌 파티를 선택하세요.</strong><p>캐릭터 버튼을 켜면 그 캐릭터 파티가 추가되고, 다시 누르면 그 캐릭터만 담당하던 파티가 빠집니다. 다른 선택 캐릭터와 겹치는 파티는 유지됩니다.</p></div>'+
       '<div class="route-picker-actions"><button type="button" data-route-select-all>전체 선택</button><button type="button" data-route-select-none>전체 해제</button></div>'+
     '</div>'+
     '<div class="route-mini-guide" aria-label="도핑 최소 루트 사용법">'+
       '<b>사용법</b>'+
       '<span><em>1</em> 사람·캐릭터로 파티 선택</span>'+
-      '<span><em>2</em> 여러 버튼은 선택을 합쳐서 유지</span>'+
-      '<span><em>3</em> 같은 버튼을 다시 누르면 그 묶음만 해제</span><span><em>4</em> 루트 만들기</span>'+
+      '<span><em>2</em> 여러 캐릭터 선택은 합쳐서 유지</span>'+
+      '<span><em>3</em> 다시 누르면 그 캐릭터 몫만 해제</span><span><em>4</em> 루트 만들기</span>'+
     '</div>';
 
   h+=routeOwnerQuickSelectHtml(allRuns,selectedIds);
