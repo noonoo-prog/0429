@@ -5304,3 +5304,9 @@ html[data-theme="dark"] .route-character-quick-btn{
 html[data-theme="dark"] .route-character-quick-group.owner-themed .route-character-quick-btn.active{
   background:color-mix(in srgb,var(--owner-accent,#909dab) 14%,#2d333b);
 }
+
+
+/* route quick selector partial state */
+.route-owner-quick-btn.partial{
+  border-style:dashed;
+}
