@@ -5465,3 +5465,42 @@ html[data-theme="dark"] .route-character-legend i{
   background:#30363d;
   border-color:#58606b;
 }
+
+
+/* FINAL: character button colors reflect actual selected party coverage */
+.route-character-quick-group.owner-themed .route-character-quick-btn.active{
+  background:var(--owner-accent,#68707c) !important;
+  border-color:var(--owner-accent,#68707c) !important;
+  color:#fff !important;
+  box-shadow:none !important;
+}
+.route-character-quick-group.owner-themed .route-character-quick-btn.active b{
+  color:#fff !important;
+}
+.route-character-quick-group.owner-themed .route-character-quick-btn.active small{
+  background:rgba(255,255,255,.22) !important;
+  color:#fff !important;
+}
+.route-character-quick-group.owner-themed .route-character-quick-btn.partial:not(.active){
+  background:color-mix(in srgb,var(--owner-accent,#7d8792) 7%,var(--surface)) !important;
+  border:2px dashed var(--owner-accent,#7d8792) !important;
+  color:var(--owner-accent,#7d8792) !important;
+}
+.route-character-quick-btn:not(.active):not(.partial){
+  background:#eef0f3 !important;
+  border:1px solid #d1d6dc !important;
+  color:#7b8490 !important;
+}
+html[data-theme="dark"] .route-character-quick-group.owner-themed .route-character-quick-btn.active{
+  background:var(--owner-accent,#909dab) !important;
+  border-color:var(--owner-accent,#909dab) !important;
+  color:#fff !important;
+}
+html[data-theme="dark"] .route-character-quick-group.owner-themed .route-character-quick-btn.partial:not(.active){
+  background:color-mix(in srgb,var(--owner-accent,#909dab) 10%,#2d333b) !important;
+}
+html[data-theme="dark"] .route-character-quick-btn:not(.active):not(.partial){
+  background:#30363d !important;
+  border-color:#444c56 !important;
+  color:#909dab !important;
+}
