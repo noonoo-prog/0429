@@ -4352,3 +4352,126 @@ html[data-theme="dark"] .route-choice-check{background:#1c2128}
   .route-empty strong{font-size:15px}
   .route-empty span{font-size:12px}
 }
+
+
+/* PC centered layout + mainstream web typography scale */
+@media(min-width:761px){
+  /* centered desktop canvas with visible side gutters */
+  .app-shell{
+    max-width:1440px;
+    padding:26px 28px 34px;
+  }
+  .app-header{margin-bottom:16px}
+  .brand-row{gap:22px;margin-bottom:16px}
+  .brand-mainline{gap:16px}
+  .brand h1{
+    font-size:30px;
+    line-height:1.12;
+    letter-spacing:-.035em;
+  }
+  .brand p{
+    margin-top:5px;
+    font-size:13px;
+    line-height:1.5;
+  }
+
+  /* top navigation / controls */
+  .page-switch{gap:4px;padding:4px;border-radius:12px}
+  .page-switch-btn{
+    min-height:36px;
+    padding:0 14px;
+    border-radius:9px;
+    font-size:13px;
+    letter-spacing:-.015em;
+  }
+  .save{gap:8px;font-size:11.5px}
+  .save-board-btn{min-height:36px;font-size:12px}
+  .ownerbar{margin-bottom:12px}
+  .owners{gap:8px}
+  .owner-tab{
+    min-height:40px;
+    padding:8px 15px;
+    font-size:13px;
+  }
+  .owner-tab.unlocked:after{font-size:10px}
+  .context-row{gap:14px}
+  .board-title{font-size:16px}
+  .lock-state{font-size:10.5px;padding:4px 8px}
+  .manage-menu>summary{
+    min-height:38px;
+    padding:8px 13px;
+    font-size:12px;
+  }
+  .manage-grid .btn{font-size:12px}
+  .theme-toggle{
+    min-height:36px;
+    padding:0 11px;
+    font-size:12px;
+  }
+  .party-filter-row{margin-top:12px}
+  .party-filter-btn{
+    min-height:40px;
+    padding:0 14px;
+    font-size:12px;
+  }
+
+  /* board readability */
+  .desktop-board-meta{
+    margin-bottom:10px;
+    padding:12px 14px;
+    font-size:11.5px;
+  }
+  .desktop-board-meta strong{font-size:14px}
+  .desktop-board-meta span{font-size:10.5px}
+  .character-column-head{padding:11px 11px 10px}
+  .column-player-name{font-size:15px}
+  .column-count{font-size:12.5px}
+  .column-sub{font-size:10.5px}
+  .boss-section-label{min-height:31px;padding:5px 8px}
+  .boss-section-label strong{font-size:10.5px}
+  .boss-section-label span{font-size:9.5px}
+  .compact-boss-card{padding:8px 9px}
+  .compact-main{min-height:31px}
+  .compact-boss-name{font-size:13.5px}
+  .compact-difficulty{font-size:10px}
+  .compact-count{font-size:11.5px}
+  .compact-solo{font-size:10.5px}
+  .compact-sync{font-size:9px}
+  .compact-party-members{margin-top:5px}
+  .compact-member{font-size:10.5px}
+  .compact-income{font-size:10.5px}
+  .hint{
+    margin-top:12px;
+    font-size:11px;
+    line-height:1.6;
+  }
+
+  /* checklist / route share the same desktop reading width */
+  .checklist-panel,
+  .route-panel{
+    width:100%;
+    max-width:1280px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+
+  /* improve route-picker density after larger type */
+  .route-choice-grid{gap:8px}
+  .route-picker{padding:16px}
+  .route-group{padding:13px 15px}
+  .route-character-head{padding:14px 16px}
+  .route-bosses{gap:7px;margin-top:9px}
+
+  /* comfortable default reading rhythm */
+  .checklist-panel,
+  .route-panel,
+  .desktop-board{
+    line-height:1.5;
+  }
+}
+
+@media(min-width:1800px){
+  .app-shell{
+    max-width:1440px;
+  }
+}
