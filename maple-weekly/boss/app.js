@@ -1103,8 +1103,10 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
       items.push({
         character:character,
         count:matches.length,
-        active:selectorOn,
-        partial:!selectorOn&&selectedCount>0
+        selectedCount:selectedCount,
+        active:matches.length>0&&selectedCount===matches.length,
+        partial:selectedCount>0&&selectedCount<matches.length,
+        selectorOn:selectorOn
       });
     });
 
@@ -1128,9 +1130,9 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
           '<strong>'+esc(group.owner)+'</strong>'+
           '<div>'+
             group.items.map(function(item){
-              return '<button type="button" class="route-character-quick-btn '+(item.active?'active ':'')+(item.partial?'partial ':'')+'" '+
-                'data-route-owner="'+esc(group.owner)+'" data-route-select-character="'+esc(item.character)+'" '+
-                'title="'+esc(item.character)+' 포함 파티 '+item.count+'개 · '+(item.active?'다시 누르면 이 선택 묶음 해제':'누르면 선택 묶음 추가')+'">'+
+              return '<button type="button" class="route-character-quick-btn '+(item.active?'active ':'')+(item.partial?'partial ':'')+(item.selectorOn?'selector-on ':'')+'" '+
+                'data-route-owner="'+esc(group.owner)+'" data-route-select-character="'+esc(item.character)+'" data-selected-count="'+item.selectedCount+'" '+
+                'title="'+esc(item.character)+' 포함 파티 '+item.selectedCount+'/'+item.count+'개 선택 · '+(item.selectorOn?'다시 누르면 이 선택 묶음 해제':'누르면 선택 묶음 추가')+'">'+
                 '<b>'+esc(item.character)+'</b><small>'+item.count+'</small>'+
               '</button>';
             }).join("")+
