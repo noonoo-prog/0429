@@ -65,10 +65,8 @@ let PARTY_ONLY=localStorage.getItem(PARTY_FILTER_KEY)==="1";
 let THEME_MODE=localStorage.getItem(THEME_KEY)==="dark"?"dark":"light";
 const CHECKLIST_START="2026-09-24";
 const PAGE_VIEW_KEY="boss-board-page-view-v1",ROUTE_SELECTION_PREFIX="boss-board-route-selection-v1-";
-const ROUTE_MODE_KEY="boss-board-route-mode-v1";
 const ROUTE_SAVED_SLOTS_KEY="boss-board-route-saved-slots-v1";
 let PAGE_VIEW=(function(){var v=localStorage.getItem(PAGE_VIEW_KEY);return v==="checklist"||v==="route"?v:"board"})();
-let ROUTE_MODE=(function(){var v=localStorage.getItem(ROUTE_MODE_KEY);return v==="personal"?"personal":"party"})();
 let CHECKLIST_MONTH=(function(){
   var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1;
   if(y<2026||(y===2026&&m<9))return "2026-09";
@@ -1038,20 +1036,6 @@ function buildOverallPartyRoute(runs){
     totalChanges:totalChanges,
     totalRevisits:totalRevisits
   };
-}
-function setRouteMode(mode){
-  ROUTE_MODE=mode==="personal"?"personal":"party";
-  localStorage.setItem(ROUTE_MODE_KEY,ROUTE_MODE);
-  renderPartyRoute();
-}
-function routeModeSwitchHtml(){
-  return '<div class="route-mode-wrap">'+
-    '<span>계산 방식</span>'+
-    '<div class="route-mode-switch" role="group" aria-label="도핑 최소 계산 방식">'+
-      '<button type="button" data-route-mode="party" class="'+(ROUTE_MODE==="party"?"active":"")+'">파티 전체 최소</button>'+
-      '<button type="button" data-route-mode="personal" class="'+(ROUTE_MODE==="personal"?"active":"")+'">내 캐릭터 최소</button>'+
-    '</div>'+
-  '</div>';
 }
 function routeTransitionHtml(transition,isFirst){
   if(isFirst)return '<div class="route-transition start"><span>시작</span></div>';
