@@ -4972,3 +4972,88 @@ html[data-theme="dark"] .route-mode-switch button.active{
   color:#c4cfda;
   box-shadow:none;
 }
+
+
+/* party route owner quick-select */
+.route-owner-quick{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 10px;
+  padding:9px 10px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface-soft);
+}
+.route-owner-quick>span{
+  flex:none;
+  color:var(--muted);
+  font-size:9px;
+  font-weight:900;
+  white-space:nowrap;
+}
+.route-owner-quick-buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+}
+.route-owner-quick-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  min-height:30px;
+  padding:0 9px;
+  border:1px solid var(--owner-line,#d7dce2);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--owner-accent,#68707c);
+  font-family:inherit;
+  cursor:pointer;
+}
+.route-owner-quick-btn b{
+  font-size:9.5px;
+  font-weight:950;
+  white-space:nowrap;
+}
+.route-owner-quick-btn small{
+  display:inline-grid;
+  place-items:center;
+  min-width:17px;
+  height:17px;
+  padding:0 4px;
+  border-radius:999px;
+  background:color-mix(in srgb,var(--owner-accent,#68707c) 10%,var(--surface));
+  color:var(--owner-accent,#68707c);
+  font-size:8px;
+  font-weight:950;
+}
+.route-owner-quick-btn:hover{
+  background:color-mix(in srgb,var(--owner-accent,#68707c) 7%,var(--surface));
+}
+@media(min-width:761px){
+  .route-owner-quick{padding:10px 11px}
+  .route-owner-quick>span{font-size:10.5px}
+  .route-owner-quick-btn{min-height:34px;padding:0 11px}
+  .route-owner-quick-btn b{font-size:11px}
+  .route-owner-quick-btn small{font-size:8.5px}
+}
+@media(max-width:760px){
+  .route-owner-quick{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:7px;
+  }
+  .route-owner-quick-buttons{
+    width:100%;
+  }
+  .route-owner-quick-btn{
+    flex:1 1 auto;
+    justify-content:center;
+  }
+}
+html[data-theme="dark"] .route-owner-quick{
+  background:var(--surface-soft);
+}
+html[data-theme="dark"] .route-owner-quick-btn{
+  background:#2d333b;
+}
