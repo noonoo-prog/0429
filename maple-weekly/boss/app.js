@@ -945,6 +945,40 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
     saveRouteSelection(focus,new Set());
     renderPartyRoute();
   };
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-select-owner]"),function(btn){
+    btn.onclick=function(){
+      var ownerName=btn.dataset.routeSelectOwner;
+      var next=new Set(selectedIds);
+      runs.forEach(function(run){
+        if(run.participants.some(function(p){return p.owner===ownerName}))next.add(run.id);
+      });
+      saveRouteSelection(focus,next);
+      renderPartyRoute();
+    };
+  });
+}
+function routeOwnerQuickSelectHtml(runs){
+  if(ROUTE_MODE!=="party")return "";
+  var names=APP.owners.map(function(o){return o.name}).filter(Boolean);
+  names.sort(function(a,b){
+    var ar=routeOwnerRank(a),br=routeOwnerRank(b);
+    if(ar!==br)return ar-br;
+    return String(a).localeCompare(String(b),"ko");
+  });
+  return '<div class="route-owner-quick">'+
+    '<span>사람별 빠른 선택</span>'+
+    '<div class="route-owner-quick-buttons">'+
+      names.map(function(name){
+        var count=runs.filter(function(run){
+          return run.participants.some(function(p){return p.owner===name});
+        }).length;
+        if(!count)return "";
+        return '<button type="button" class="route-owner-quick-btn owner-themed" data-theme="'+ownerTheme(name)+'" data-route-select-owner="'+esc(name)+'" title="'+esc(name)+' 포함 파티 '+count+'개 모두 선택">'+
+          '<b>'+esc(name)+'</b><small>'+count+'</small>'+
+        '</button>';
+      }).join("")+
+    '</div>'+
+  '</div>';
 }
 function renderPartyRoute(){
   var panel=document.getElementById("routePanel");
@@ -978,6 +1012,7 @@ function renderPartyRoute(){
     '<div class="route-picker-head"><div><span>1. 돌 파티 선택</span><strong>'+(ROUTE_MODE==="party"?'전체에서 이번에 돌 파티만 골라주세요.':'내가 참여하는 파티 중 이번에 돌 파티만 골라주세요.')+'</strong>'+
     '<p>'+(ROUTE_MODE==="party"?'현재 주인과 상관없이 모든 2인 이상 파티를 보여줍니다.':'현재 주인 '+esc(focus.name)+'이 포함된 파티만 보여줍니다.')+'</p></div>'+
     '<div class="route-picker-actions"><button type="button" data-route-select-all>전체 선택</button><button type="button" data-route-select-none>전체 해제</button></div></div>'+
+    routeOwnerQuickSelectHtml(allRuns)+
     '<div class="route-choice-grid">'+
       allRuns.map(function(run){return routeChoiceHtml(run,selectedIds.has(run.id),focus.name)}).join("")+
     '</div>'+
