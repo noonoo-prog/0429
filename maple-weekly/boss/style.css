@@ -5527,3 +5527,28 @@ html[data-theme="dark"] .route-character-quick-btn:not(.active):not(.partial){
   background:color-mix(in srgb,var(--owner-accent,#7d8792) 6%,var(--surface)) !important;
   color:var(--owner-accent,#7d8792) !important;
 }
+
+
+/* FINAL v3 route character states */
+.route-character-quick-group.owner-themed .route-character-quick-btn.excluded{
+  background:#eef0f3 !important;
+  border:1px solid #d1d6dc !important;
+  color:#7b8490 !important;
+  box-shadow:none !important;
+}
+.route-character-quick-group.owner-themed .route-character-quick-btn.excluded b{
+  color:#7b8490 !important;
+}
+.route-character-quick-group.owner-themed .route-character-quick-btn.excluded small{
+  background:#e1e5e9 !important;
+  color:#7b8490 !important;
+}
+html[data-theme="dark"] .route-character-quick-group.owner-themed .route-character-quick-btn.excluded{
+  background:#30363d !important;
+  border-color:#444c56 !important;
+  color:#909dab !important;
+}
+html[data-theme="dark"] .route-character-quick-group.owner-themed .route-character-quick-btn.excluded b,
+html[data-theme="dark"] .route-character-quick-group.owner-themed .route-character-quick-btn.excluded small{
+  color:#909dab !important;
+}
