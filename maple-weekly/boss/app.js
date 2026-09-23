@@ -707,23 +707,39 @@ function collectPartyRouteRuns(focusOwner,includeAll){
   return runs;
 }
 function routeSelectionKey(){
-  return ROUTE_SELECTION_PREFIX+"simple-v4";
+  return ROUTE_SELECTION_PREFIX+"simple-v5";
 }
 function routeQuickStateKey(){
-  return ROUTE_SELECTION_PREFIX+"simple-state-v4";
+  return ROUTE_SELECTION_PREFIX+"simple-state-v5";
 }
 function routeCharacterSelectorKey(ownerName,characterName){
   return String(ownerName||"")+"\u0001"+String(characterName||"");
 }
 function emptyRouteQuickState(){
-  return{characters:[],excludedRuns:[]};
+  return{characters:[],excludedCharacters:[],excludedRuns:[]};
 }
 function routeQuickState(){
   try{
-    var raw=JSON.parse(localStorage.getItem(routeQuickStateKey())||"{}");
+    var storageKey=routeQuickStateKey();
+    var raw=localStorage.getItem(storageKey);
+    if(raw===null){
+      var legacy=localStorage.getItem(ROUTE_SELECTION_PREFIX+"simple-state-v4");
+      if(legacy!==null){
+        var old=JSON.parse(legacy);
+        var migrated={
+          characters:Array.isArray(old.characters)?old.characters.filter(Boolean):[],
+          excludedCharacters:[],
+          excludedRuns:Array.isArray(old.excludedRuns)?old.excludedRuns.filter(Boolean):[]
+        };
+        localStorage.setItem(storageKey,JSON.stringify(migrated));
+        return migrated;
+      }
+    }
+    var parsed=JSON.parse(raw||"{}");
     return{
-      characters:Array.isArray(raw.characters)?raw.characters.filter(Boolean):[],
-      excludedRuns:Array.isArray(raw.excludedRuns)?raw.excludedRuns.filter(Boolean):[]
+      characters:Array.isArray(parsed.characters)?parsed.characters.filter(Boolean):[],
+      excludedCharacters:Array.isArray(parsed.excludedCharacters)?parsed.excludedCharacters.filter(Boolean):[],
+      excludedRuns:Array.isArray(parsed.excludedRuns)?parsed.excludedRuns.filter(Boolean):[]
     };
   }catch(e){
     return emptyRouteQuickState();
@@ -732,16 +748,21 @@ function routeQuickState(){
 function saveRouteQuickState(state){
   localStorage.setItem(routeQuickStateKey(),JSON.stringify({
     characters:(state.characters||[]).slice(),
+    excludedCharacters:(state.excludedCharacters||[]).slice(),
     excludedRuns:(state.excludedRuns||[]).slice()
   }));
 }
 function routeSelectedFromState(runs,state){
   state=state||emptyRouteQuickState();
   var characterSet=new Set(state.characters||[]);
-  var excludedSet=new Set(state.excludedRuns||[]);
+  var excludedCharacterSet=new Set(state.excludedCharacters||[]);
+  var excludedRunSet=new Set(state.excludedRuns||[]);
   var valid=new Set((runs||[]).map(function(run){return run.id}));
   return new Set((runs||[]).filter(function(run){
-    if(excludedSet.has(run.id))return false;
+    if(excludedRunSet.has(run.id))return false;
+    if(run.participants.some(function(p){
+      return excludedCharacterSet.has(routeCharacterSelectorKey(p.owner,p.character));
+    }))return false;
     return run.participants.some(function(p){
       return characterSet.has(routeCharacterSelectorKey(p.owner,p.character));
     });
@@ -966,9 +987,29 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
     btn.onclick=function(){
       var key=routeCharacterSelectorKey(btn.dataset.routeOwner,btn.dataset.routeSelectCharacter);
       var state=routeQuickState();
+      var excludedIndex=state.excludedCharacters.indexOf(key);
+      if(excludedIndex>=0)state.excludedCharacters.splice(excludedIndex,1);
       var i=state.characters.indexOf(key);
       if(i>=0)state.characters.splice(i,1);
       else state.characters.push(key);
+      saveRouteQuickState(state);
+      ROUTE_RESULT_READY=false;
+      renderPartyRoute();
+    };
+  });
+
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-exclude-character]"),function(btn){
+    btn.onclick=function(e){
+      if(e&&e.stopPropagation)e.stopPropagation();
+      var key=routeCharacterSelectorKey(btn.dataset.routeOwner,btn.dataset.routeExcludeCharacter);
+      var state=routeQuickState();
+      var i=state.excludedCharacters.indexOf(key);
+      if(i>=0){
+        state.excludedCharacters.splice(i,1);
+      }else{
+        state.characters=state.characters.filter(function(x){return x!==key});
+        state.excludedCharacters.push(key);
+      }
       saveRouteQuickState(state);
       ROUTE_RESULT_READY=false;
       renderPartyRoute();
@@ -987,11 +1028,13 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
         });
       });
       var state=routeQuickState();
-      var allOn=keys.length>0&&keys.every(function(key){return state.characters.indexOf(key)>=0});
+      var excludedSet=new Set(state.excludedCharacters||[]);
+      var selectableKeys=keys.filter(function(key){return !excludedSet.has(key)});
+      var allOn=selectableKeys.length>0&&selectableKeys.every(function(key){return state.characters.indexOf(key)>=0});
       if(allOn){
-        state.characters=state.characters.filter(function(key){return keys.indexOf(key)<0});
+        state.characters=state.characters.filter(function(key){return selectableKeys.indexOf(key)<0});
       }else{
-        keys.forEach(function(key){if(state.characters.indexOf(key)<0)state.characters.push(key)});
+        selectableKeys.forEach(function(key){if(state.characters.indexOf(key)<0)state.characters.push(key)});
       }
       saveRouteQuickState(state);
       ROUTE_RESULT_READY=false;
@@ -1021,10 +1064,7 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
 
   var clear=panel.querySelector("[data-route-clear-characters]");
   if(clear)clear.onclick=function(){
-    var state=routeQuickState();
-    state.characters=[];
-    state.excludedRuns=[];
-    saveRouteQuickState(state);
+    saveRouteQuickState(emptyRouteQuickState());
     ROUTE_RESULT_READY=false;
     renderPartyRoute();
   };
@@ -1040,35 +1080,10 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
     },0);
   };
 }
-function routeOwnerQuickSelectHtml(runs,selectedIds){
-  var names=APP.owners.map(function(o){return o.name}).filter(Boolean);
-  names.sort(function(a,b){
-    var ar=routeOwnerRank(a),br=routeOwnerRank(b);
-    if(ar!==br)return ar-br;
-    return String(a).localeCompare(String(b),"ko");
-  });
-
-  return '<div class="route-owner-quick simple">'+
-    '<span>사람별 선택</span>'+
-    '<div class="route-owner-quick-buttons">'+
-      names.map(function(name){
-        var matches=runs.filter(function(run){
-          return run.participants.some(function(p){return p.owner===name});
-        });
-        var selectedCount=matches.filter(function(run){return selectedIds.has(run.id)}).length;
-        var quick=routeQuickState();
-        var active=quick.owners.indexOf(name)>=0;
-        var partial=!active&&selectedCount>0;
-        return '<button type="button" class="route-owner-quick-btn owner-themed '+(active?'active ':'')+(partial?'partial ':'')+(matches.length?'':'disabled')+'" data-theme="'+ownerTheme(name)+'" data-route-select-owner="'+esc(name)+'" '+(matches.length?'':'disabled')+' title="'+esc(name)+' 포함 파티 '+matches.length+'개 · '+(active?'다시 누르면 이 선택 묶음 해제':'누르면 선택 묶음 추가')+'">'+
-          '<b>'+esc(name)+'</b><small>'+matches.length+'</small>'+
-        '</button>';
-      }).join("")+
-    '</div>'+
-  '</div>';
-}
 function routeCharacterQuickSelectHtml(runs,selectedIds){
   var state=routeQuickState();
   var selectedSet=new Set(state.characters||[]);
+  var excludedSet=new Set(state.excludedCharacters||[]);
   var groups=[];
 
   APP.owners.slice().sort(function(a,b){
@@ -1085,7 +1100,12 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
           return r.participants.some(function(x){return x.owner===o.name&&x.character===p.character});
         }).length;
         var key=routeCharacterSelectorKey(o.name,p.character);
-        items.push({character:p.character,count:count,active:selectedSet.has(key)});
+        items.push({
+          character:p.character,
+          count:count,
+          active:selectedSet.has(key),
+          excluded:excludedSet.has(key)
+        });
       });
     });
     if(items.length){
@@ -1095,7 +1115,12 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
         if(ai<0)ai=999;if(bi<0)bi=999;
         return ai-bi||a.character.localeCompare(b.character,"ko");
       });
-      groups.push({owner:o.name,items:items,allOn:items.every(function(item){return item.active})});
+      var selectable=items.filter(function(item){return !item.excluded});
+      groups.push({
+        owner:o.name,
+        items:items,
+        allOn:selectable.length>0&&selectable.every(function(item){return item.active})
+      });
     }
   });
 
@@ -1103,7 +1128,7 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
 
   return '<div class="route-character-quick">'+
     '<div class="route-character-simple-head">'+
-      '<div><span>1</span><strong>갈 캐릭터 선택</strong><p>갈 캐릭터만 눌러 주세요. 포함된 파티가 아래에 자동으로 모입니다.</p></div>'+
+      '<div><span>1</span><strong>갈 캐릭터 선택</strong><p>이름은 선택, 오른쪽 ×는 그 캐릭터가 포함된 파티를 한 번에 제외합니다.</p></div>'+
       '<button type="button" data-route-clear-characters>선택 초기화</button>'+
     '</div>'+
     '<div class="route-character-quick-groups">'+
@@ -1115,10 +1140,20 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
           '</div>'+
           '<div class="route-character-buttons">'+
             group.items.map(function(item){
-              return '<button type="button" class="route-character-quick-btn '+(item.active?'active':'')+'" '+
-                'data-route-owner="'+esc(group.owner)+'" data-route-select-character="'+esc(item.character)+'" aria-pressed="'+(item.active?'true':'false')+'">'+
-                '<b>'+esc(item.character)+'</b><small>'+item.count+'</small>'+
-              '</button>';
+              return '<span class="route-character-chip '+(item.excluded?'excluded ':'')+(item.active?'active ':'')+'">'+
+                '<button type="button" class="route-character-quick-btn '+(item.active?'active':'')+'" '+
+                  'data-route-owner="'+esc(group.owner)+'" data-route-select-character="'+esc(item.character)+'" '+
+                  'aria-pressed="'+(item.active?'true':'false')+'">'+
+                  '<b>'+esc(item.character)+'</b>'+
+                  (item.excluded?'<em>제외</em>':'<small>'+item.count+'</small>')+
+                '</button>'+
+                '<button type="button" class="route-character-exclude-btn '+(item.excluded?'is-excluded':'')+'" '+
+                  'data-route-owner="'+esc(group.owner)+'" data-route-exclude-character="'+esc(item.character)+'" '+
+                  'aria-label="'+esc(item.character)+(item.excluded?' 제외 취소':' 포함 파티 전부 제외')+'" '+
+                  'title="'+esc(item.character)+(item.excluded?' 제외 취소':' 포함 파티 전부 제외')+'">'+
+                  (item.excluded?'↶':'×')+
+                '</button>'+
+              '</span>';
             }).join("")+
           '</div>'+
         '</section>';
@@ -1148,9 +1183,10 @@ function renderPartyRoute(){
   var excludedVisible=(state.excludedRuns||[]).filter(function(id){
     return allRuns.some(function(run){return run.id===id});
   }).length;
+  var excludedCharacterCount=(state.excludedCharacters||[]).length;
 
   var h='<div class="route-simple-head">'+
-      '<div><span>도핑 최소 루트</span><strong>갈 파티만 빠르게 고르세요.</strong><p>캐릭터 선택 → 필요 없는 파티 제외. 두 단계면 됩니다.</p></div>'+
+      '<div><span>도핑 최소 루트</span><strong>갈 파티만 빠르게 고르세요.</strong><p>캐릭터 선택 → 필요 없으면 캐릭터 × 또는 파티 ×로 제외하세요.</p></div>'+
     '</div>';
 
   h+=routeCharacterQuickSelectHtml(allRuns,selectedIds);
@@ -1158,7 +1194,10 @@ function renderPartyRoute(){
   h+='<section class="route-step route-step-parties">'+
     '<div class="route-step-title route-step-title-row">'+
       '<div><span>2</span><div><strong>갈 파티 확인</strong><p>필요 없는 파티만 × 제외하세요.</p></div></div>'+
-      (excludedVisible?'<button type="button" class="route-restore-excluded" data-route-restore-excluded>제외한 파티 '+excludedVisible+'개 복구</button>':'')+
+      ((excludedVisible||excludedCharacterCount)?'<span class="route-exclude-summary">'+
+        (excludedCharacterCount?'<b>캐릭터 '+excludedCharacterCount+'명 제외</b>':'')+
+        (excludedVisible?'<button type="button" class="route-restore-excluded" data-route-restore-excluded>파티 '+excludedVisible+'개 복구</button>':'')+
+      '</span>':'')+
     '</div>';
 
   if(selectedRuns.length){
