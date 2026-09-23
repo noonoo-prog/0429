@@ -18,7 +18,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
 <title>보스 현황판</title>
-<link rel="stylesheet" href="./style.css?v=party-only-filter-20260923-2">
+<link rel="stylesheet" href="./style.css?v=doping-route-20260924-1">
 </head>
 <body>
 <div class="app-shell">
@@ -30,6 +30,7 @@
           <div class="page-switch" role="tablist" aria-label="화면 선택">
             <button class="page-switch-btn active" id="boardViewBtn" type="button" data-page-view="board">보스 현황판</button>
             <button class="page-switch-btn" id="checklistViewBtn" type="button" data-page-view="checklist">보스 체크리스트</button>
+            <button class="page-switch-btn" id="routeViewBtn" type="button" data-page-view="route">도핑 최소 루트</button>
           </div>
         </div>
         <p id="pageSub">주간 최대 12개 · 검은 마법사는 월간</p>
@@ -93,6 +94,10 @@
     <section class="checklist-panel" id="checklistPanel" hidden aria-label="주간 보스 체크리스트">
       <div class="checklist-loading">체크리스트를 불러오는 중…</div>
     </section>
+
+    <section class="route-panel" id="routePanel" hidden aria-label="도핑 최소 파티 루트">
+      <div class="route-empty">파티 루트를 계산하는 중…</div>
+    </section>
   </main>
 </div>
 
@@ -118,6 +123,6 @@
 
 <div class="toast" id="toast"></div>
 <noscript><div style="padding:24px;font-family:sans-serif">JavaScript를 켜야 보스 현황판을 사용할 수 있어요.</div></noscript>
-<script defer src="./app.js?v=party-only-filter-20260923-2"></script>
+<script defer src="./app.js?v=doping-route-20260924-1"></script>
 </body>
 </html>
