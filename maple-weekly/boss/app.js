@@ -747,26 +747,23 @@ function routePartySizeFilterHtml(allRuns,filters){
   '</div>';
 }
 function routeSelectionKey(){
-  return ROUTE_SELECTION_PREFIX+"simple-global-v3";
+  return ROUTE_SELECTION_PREFIX+"simple-v4";
 }
 function routeQuickStateKey(){
-  return ROUTE_SELECTION_PREFIX+"quick-groups-v3";
+  return ROUTE_SELECTION_PREFIX+"simple-state-v4";
 }
 function routeCharacterSelectorKey(ownerName,characterName){
   return String(ownerName||"")+"\u0001"+String(characterName||"");
 }
 function emptyRouteQuickState(){
-  return{owners:[],characters:[],excludedCharacters:[],manualInclude:[],manualExclude:[]};
+  return{characters:[],excludedRuns:[]};
 }
 function routeQuickState(){
   try{
     var raw=JSON.parse(localStorage.getItem(routeQuickStateKey())||"{}");
     return{
-      owners:Array.isArray(raw.owners)?raw.owners.filter(Boolean):[],
       characters:Array.isArray(raw.characters)?raw.characters.filter(Boolean):[],
-      excludedCharacters:Array.isArray(raw.excludedCharacters)?raw.excludedCharacters.filter(Boolean):[],
-      manualInclude:Array.isArray(raw.manualInclude)?raw.manualInclude.filter(Boolean):[],
-      manualExclude:Array.isArray(raw.manualExclude)?raw.manualExclude.filter(Boolean):[]
+      excludedRuns:Array.isArray(raw.excludedRuns)?raw.excludedRuns.filter(Boolean):[]
     };
   }catch(e){
     return emptyRouteQuickState();
@@ -774,48 +771,29 @@ function routeQuickState(){
 }
 function saveRouteQuickState(state){
   localStorage.setItem(routeQuickStateKey(),JSON.stringify({
-    owners:(state.owners||[]).slice(),
     characters:(state.characters||[]).slice(),
-    excludedCharacters:(state.excludedCharacters||[]).slice(),
-    manualInclude:(state.manualInclude||[]).slice(),
-    manualExclude:(state.manualExclude||[]).slice()
+    excludedRuns:(state.excludedRuns||[]).slice()
   }));
 }
 function routeSelectedFromState(runs,state){
   state=state||emptyRouteQuickState();
-  var ownerSet=new Set(state.owners||[]);
   var characterSet=new Set(state.characters||[]);
-  var excludedSet=new Set(state.excludedCharacters||[]);
-  var selected=new Set();
-
-  (runs||[]).forEach(function(run){
-    var included=run.participants.some(function(p){
-      return ownerSet.has(p.owner)||characterSet.has(routeCharacterSelectorKey(p.owner,p.character));
-    });
-    if(included)selected.add(run.id);
-  });
-
-  if(excludedSet.size){
-    (runs||[]).forEach(function(run){
-      var excluded=run.participants.some(function(p){
-        return excludedSet.has(routeCharacterSelectorKey(p.owner,p.character));
-      });
-      if(excluded)selected.delete(run.id);
-    });
-  }
-
-  (state.manualInclude||[]).forEach(function(id){selected.add(id)});
-  (state.manualExclude||[]).forEach(function(id){selected.delete(id)});
-
+  var excludedSet=new Set(state.excludedRuns||[]);
   var valid=new Set((runs||[]).map(function(run){return run.id}));
-  return new Set(Array.from(selected).filter(function(id){return valid.has(id)}));
+  return new Set((runs||[]).filter(function(run){
+    if(excludedSet.has(run.id))return false;
+    return run.participants.some(function(p){
+      return characterSet.has(routeCharacterSelectorKey(p.owner,p.character));
+    });
+  }).map(function(run){return run.id}).filter(function(id){return valid.has(id)}));
 }
 function selectedRouteIds(focusOwner,runs){
   return routeSelectedFromState(runs,routeQuickState());
 }
 function saveRouteSelection(focusOwner,ids){
-  var state=emptyRouteQuickState();
-  state.manualInclude=Array.from(ids||[]);
+  var state=routeQuickState();
+  var keep=new Set(ids||[]);
+  state.excludedRuns=(state.excludedRuns||[]).filter(function(id){return !keep.has(id)});
   saveRouteQuickState(state);
 }
 function groupPartyRouteRuns(runs){
@@ -1014,89 +992,82 @@ function routeParticipantHtml(p,focusOwnerName){
   return '<span class="route-member owner-themed '+(p.owner===focusOwnerName?'focus':'')+'" data-theme="'+theme+'">'+
     (p.owner?'<i>'+esc(p.owner)+'</i>':'')+'<b>'+esc(p.character)+'</b></span>';
 }
-function routeChoiceHtml(run,selected,focusOwnerName){
-  return '<label class="route-choice '+(selected?'selected':'')+'">'+
-    '<input type="checkbox" class="route-choice-input" data-route-run="'+esc(run.id)+'" '+(selected?'checked':'')+'>'+
-    '<span class="route-choice-check">✓</span>'+
-    '<span class="route-choice-main"><b>'+esc(run.boss)+'</b><i>'+esc(run.difficulty)+'</i></span>'+
-    '<span class="route-choice-members">'+run.participants.map(function(p){return routeParticipantHtml(p,focusOwnerName)}).join('<span class="route-plus">+</span>')+'</span>'+
-  '</label>';
+function routeSelectedPartyHtml(run,focusOwnerName){
+  return '<article class="route-selected-party">'+
+    '<div class="route-selected-party-main">'+
+      '<div class="route-choice-main"><b>'+esc(run.boss)+'</b><i>'+esc(run.difficulty)+'</i></div>'+
+      '<div class="route-choice-members">'+run.participants.map(function(p){return routeParticipantHtml(p,focusOwnerName)}).join('<span class="route-plus">+</span>')+'</div>'+
+    '</div>'+
+    '<button type="button" class="route-party-exclude" data-route-exclude="'+esc(run.id)+'" aria-label="'+esc(run.boss)+' 파티 제외">× 제외</button>'+
+  '</article>';
 }
 function bindRouteSelection(panel,focus,runs,selectedIds){
-  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-run]"),function(input){
-    input.onchange=function(){
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-select-character]"),function(btn){
+    btn.onclick=function(){
+      var key=routeCharacterSelectorKey(btn.dataset.routeOwner,btn.dataset.routeSelectCharacter);
       var state=routeQuickState();
-      var id=input.dataset.routeRun;
-      state.manualInclude=(state.manualInclude||[]).filter(function(x){return x!==id});
-      state.manualExclude=(state.manualExclude||[]).filter(function(x){return x!==id});
-      if(input.checked)state.manualInclude.push(id);
-      else state.manualExclude.push(id);
+      var i=state.characters.indexOf(key);
+      if(i>=0)state.characters.splice(i,1);
+      else state.characters.push(key);
       saveRouteQuickState(state);
       ROUTE_RESULT_READY=false;
       renderPartyRoute();
     };
   });
 
-  var all=panel.querySelector("[data-route-select-all]");
-  if(all)all.onclick=function(){
-    var state=emptyRouteQuickState();
-    state.manualInclude=runs.map(function(run){return run.id});
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-owner-all]"),function(btn){
+    btn.onclick=function(){
+      var ownerName=btn.dataset.routeOwnerAll;
+      var keys=[];
+      runs.forEach(function(run){
+        run.participants.forEach(function(p){
+          if(p.owner!==ownerName||!p.character||p.character==="미정")return;
+          var key=routeCharacterSelectorKey(p.owner,p.character);
+          if(keys.indexOf(key)<0)keys.push(key);
+        });
+      });
+      var state=routeQuickState();
+      var allOn=keys.length>0&&keys.every(function(key){return state.characters.indexOf(key)>=0});
+      if(allOn){
+        state.characters=state.characters.filter(function(key){return keys.indexOf(key)<0});
+      }else{
+        keys.forEach(function(key){if(state.characters.indexOf(key)<0)state.characters.push(key)});
+      }
+      saveRouteQuickState(state);
+      ROUTE_RESULT_READY=false;
+      renderPartyRoute();
+    };
+  });
+
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-exclude]"),function(btn){
+    btn.onclick=function(){
+      var id=btn.dataset.routeExclude;
+      var state=routeQuickState();
+      if(state.excludedRuns.indexOf(id)<0)state.excludedRuns.push(id);
+      saveRouteQuickState(state);
+      ROUTE_RESULT_READY=false;
+      renderPartyRoute();
+    };
+  });
+
+  var restore=panel.querySelector("[data-route-restore-excluded]");
+  if(restore)restore.onclick=function(){
+    var state=routeQuickState();
+    state.excludedRuns=[];
     saveRouteQuickState(state);
     ROUTE_RESULT_READY=false;
     renderPartyRoute();
   };
 
-  var none=panel.querySelector("[data-route-select-none]");
-  if(none)none.onclick=function(){
-    saveRouteQuickState(emptyRouteQuickState());
+  var clear=panel.querySelector("[data-route-clear-characters]");
+  if(clear)clear.onclick=function(){
+    var state=routeQuickState();
+    state.characters=[];
+    state.excludedRuns=[];
+    saveRouteQuickState(state);
     ROUTE_RESULT_READY=false;
     renderPartyRoute();
   };
-
-  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-select-owner]"),function(btn){
-    btn.onclick=function(){
-      var ownerName=btn.dataset.routeSelectOwner;
-      var state=routeQuickState();
-      var i=state.owners.indexOf(ownerName);
-      if(i>=0)state.owners.splice(i,1);
-      else state.owners.push(ownerName);
-      saveRouteQuickState(state);
-      ROUTE_RESULT_READY=false;
-      renderPartyRoute();
-    };
-  });
-
-  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-select-character]"),function(btn){
-    btn.onclick=function(){
-      var ownerName=btn.dataset.routeOwner;
-      var characterName=btn.dataset.routeSelectCharacter;
-      var key=routeCharacterSelectorKey(ownerName,characterName);
-      var state=routeQuickState();
-      var includeIndex=state.characters.indexOf(key);
-      var excludeIndex=state.excludedCharacters.indexOf(key);
-      var selectedCount=Number(btn.dataset.selectedCount||0);
-
-      if(includeIndex>=0){
-        state.characters.splice(includeIndex,1);
-      }else if(excludeIndex>=0){
-        state.excludedCharacters.splice(excludeIndex,1);
-      }else if(selectedCount>0){
-        state.excludedCharacters.push(key);
-        var matchingIds=new Set(runs.filter(function(run){
-          return run.participants.some(function(p){
-            return routeCharacterSelectorKey(p.owner,p.character)===key;
-          });
-        }).map(function(run){return run.id}));
-        state.manualInclude=(state.manualInclude||[]).filter(function(id){return !matchingIds.has(id)});
-      }else{
-        state.characters.push(key);
-      }
-
-      saveRouteQuickState(state);
-      ROUTE_RESULT_READY=false;
-      renderPartyRoute();
-    };
-  });
 
   Array.prototype.forEach.call(panel.querySelectorAll("[data-route-size-filter]"),function(btn){
     btn.onclick=function(){
@@ -1148,6 +1119,8 @@ function routeOwnerQuickSelectHtml(runs,selectedIds){
   '</div>';
 }
 function routeCharacterQuickSelectHtml(runs,selectedIds){
+  var state=routeQuickState();
+  var selectedSet=new Set(state.characters||[]);
   var groups=[];
 
   APP.owners.slice().sort(function(a,b){
@@ -1155,56 +1128,47 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
     if(ar!==br)return ar-br;
     return String(a.name||"").localeCompare(String(b.name||""),"ko");
   }).forEach(function(o){
-    var characters=(o.board&&o.board.players||[]).map(function(name){return String(name||"").trim()}).filter(Boolean);
-    var items=[];
-
-    characters.forEach(function(character){
-      var matches=runs.filter(function(run){
-        return run.participants.some(function(p){
-          return p.owner===o.name&&p.character===character;
-        });
-      });
-      if(!matches.length)return;
-
-      var selectedCount=matches.filter(function(run){return selectedIds.has(run.id)}).length;
-      var quick=routeQuickState();
-      var key=routeCharacterSelectorKey(o.name,character);
-      var selectorOn=quick.characters.indexOf(key)>=0;
-      var excluded=quick.excludedCharacters.indexOf(key)>=0;
-      items.push({
-        character:character,
-        count:matches.length,
-        selectedCount:selectedCount,
-        active:selectorOn,
-        partial:!selectorOn&&!excluded&&selectedCount>0,
-        selectorOn:selectorOn,
-        excluded:excluded
+    var seen={},items=[];
+    runs.forEach(function(run){
+      run.participants.forEach(function(p){
+        if(p.owner!==o.name||!p.character||p.character==="미정"||seen[p.character])return;
+        seen[p.character]=1;
+        var count=runs.filter(function(r){
+          return r.participants.some(function(x){return x.owner===o.name&&x.character===p.character});
+        }).length;
+        var key=routeCharacterSelectorKey(o.name,p.character);
+        items.push({character:p.character,count:count,active:selectedSet.has(key)});
       });
     });
-
-    if(items.length)groups.push({owner:o.name,items:items});
+    if(items.length){
+      items.sort(function(a,b){
+        var ai=(o.board&&o.board.players||[]).indexOf(a.character);
+        var bi=(o.board&&o.board.players||[]).indexOf(b.character);
+        if(ai<0)ai=999;if(bi<0)bi=999;
+        return ai-bi||a.character.localeCompare(b.character,"ko");
+      });
+      groups.push({owner:o.name,items:items,allOn:items.every(function(item){return item.active})});
+    }
   });
 
-  if(!groups.length)return "";
+  if(!groups.length)return '<div class="route-character-empty">선택한 인원 조건에 해당하는 등록 캐릭터가 없어요.</div>';
 
   return '<div class="route-character-quick">'+
-    '<div class="route-character-quick-head">'+
-      '<span class="route-character-quick-title">캐릭터별 선택</span>'+
-      '<div class="route-character-legend" aria-label="캐릭터 선택 상태">'+
-        '<span class="none"><i></i>미선택·제외</span>'+
-        '<span class="partial"><i></i>같이 포함됨</span>'+
-        '<span class="full"><i></i>직접 선택</span>'+
-      '</div>'+
+    '<div class="route-character-simple-head">'+
+      '<div><span>2</span><strong>갈 캐릭터 선택</strong><p>갈 캐릭터만 눌러 주세요. 선택된 캐릭터가 포함된 파티가 아래에 자동으로 모입니다.</p></div>'+
+      '<button type="button" data-route-clear-characters>선택 초기화</button>'+
     '</div>'+
     '<div class="route-character-quick-groups">'+
       groups.map(function(group){
         return '<section class="route-character-quick-group owner-themed" data-theme="'+ownerTheme(group.owner)+'">'+
-          '<strong>'+esc(group.owner)+'</strong>'+
-          '<div>'+
+          '<div class="route-character-owner-head">'+
+            '<strong>'+esc(group.owner)+'</strong>'+
+            '<button type="button" data-route-owner-all="'+esc(group.owner)+'">'+(group.allOn?'전체 해제':'전체 선택')+'</button>'+
+          '</div>'+
+          '<div class="route-character-buttons">'+
             group.items.map(function(item){
-              return '<button type="button" class="route-character-quick-btn '+(item.active?'active ':'')+(item.partial?'partial ':'')+(item.selectorOn?'selector-on ':'')+(item.excluded?'excluded ':'')+'" '+
-                'data-route-owner="'+esc(group.owner)+'" data-route-select-character="'+esc(item.character)+'" data-selected-count="'+item.selectedCount+'" '+
-                'title="'+esc(item.character)+' · '+(item.selectorOn?'선택 중 · 누르면 해제':(item.excluded?'제외 중 · 누르면 제외 취소':(item.partial?'같이 포함됨 · 누르면 이 캐릭터 파티 제외':'누르면 이 캐릭터 파티 선택')))+'">'+
+              return '<button type="button" class="route-character-quick-btn '+(item.active?'active':'')+'" '+
+                'data-route-owner="'+esc(group.owner)+'" data-route-select-character="'+esc(item.character)+'" aria-pressed="'+(item.active?'true':'false')+'">'+
                 '<b>'+esc(item.character)+'</b><small>'+item.count+'</small>'+
               '</button>';
             }).join("")+
@@ -1234,41 +1198,53 @@ function renderPartyRoute(){
   var selectedIds=selectedRouteIds(focus,visibleRuns);
   var selectedRuns=visibleRuns.filter(function(run){return selectedIds.has(run.id)});
   var route=ROUTE_RESULT_READY&&selectedRuns.length?buildOverallPartyRoute(selectedRuns):null;
+  var state=routeQuickState();
+  var excludedVisible=(state.excludedRuns||[]).filter(function(id){
+    return visibleRuns.some(function(run){return run.id===id});
+  }).length;
 
   var h='<div class="route-simple-head">'+
-      '<div><span>2인 이상 파티</span><strong>이번에 돌 파티를 선택하세요.</strong><p>선택색은 직접 선택, 점선은 다른 선택 때문에 같이 포함된 캐릭터입니다. 점선을 누르면 그 캐릭터가 들어간 파티를 제외합니다.</p></div>'+
-      '<div class="route-picker-actions"><button type="button" data-route-select-all>전체 선택</button><button type="button" data-route-select-none>전체 해제</button></div>'+
-    '</div>'+
-    '<div class="route-mini-guide" aria-label="도핑 최소 루트 사용법">'+
-      '<b>사용법</b>'+
-      '<span><em>1</em> 캐릭터 선택</span>'+
-      '<span><em>2</em> 점선 캐릭터 클릭 = 제외</span>'+
-      '<span><em>3</em> 선택색 다시 클릭 = 해제</span>'+
-      '<span><em>4</em> 루트 만들기</span>'+
+      '<div><span>도핑 최소 루트</span><strong>갈 파티만 빠르게 고르세요.</strong><p>인원 → 캐릭터 → 필요 없는 파티 제외. 세 단계만 거치면 됩니다.</p></div>'+
     '</div>';
 
-  h+=routePartySizeFilterHtml(allRuns,sizeFilters);
+  h+='<section class="route-step route-step-size">'+
+    '<div class="route-step-title"><span>1</span><div><strong>파티 인원 선택</strong><p>여러 개를 동시에 선택할 수 있습니다.</p></div></div>'+
+    routePartySizeFilterHtml(allRuns,sizeFilters)+
+  '</section>';
 
-  if(visibleRuns.length){
-    h+=routeOwnerQuickSelectHtml(visibleRuns,selectedIds);
-    h+=routeCharacterQuickSelectHtml(visibleRuns,selectedIds);
+  if(!visibleRuns.length){
+    h+='<div class="route-size-empty"><strong>표시할 파티 인원을 선택하세요.</strong><span>2인, 3인, 4인 이상을 여러 개 동시에 선택할 수 있습니다.</span></div>';
+    panel.innerHTML=h;
+    bindRouteSelection(panel,focus,visibleRuns,selectedIds);
+    return;
+  }
 
-    h+='<div class="route-picker route-simple-picker owner-themed" data-theme="'+theme+'">'+
-      '<div class="route-choice-grid">'+
-        visibleRuns.map(function(run){return routeChoiceHtml(run,selectedIds.has(run.id),focus.name)}).join("")+
-      '</div>'+
-      '<div class="route-simple-footer">'+
-        '<div class="route-selection-summary"><b>'+selectedRuns.length+'</b> / '+visibleRuns.length+'개 파티 선택</div>'+
-        '<button type="button" class="route-build-btn" data-route-build '+(selectedRuns.length?'':'disabled')+'>선택한 파티로 루트 만들기</button>'+
-      '</div>'+
+  h+=routeCharacterQuickSelectHtml(visibleRuns,selectedIds);
+
+  h+='<section class="route-step route-step-parties">'+
+    '<div class="route-step-title route-step-title-row">'+
+      '<div><span>3</span><div><strong>갈 파티 확인</strong><p>필요 없는 파티만 × 제외하세요.</p></div></div>'+
+      (excludedVisible?'<button type="button" class="route-restore-excluded" data-route-restore-excluded>제외한 파티 '+excludedVisible+'개 복구</button>':'')+
+    '</div>';
+
+  if(selectedRuns.length){
+    h+='<div class="route-selected-list">'+
+      selectedRuns.map(function(run){return routeSelectedPartyHtml(run,focus.name)}).join("")+
+    '</div>'+
+    '<div class="route-simple-footer">'+
+      '<div class="route-selection-summary"><b>'+selectedRuns.length+'</b>개 파티로 이동</div>'+
+      '<button type="button" class="route-build-btn" data-route-build>이 파티들로 루트 만들기</button>'+
     '</div>';
   }else{
-    h+='<div class="route-size-empty"><strong>표시할 파티 인원을 선택하세요.</strong><span>2인, 3인, 4인 이상을 여러 개 동시에 선택할 수 있습니다.</span></div>';
+    var hasCharacters=(state.characters||[]).length>0;
+    h+='<div class="route-selection-empty"><strong>'+(hasCharacters?'선택한 캐릭터에 해당하는 파티가 없어요.':'먼저 갈 캐릭터를 선택하세요.')+'</strong>'+
+      '<span>'+(hasCharacters?'파티 인원 필터를 바꾸거나 다른 캐릭터를 선택해 보세요.':'캐릭터를 누르면 해당 파티가 자동으로 여기에 모입니다.')+'</span></div>';
   }
+  h+='</section>';
 
   if(ROUTE_RESULT_READY&&route){
     h+='<section class="route-simple-result owner-themed" data-theme="'+theme+'">'+
-      '<header><span>추천 루트</span><strong>캐릭터 교체가 적은 순서</strong></header>'+
+      '<header><span>추천 루트</span><strong>이 순서대로 돌면 됩니다.</strong></header>'+
       '<div class="route-flow route-party-flow">';
 
     route.groups.forEach(function(group,index){
