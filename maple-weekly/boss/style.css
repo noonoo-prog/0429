@@ -5704,3 +5704,17 @@ html[data-theme="dark"] .mobile-character-name-line .mobile-rename-character{
   border-color:#444c56;
   color:#909dab;
 }
+
+/* Shared route names */
+.route-save-slot>div:first-child{min-width:0;width:100%}
+.route-name-label{display:block;margin-bottom:6px;color:var(--route-muted);font-size:12px;font-weight:850}
+.route-name-input{display:block;width:100%;min-width:0;box-sizing:border-box;min-height:40px;padding:8px 10px;border:1px solid var(--route-line);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;font-size:14px;font-weight:800}
+.route-name-input:focus{outline:2px solid var(--owner-accent,#909dab);outline-offset:2px}
+.route-save-head span{line-height:1.6}
+.route-save-error{color:var(--danger);font-size:13px}
+.route-save-error button{font:inherit;cursor:pointer}
+@media(max-width:760px){
+  .route-save-slot{display:block;padding:12px}
+  .route-save-actions{margin-top:10px}
+  .route-save-slot>div:first-child span{font-size:11px}
+}

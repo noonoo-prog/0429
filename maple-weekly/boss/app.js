@@ -86,6 +86,7 @@ let CHECKLIST_SAVING="";
 let ROUTE_RESULT_READY=false;
 let ROUTE_LOADED_RUNS=null;
 let ROUTE_LOADED_SLOT=0;
+let ROUTE_SLOT_ROWS=[],ROUTE_SLOTS_LOADED=false,ROUTE_SLOTS_LOADING=false,ROUTE_SLOTS_ERROR="",ROUTE_SLOT_BUSY=0,ROUTE_NAME_DRAFTS={};
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(m){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})}
 function applyTheme(mode){
@@ -921,25 +922,46 @@ function applyOverallGroupState(group,lastByOwner,seenByOwner){
   });
 }
 function routeSavedSlots(){
-  try{
-    var raw=JSON.parse(localStorage.getItem(ROUTE_SAVED_SLOTS_KEY)||"[]");
-    var out=[null,null,null];
-    for(var i=0;i<3;i++){
-      var item=raw&&raw[i];
-      if(item&&Array.isArray(item.runs)&&item.runs.length){
-        out[i]={
-          runs:item.runs,
-          savedAt:String(item.savedAt||"")
-        };
-      }
-    }
-    return out;
-  }catch(e){
-    return [null,null,null];
-  }
+  return [1,2,3].map(function(no){
+    var row=ROUTE_SLOT_ROWS.find(function(x){return x.slot===no});
+    return row&&row.runs&&row.runs.length?{name:row.name,runs:row.runs,savedAt:row.updated_at}:null;
+  });
 }
-function saveRouteSlots(slots){
-  localStorage.setItem(ROUTE_SAVED_SLOTS_KEY,JSON.stringify((slots||[]).slice(0,3)));
+function legacyRouteSlot(no){
+  try{var item=JSON.parse(localStorage.getItem(ROUTE_SAVED_SLOTS_KEY)||"[]")[no-1];return item&&Array.isArray(item.runs)&&item.runs.length?item:null}catch(e){return null}
+}
+async function loadRouteSlots(refresh){
+  if(ROUTE_SLOTS_LOADING||ROUTE_SLOT_BUSY)return;
+  ROUTE_SLOTS_LOADING=true;
+  try{
+    var data=await callApi("route_slots");
+    var changed=JSON.stringify(ROUTE_SLOT_ROWS)!==JSON.stringify(data.slots);
+    ROUTE_SLOT_ROWS=data.slots||[];
+    ROUTE_SLOTS_LOADED=true;ROUTE_SLOTS_ERROR="";
+    if(changed||refresh){if(PAGE_VIEW==="route")guardedRender();}
+  }catch(e){ROUTE_SLOTS_ERROR=e.message;if(refresh&&PAGE_VIEW==="route")renderPartyRoute();}
+  finally{ROUTE_SLOTS_LOADING=false;}
+}
+async function writeRouteSlot(action,no,runs,name){
+  if(ROUTE_SLOT_BUSY||!ROUTE_SLOTS_LOADED)return;
+  var row=ROUTE_SLOT_ROWS.find(function(x){return x.slot===no});
+  if(!row)return;
+  ROUTE_SLOT_BUSY=no;renderPartyRoute();
+  try{
+    var data=await callApi(action,{slot:no,revision:row.revision,name:name,runs:runs});
+    ROUTE_SLOT_ROWS=ROUTE_SLOT_ROWS.map(function(x){return x.slot===no?data.item:x});
+    delete ROUTE_NAME_DRAFTS[no];
+    if(action==="save_route_slot")ROUTE_LOADED_SLOT=no;
+    if(action==="delete_route_slot"&&ROUTE_LOADED_SLOT===no)invalidateRouteResult();
+    toast(action==="delete_route_slot"?"저장한 루트를 삭제했어요.":action==="rename_route_slot"?"루트 이름을 변경했어요.":"홈페이지에 루트를 저장했어요.");
+  }catch(e){
+    toast(e.message);
+    if(e.status===409){
+      ROUTE_SLOTS_LOADED=false;
+      ROUTE_SLOT_BUSY=0;
+      await loadRouteSlots(false);
+    }
+  }finally{ROUTE_SLOT_BUSY=0;renderPartyRoute();}
 }
 function cloneRouteRuns(runs){
   return JSON.parse(JSON.stringify(runs||[]));
@@ -960,31 +982,24 @@ function invalidateRouteResult(){
   ROUTE_LOADED_SLOT=0;
 }
 function routeSaveSlotsHtml(displayRuns){
-  var slots=routeSavedSlots();
+  var slots=routeSavedSlots(),locked=!!ROUTE_SLOT_BUSY||!ROUTE_SLOTS_LOADED;
   return '<section class="route-save-section">'+
-    '<div class="route-save-head">'+
-      '<div><strong>루트 저장</strong><span>이 기기에 최대 3개까지 저장됩니다.</span></div>'+
-    '</div>'+
-    '<div class="route-save-grid">'+
-      slots.map(function(slot,index){
-        var no=index+1;
-        if(!slot){
-          return '<article class="route-save-slot empty">'+
-            '<div><b>슬롯 '+no+'</b><span>비어 있음</span></div>'+
-            '<button type="button" data-route-save-slot="'+no+'" '+((displayRuns&&displayRuns.length)?'':'disabled')+'>현재 루트 저장</button>'+
-          '</article>';
-        }
-        return '<article class="route-save-slot filled '+(ROUTE_LOADED_SLOT===no?'active':'')+'">'+
-          '<div><b>슬롯 '+no+'</b><span>'+slot.runs.length+'개 파티 · '+esc(routeSavedAtLabel(slot.savedAt))+'</span></div>'+
-          '<div class="route-save-actions">'+
-            '<button type="button" class="primary" data-route-load-slot="'+no+'">불러오기</button>'+
-            '<button type="button" data-route-save-slot="'+no+'" '+((displayRuns&&displayRuns.length)?'':'disabled')+'>덮어쓰기</button>'+
-            '<button type="button" class="danger" data-route-delete-slot="'+no+'" aria-label="저장 루트 '+no+' 삭제">삭제</button>'+
-          '</div>'+
-        '</article>';
-      }).join("")+
-    '</div>'+
-  '</section>';
+    '<div class="route-save-head"><div><strong>루트 저장</strong><span>이 홈페이지에 최대 3개까지 저장됩니다. PC와 모바일에서 함께 불러올 수 있어요.</span></div></div>'+
+    (ROUTE_SLOTS_ERROR?'<p class="route-save-error" role="alert">저장 목록을 불러오지 못했어요. <button type="button" data-route-retry>다시 불러오기</button></p>':'')+
+    '<div class="route-save-grid">'+slots.map(function(slot,index){
+      var no=index+1,name=Object.prototype.hasOwnProperty.call(ROUTE_NAME_DRAFTS,no)?ROUTE_NAME_DRAFTS[no]:(slot?slot.name:"");
+      var disabled=locked?' disabled':'';
+      return '<article class="route-save-slot '+(slot?'filled':'empty')+' '+(ROUTE_LOADED_SLOT===no?'active':'')+'">'+
+        '<div><label class="route-name-label" for="route-name-'+no+'">루트 '+no+'</label>'+
+        '<input class="route-name-input" id="route-name-'+no+'" data-route-name="'+no+'" value="'+esc(name)+'" maxlength="40" placeholder="루트 이름 입력"'+disabled+'>'+
+        '<span>'+(ROUTE_SLOT_BUSY===no?'저장 중…':!ROUTE_SLOTS_LOADED?'저장 목록 확인 중…':slot?slot.runs.length+'개 파티 · '+esc(routeSavedAtLabel(slot.savedAt)):'비어 있음')+'</span></div>'+
+        '<div class="route-save-actions">'+
+          (slot?'<button type="button" class="primary" data-route-load-slot="'+no+'"'+disabled+'>불러오기</button><button type="button" data-route-rename-slot="'+no+'"'+disabled+'>이름 저장</button>':'')+
+          '<button type="button" data-route-save-slot="'+no+'"'+(locked||!displayRuns||!displayRuns.length?' disabled':'')+'>'+(slot?'덮어쓰기':'현재 루트 저장')+'</button>'+
+          (!slot&&legacyRouteSlot(no)?'<button type="button" data-route-import-slot="'+no+'"'+disabled+'>이 기기 루트 가져오기</button>':'')+
+          (slot?'<button type="button" class="danger" data-route-delete-slot="'+no+'"'+disabled+'>삭제</button>':'')+
+        '</div></article>';
+    }).join("")+'</div></section>';
 }
 function routeParticipantKey(p){
   return String(p&&p.owner||"")+"\u0001"+String(p&&p.character||"");
@@ -1191,49 +1206,49 @@ function bindRouteSelection(panel,focus,runs,selectedIds){
     renderPartyRoute();
   };
 
-  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-save-slot]"),function(btn){
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-name]"),function(input){
+    input.oninput=function(){ROUTE_NAME_DRAFTS[Number(input.dataset.routeName)]=input.value};
+    input.onfocus=beginSelectInteraction;
+    input.onblur=endSelectInteraction;
+  });
+  var retry=panel.querySelector("[data-route-retry]");
+  if(retry)retry.onclick=function(){loadRouteSlots(true)};
+  function slotName(no){
+    var input=panel.querySelector('[data-route-name="'+no+'"]');
+    var name=input?input.value.trim():"";
+    if(!name){toast("루트 이름을 입력해 주세요.");if(input)input.focus();return null}
+    return name;
+  }
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-save-slot],[data-route-import-slot]"),function(btn){
     btn.onclick=function(){
-      var slotNo=Math.max(1,Math.min(3,Number(btn.dataset.routeSaveSlot)||1));
-      var displayRuns=ROUTE_LOADED_RUNS&&ROUTE_LOADED_RUNS.length?ROUTE_LOADED_RUNS:runs.filter(function(run){return selectedIds.has(run.id)});
+      var importing=!!btn.dataset.routeImportSlot;
+      var no=Number(btn.dataset.routeSaveSlot||btn.dataset.routeImportSlot);
+      var name=slotName(no);if(!name)return;
+      var legacy=importing?legacyRouteSlot(no):null;
+      var displayRuns=legacy?legacy.runs:(ROUTE_LOADED_RUNS&&ROUTE_LOADED_RUNS.length?ROUTE_LOADED_RUNS:runs.filter(function(run){return selectedIds.has(run.id)}));
       if(!displayRuns.length)return;
-      var slots=routeSavedSlots();
-      slots[slotNo-1]={runs:cloneRouteRuns(displayRuns),savedAt:new Date().toISOString()};
-      saveRouteSlots(slots);
-      ROUTE_LOADED_SLOT=slotNo;
-      toast("루트 "+slotNo+"에 저장했어요.");
-      renderPartyRoute();
+      var slot=routeSavedSlots()[no-1];
+      if(slot&&!confirm('“'+slot.name+'” 루트를 현재 루트로 덮어쓸까요?'))return;
+      writeRouteSlot("save_route_slot",no,cloneRouteRuns(displayRuns),name);
     };
   });
-
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-route-rename-slot]"),function(btn){
+    btn.onclick=function(){var no=Number(btn.dataset.routeRenameSlot),name=slotName(no);if(name)writeRouteSlot("rename_route_slot",no,null,name)};
+  });
   Array.prototype.forEach.call(panel.querySelectorAll("[data-route-load-slot]"),function(btn){
     btn.onclick=function(){
-      var slotNo=Math.max(1,Math.min(3,Number(btn.dataset.routeLoadSlot)||1));
-      var slot=routeSavedSlots()[slotNo-1];
-      if(!slot||!slot.runs||!slot.runs.length)return;
-      ROUTE_LOADED_RUNS=cloneRouteRuns(slot.runs);
-      ROUTE_LOADED_SLOT=slotNo;
-      ROUTE_RESULT_READY=true;
+      var no=Number(btn.dataset.routeLoadSlot),slot=routeSavedSlots()[no-1];
+      if(!slot)return;
+      ROUTE_LOADED_RUNS=cloneRouteRuns(slot.runs);ROUTE_LOADED_SLOT=no;ROUTE_RESULT_READY=true;
       renderPartyRoute();
-      setTimeout(function(){
-        var result=document.querySelector(".route-simple-result");
-        if(result&&result.scrollIntoView)result.scrollIntoView({behavior:"smooth",block:"start"});
-      },0);
+      var result=document.querySelector(".route-simple-result");
+      if(result)result.scrollIntoView({behavior:"smooth",block:"start"});
     };
   });
-
   Array.prototype.forEach.call(panel.querySelectorAll("[data-route-delete-slot]"),function(btn){
     btn.onclick=function(){
-      var slotNo=Math.max(1,Math.min(3,Number(btn.dataset.routeDeleteSlot)||1));
-      var slots=routeSavedSlots();
-      slots[slotNo-1]=null;
-      saveRouteSlots(slots);
-      if(ROUTE_LOADED_SLOT===slotNo){
-        ROUTE_LOADED_SLOT=0;
-        ROUTE_LOADED_RUNS=null;
-        ROUTE_RESULT_READY=false;
-      }
-      toast("루트 "+slotNo+" 저장을 삭제했어요.");
-      renderPartyRoute();
+      var no=Number(btn.dataset.routeDeleteSlot),slot=routeSavedSlots()[no-1];
+      if(slot&&confirm('“'+slot.name+'” 루트를 홈페이지에서 삭제할까요?'))writeRouteSlot("delete_route_slot",no);
     };
   });
 
@@ -1336,6 +1351,7 @@ function routeCharacterQuickSelectHtml(runs,selectedIds){
   '</div>';
 }
 function renderPartyRoute(){
+  if(!ROUTE_SLOTS_LOADED&&!ROUTE_SLOTS_LOADING&&!ROUTE_SLOTS_ERROR)loadRouteSlots(false);
   var panel=document.getElementById("routePanel");
   if(!panel)return;
   var focus=owner();
@@ -1345,11 +1361,6 @@ function renderPartyRoute(){
   }
 
   var allRuns=collectPartyRouteRuns(focus,true),theme=ownerTheme(focus.name);
-  if(!allRuns.length){
-    panel.innerHTML='<div class="route-empty owner-themed" data-theme="'+theme+'"><strong>전체 보스판에 2인 이상 주간 파티가 없어요.</strong><span>보스 현황판에서 2인 이상 파티를 등록하면 여기에 자동으로 나타납니다.</span></div>';
-    return;
-  }
-
   var selectedIds=selectedRouteIds(focus,allRuns);
   var selectedRuns=allRuns.filter(function(run){return selectedIds.has(run.id)});
   var displayRuns=ROUTE_LOADED_RUNS&&ROUTE_LOADED_RUNS.length?ROUTE_LOADED_RUNS:selectedRuns;
@@ -1392,7 +1403,7 @@ function renderPartyRoute(){
 
   if(ROUTE_RESULT_READY&&route){
     h+='<section class="route-simple-result owner-themed" data-theme="'+theme+'">'+
-      '<header><span>'+(ROUTE_LOADED_SLOT?'저장 루트 '+ROUTE_LOADED_SLOT:'추천 루트')+'</span><strong>이 순서대로 돌면 됩니다.</strong></header>'+
+      '<header><span>'+(ROUTE_LOADED_SLOT?esc((routeSavedSlots()[ROUTE_LOADED_SLOT-1]||{}).name||("저장 루트 "+ROUTE_LOADED_SLOT)):"추천 루트")+'</span><strong>이 순서대로 돌면 됩니다.</strong></header>'+
       '<div class="route-flow route-party-flow">';
 
     route.groups.forEach(function(group,index){
@@ -2401,6 +2412,7 @@ function startPolling(){
       loadChecklist(false);
     }else{
       loadRemote(false);
+      loadRouteSlots(false);
     }
   },4000);
 }
