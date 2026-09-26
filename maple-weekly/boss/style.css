@@ -1547,13 +1547,13 @@ html,body{overflow-x:hidden}
     max-width:100%;
   }
 
-  .character-boss-list .compact-difficulty{
-    width:58px;
-    min-width:58px;
-    max-width:58px;
-    height:25px;
-    padding:0 2px;
-    font-size:8.5px;
+   .character-boss-list .compact-difficulty{
+    width:66px;
+    min-width:66px;
+    max-width:66px;
+    height:28px;
+    padding:0 3px;
+    font-size:10px;
   }
 
   .character-boss-list .compact-name-wrap{
@@ -1574,8 +1574,8 @@ html,body{overflow-x:hidden}
     text-overflow:ellipsis;
     white-space:nowrap;
     text-align:left;
-    font-size:12.5px;
-    line-height:1.1;
+    font-size:15px;
+    line-height:1.2;
   }
 
   .character-boss-list .compact-count-slot{
@@ -1619,10 +1619,10 @@ html,body{overflow-x:hidden}
     font-size:10px;
   }
 
-  .character-boss-list .compact-income-slot{
-    width:44px;
-    min-width:44px;
-    max-width:44px;
+   .character-boss-list .compact-income-slot{
+    width:58px;
+    min-width:58px;
+    max-width:58px;
     overflow:hidden;
     display:flex;
     align-items:center;
@@ -1630,11 +1630,11 @@ html,body{overflow-x:hidden}
     text-align:center;
   }
 
-  .character-boss-list .compact-income{
+   .character-boss-list .compact-income{
     box-sizing:border-box;
-    width:44px;
-    min-width:44px;
-    max-width:44px;
+    width:58px;
+    min-width:58px;
+    max-width:58px;
     margin:0;
     padding:2px 2px;
     overflow:hidden;
@@ -1644,17 +1644,17 @@ html,body{overflow-x:hidden}
     align-items:center;
     justify-content:center;
     text-align:center;
-    font-size:8px;
-    line-height:1.1;
+    font-size:11px;
+    line-height:1.2;
     letter-spacing:-.02em;
     font-variant-numeric:tabular-nums;
   }
 
-  .character-boss-list .compact-income.missing{
-    width:44px;
-    min-width:44px;
-    max-width:44px;
-    font-size:7px;
+   .character-boss-list .compact-income.missing{
+    width:58px;
+    min-width:58px;
+    max-width:58px;
+    font-size:9px;
   }
 
   .character-boss-list .compact-party-members{
@@ -3958,81 +3958,23 @@ html[data-theme="dark"] .toast{
 }
 
 
-/* clearer visual break between wrapped character rows */
+/* separate each wrapped desktop character row */
 @media(min-width:761px){
   .character-columns,
-  .character-columns.is-searching{
-    row-gap:34px!important;
-  }
-
-  /* every row after the first gets its own separator space */
-  .character-column{
-    position:relative;
-  }
+  .character-columns.is-searching{row-gap:28px}
+  .character-column{position:relative}
 }
-@media(min-width:1380px){
-  .character-columns>.character-column:nth-child(n+7){
-    padding-top:22px;
-    border-top:1px solid var(--line);
-  }
-  .character-columns>.character-column:nth-child(6n+7)::before{
-    content:"다음 캐릭터";
-    position:absolute;
-    left:2px;
-    top:3px;
-    color:var(--muted2);
-    font-size:8px;
-    font-weight:850;
-    letter-spacing:.02em;
-  }
+@media(min-width:1280px){
+  .character-columns>.character-column:nth-child(n+5){padding-top:20px;border-top:1px solid var(--line)}
+  .character-columns>.character-column:nth-child(4n+5)::before{content:"다음 캐릭터";position:absolute;left:2px;top:3px;color:var(--muted2);font-size:10px;font-weight:850}
 }
-@media(min-width:1160px) and (max-width:1379px){
-  .character-columns>.character-column:nth-child(n+6){
-    padding-top:22px;
-    border-top:1px solid var(--line);
-  }
-  .character-columns>.character-column:nth-child(5n+6)::before{
-    content:"다음 캐릭터";
-    position:absolute;
-    left:2px;
-    top:3px;
-    color:var(--muted2);
-    font-size:8px;
-    font-weight:850;
-    letter-spacing:.02em;
-  }
-}
-@media(min-width:960px) and (max-width:1159px){
-  .character-columns>.character-column:nth-child(n+5){
-    padding-top:22px;
-    border-top:1px solid var(--line);
-  }
-  .character-columns>.character-column:nth-child(4n+5)::before{
-    content:"다음 캐릭터";
-    position:absolute;
-    left:2px;
-    top:3px;
-    color:var(--muted2);
-    font-size:8px;
-    font-weight:850;
-    letter-spacing:.02em;
-  }
+@media(min-width:960px) and (max-width:1279px){
+  .character-columns>.character-column:nth-child(n+4){padding-top:20px;border-top:1px solid var(--line)}
+  .character-columns>.character-column:nth-child(3n+4)::before{content:"다음 캐릭터";position:absolute;left:2px;top:3px;color:var(--muted2);font-size:10px;font-weight:850}
 }
 @media(min-width:761px) and (max-width:959px){
-  .character-columns>.character-column:nth-child(n+4){
-    padding-top:22px;
-    border-top:1px solid var(--line);
-  }
-  .character-columns>.character-column:nth-child(3n+4)::before{
-    content:"다음 캐릭터";
-    position:absolute;
-    left:2px;
-    top:3px;
-    color:var(--muted2);
-    font-size:8px;
-    font-weight:850;
-    letter-spacing:.02em;
-  }
+  .character-columns>.character-column:nth-child(n+3){padding-top:20px;border-top:1px solid var(--line)}
+  .character-columns>.character-column:nth-child(2n+3)::before{content:"다음 캐릭터";position:absolute;left:2px;top:3px;color:var(--muted2);font-size:10px;font-weight:850}
 }
 
 /* extra breathing room below the monthly boss block */
@@ -4228,22 +4170,22 @@ html[data-theme="dark"] .party-filter-btn.active{
   .desktop-board-meta strong{font-size:14px}
   .desktop-board-meta span{font-size:10.5px}
   .character-column-head{padding:11px 11px 10px}
-  .column-player-name{font-size:15px}
+   .column-player-name{font-size:17px}
   .column-count{font-size:12.5px}
-  .column-sub{font-size:10.5px}
+   .column-sub{font-size:12px}
   .boss-section-label{min-height:31px;padding:5px 8px}
-  .boss-section-label strong{font-size:10.5px}
-  .boss-section-label span{font-size:9.5px}
-  .compact-boss-card{padding:8px 9px}
-  .compact-main{min-height:31px}
+   .boss-section-label strong{font-size:12px}
+   .boss-section-label span{font-size:11px}
+   .compact-boss-card{padding:10px 11px}
+   .compact-main{min-height:34px}
   .compact-boss-name{font-size:13.5px}
   .compact-difficulty{font-size:10px}
   .compact-count{font-size:11.5px}
   .compact-solo{font-size:10.5px}
   .compact-sync{font-size:9px}
   .compact-party-members{margin-top:5px}
-  .compact-member{font-size:10.5px}
-  .compact-income{font-size:10.5px}
+   .compact-member{font-size:12px}
+   .compact-income{font-size:11px}
   .hint{
     margin-top:12px;
     font-size:11px;
@@ -4327,10 +4269,10 @@ html[data-theme="dark"] .party-filter-btn.active{
 
 /* FINAL boss-row layout — difficulty | boss · party count | crystal */
 @media(min-width:761px){
-  .character-boss-list .compact-main{
+   .character-boss-list .compact-main{
     display:grid;
-    grid-template-columns:58px minmax(0,1fr) 44px;
-    column-gap:6px;
+    grid-template-columns:66px minmax(0,1fr) 58px;
+    column-gap:8px;
     align-items:center;
     width:100%;
     min-width:0;
@@ -4411,23 +4353,24 @@ html[data-theme="dark"] .party-filter-btn.active{
     outline-offset:0;
   }
 
-  .character-boss-list .compact-income-slot{
-    width:44px;
-    min-width:44px;
-    max-width:44px;
+   .character-boss-list .compact-income-slot{
+    width:58px;
+    min-width:58px;
+    max-width:58px;
     justify-self:end;
   }
 
   /* second line starts exactly under the boss name */
-  .character-boss-list .compact-party-members{
-    padding-left:64px;
+   .character-boss-list .compact-party-members{
+    padding-left:74px;
     padding-right:0;
-    margin-top:4px;
+    margin-top:6px;
     width:100%;
     min-width:0;
     max-width:100%;
-    overflow:hidden;
-    white-space:nowrap;
+    overflow:visible;
+    flex-wrap:wrap;
+    white-space:normal;
   }
 }
 
@@ -4542,9 +4485,9 @@ html[data-theme="dark"] .compact-count-inline-select{
     white-space:nowrap;
   }
 
-  .character-boss-list .compact-party-count{
+   .character-boss-list .compact-party-count{
     flex:0 0 auto;
-    font-size:10px;
+    font-size:12px;
     letter-spacing:-.02em;
   }
 
