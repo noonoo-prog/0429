@@ -1943,7 +1943,7 @@ function toggleBoardBossCheck(bi,pi){
 }
 function compactBossCard(b,bi,c,pi,unlocked){
   var auto=!!c._sync,editable=unlocked&&!auto,mon=MONTHLY.has(b);
-  var checkable=!unlocked&&planned(c),checked=checkable&&boardBossChecked(b,pi);
+  var checkable=!unlocked&&planned(c),checked=planned(c)&&boardBossChecked(b,pi);
   var sync="";
   if(auto&&unlocked){
     var so=c._sync.sourceOwnerName||"";
