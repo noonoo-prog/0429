@@ -4590,26 +4590,6 @@ html[data-theme="dark"] .compact-boss-card.is-cleared{
   background:color-mix(in srgb,var(--success) 8%,var(--surface));
 }
 @media(min-width:761px){
-  .character-boss-list .compact-boss-card.is-cleared{
-    position:relative;
-    padding-bottom:29px;
-  }
-  .character-boss-list .compact-boss-card.is-cleared::after{
-    content:"✓ 완료";
-    position:absolute;
-    right:10px;
-    bottom:6px;
-    display:inline-flex;
-    align-items:center;
-    min-height:19px;
-    padding:0 7px;
-    border-radius:6px;
-    background:color-mix(in srgb,var(--success) 14%,var(--surface));
-    color:var(--success);
-    font-size:10px;
-    font-weight:950;
-    line-height:1;
-  }
   .character-boss-list .compact-boss-card.is-set:not(.is-cleared){
     border-color:var(--line-strong);
   }
