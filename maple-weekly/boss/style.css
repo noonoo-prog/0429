@@ -3965,16 +3965,20 @@ html[data-theme="dark"] .toast{
   .character-column{position:relative}
 }
 @media(min-width:1280px){
+  .character-columns>.character-column:nth-child(n+7){padding-top:20px;border-top:1px solid var(--line)}
+  .character-columns>.character-column:nth-child(6n+7)::before{content:"다음 캐릭터";position:absolute;left:2px;top:3px;color:var(--muted2);font-size:10px;font-weight:850}
+}
+@media(min-width:1160px) and (max-width:1279px){
+  .character-columns>.character-column:nth-child(n+6){padding-top:20px;border-top:1px solid var(--line)}
+  .character-columns>.character-column:nth-child(5n+6)::before{content:"다음 캐릭터";position:absolute;left:2px;top:3px;color:var(--muted2);font-size:10px;font-weight:850}
+}
+@media(min-width:960px) and (max-width:1159px){
   .character-columns>.character-column:nth-child(n+5){padding-top:20px;border-top:1px solid var(--line)}
   .character-columns>.character-column:nth-child(4n+5)::before{content:"다음 캐릭터";position:absolute;left:2px;top:3px;color:var(--muted2);font-size:10px;font-weight:850}
 }
-@media(min-width:960px) and (max-width:1279px){
+@media(min-width:761px) and (max-width:959px){
   .character-columns>.character-column:nth-child(n+4){padding-top:20px;border-top:1px solid var(--line)}
   .character-columns>.character-column:nth-child(3n+4)::before{content:"다음 캐릭터";position:absolute;left:2px;top:3px;color:var(--muted2);font-size:10px;font-weight:850}
-}
-@media(min-width:761px) and (max-width:959px){
-  .character-columns>.character-column:nth-child(n+3){padding-top:20px;border-top:1px solid var(--line)}
-  .character-columns>.character-column:nth-child(2n+3)::before{content:"다음 캐릭터";position:absolute;left:2px;top:3px;color:var(--muted2);font-size:10px;font-weight:850}
 }
 
 /* extra breathing room below the monthly boss block */
@@ -4561,6 +4565,37 @@ html[data-theme="dark"] .compact-count-inline-select{
   }
 }
 
+
+/* Six-column PC board: keep boss names readable in narrow cards */
+@media(min-width:1280px){
+  .character-boss-list .compact-boss-card{padding:9px 8px}
+  .character-boss-list .compact-main{
+    grid-template-columns:58px minmax(0,1fr);
+    column-gap:7px;
+    row-gap:3px;
+  }
+  .character-boss-list .compact-difficulty{
+    width:58px;
+    min-width:58px;
+    max-width:58px;
+    font-size:9px;
+  }
+  .character-boss-list .compact-boss-name{font-size:13px}
+  .character-boss-list .compact-party-count{font-size:10px}
+  .character-boss-list .compact-income-slot{
+    grid-column:2;
+    grid-row:2;
+    width:58px;
+    min-width:58px;
+    max-width:58px;
+    justify-self:end;
+  }
+  .character-boss-list .compact-party-members{
+    padding-left:65px;
+    margin-top:4px;
+  }
+  .character-boss-list .compact-member{font-size:10.5px}
+}
 
 /* view-only weekly boss completion toggle */
 .compact-boss-card.is-checkable{

@@ -2031,7 +2031,7 @@ function bindCharacterReorder(root,enabled){
 
 function desktopRowColumns(total){
   var w=Math.min(window.innerWidth||1600,1600);
-  var maxCols=w>=1280?4:w>=960?3:2;
+  var maxCols=w>=1280?6:w>=1160?5:w>=960?4:3;
   return Math.max(1,Math.min(total,maxCols));
 }
 
