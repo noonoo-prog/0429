@@ -49,7 +49,7 @@ const MONTHLY=new Set(["검은 마법사"]);
 const SOLO=new Set(["데미안","루시드","윌","더스크","진힐라","듄켈"]);
 const LIMIT=12,DIFFS=["","x","이지","노말","하드","카오스","익스트림"];
 const ACTIVE_KEY="boss-board-active-owner-v6",PIN_PREFIX="boss-board-pin-",CHAR_PREFIX="boss-board-active-char-",MOBILE_VIEW_KEY="boss-board-mobile-view-v1";
-const THEME_KEY="boss-board-theme-v1",PARTY_FILTER_KEY="boss-board-party-only-v1";
+const THEME_KEY="boss-board-theme-v1",PARTY_FILTER_KEY="boss-board-party-filter-v2";
 const FIXED_OWNER_ORDER=["오똑","츠죠","피콕","꿈품은","달하늘의별을","띵스"];
 
 let APP={owners:[]};
@@ -61,7 +61,11 @@ let EDIT_VERSION=0,SELECT_ACTIVE=false,PENDING_RENDER=false;
 let ADMIN_UNLOCKED=false,ADMIN_CODE="";
 let PICKER=null;
 let MOBILE_VIEW=localStorage.getItem(MOBILE_VIEW_KEY)==="all"?"all":"active";
-let PARTY_ONLY=localStorage.getItem(PARTY_FILTER_KEY)==="1";
+let PARTY_FILTER=(function(){
+  var saved=localStorage.getItem(PARTY_FILTER_KEY);
+  if(saved==="all"||saved==="solo"||saved==="multi")return saved;
+  return localStorage.getItem("boss-board-party-only-v1")==="1"?"multi":"all";
+})();
 let THEME_MODE=localStorage.getItem(THEME_KEY)==="dark"?"dark":"light";
 const CHECKLIST_START="2026-09-24";
 const PAGE_VIEW_KEY="boss-board-page-view-v1",ROUTE_SELECTION_PREFIX="boss-board-route-selection-v1-";
@@ -145,32 +149,38 @@ function planned(c){return !!c&&c.difficulty!==""&&c.difficulty!=="x"}
 function isMultiPartyCell(c){
   return planned(c)&&Number(c.count)>=2;
 }
-function partyOnlyCount(){
+function matchesPartyFilter(c,mode){
+  if(mode==="solo")return planned(c)&&Number(c.count)===1;
+  if(mode==="multi")return isMultiPartyCell(c);
+  return true;
+}
+function filteredPartyCount(mode){
   var st=state(),n=0;
   if(!st)return 0;
   st.players.forEach(function(_,pi){
     BOSSES.forEach(function(b){
-      if(isMultiPartyCell(st.cells[b][pi]||emptyCell()))n++;
+      if(matchesPartyFilter(st.cells[b][pi]||emptyCell(),mode))n++;
     });
   });
   return n;
 }
 function updatePartyFilterUI(){
-  var btn=document.getElementById("partyOnlyBtn");
   var row=document.getElementById("partyFilterRow");
-  if(!btn||!row)return;
+  if(!row)return;
   row.hidden=PAGE_VIEW!=="board";
   var o=owner();
-  btn.classList.add("owner-themed");
-  if(o)btn.setAttribute("data-theme",ownerTheme(o.name));
-  btn.classList.toggle("active",PARTY_ONLY);
-  btn.setAttribute("aria-pressed",PARTY_ONLY?"true":"false");
-  var label=btn.querySelector("span:last-child");
-  if(label)label.textContent=PARTY_ONLY?"2인 이상 파티만 보는 중":"2인 이상 파티만 보기";
+  row.classList.add("owner-themed");
+  if(o)row.setAttribute("data-theme",ownerTheme(o.name));
+  Array.prototype.forEach.call(row.querySelectorAll("[data-party-filter]"),function(btn){
+    var active=btn.dataset.partyFilter===PARTY_FILTER;
+    btn.classList.toggle("active",active);
+    btn.setAttribute("aria-pressed",active?"true":"false");
+  });
 }
-function togglePartyOnly(){
-  PARTY_ONLY=!PARTY_ONLY;
-  localStorage.setItem(PARTY_FILTER_KEY,PARTY_ONLY?"1":"0");
+function setPartyFilterMode(mode){
+  if(mode!=="all"&&mode!=="solo"&&mode!=="multi")return;
+  PARTY_FILTER=mode;
+  localStorage.setItem(PARTY_FILTER_KEY,mode);
   renderDesktop();
   renderMobile();
   updatePartyFilterUI();
@@ -2028,34 +2038,35 @@ function desktopRowColumns(total){
 function renderDesktop(){
   var st=state(),root=document.getElementById("desktopBoard");
   if(!st){root.innerHTML="";return}
-  var o=owner(),unlocked=isUnlocked(o.id),theme=ownerTheme(o.name),partyOnly=PARTY_ONLY;
+  var o=owner(),unlocked=isUnlocked(o.id),theme=ownerTheme(o.name),filterMode=PARTY_FILTER;
   var visible=[];
   st.players.forEach(function(p,pi){
     var full=weekly(pi)>=LIMIT;
     var bosses=BOSSES.filter(function(b){
       var c=st.cells[b][pi]||emptyCell();
-      if(partyOnly)return isMultiPartyCell(c);
+      if(filterMode!=="all")return matchesPartyFilter(c,filterMode);
       if(full && !MONTHLY.has(b) && !planned(c))return false;
       return true;
     });
-    if(!partyOnly||bosses.length)visible.push({p:p,pi:pi,bosses:bosses});
+    if(filterMode==="all"||bosses.length)visible.push({p:p,pi:pi,bosses:bosses});
   });
 
   var ownerIncome=ownerWeeklyIncome(),ownerMissing=ownerMissingPriceCount();
-  var h='<div class="desktop-board-meta"><div><strong>'+esc(o.name)+' 캐릭터 보드</strong><span>'+st.players.length+'명</span><b class="owner-weekly-total">총 주간 '+formatEok(ownerIncome)+(ownerMissing?' · 미등록 '+ownerMissing+'건':'')+'</b></div><div>'+(partyOnly?'2인 이상 파티 '+partyOnlyCount()+'건':'주간 최대 '+LIMIT+'개 · 검은 마법사 월간')+'</div></div>';
-  if(partyOnly&&!visible.length){
-    root.innerHTML=h+'<div class="party-filter-empty"><strong>2인 이상 파티가 없어요.</strong><span>버튼을 다시 누르면 전체 보스를 볼 수 있어요.</span></div>';
+  var modeText=filterMode==="solo"?"1인 보스 "+filteredPartyCount("solo")+"건":filterMode==="multi"?"2인 이상 파티 "+filteredPartyCount("multi")+"건":"주간 최대 "+LIMIT+"개 · 검은 마법사 월간";
+  var h='<div class="desktop-board-meta"><div><strong>'+esc(o.name)+' 캐릭터 보드</strong><span>'+st.players.length+'명</span><b class="owner-weekly-total">총 주간 '+formatEok(ownerIncome)+(ownerMissing?' · 미등록 '+ownerMissing+'건':'')+'</b></div><div>'+modeText+'</div></div>';
+  if(filterMode!=="all"&&!visible.length){
+    root.innerHTML=h+'<div class="party-filter-empty"><strong>'+(filterMode==="solo"?"등록된 1인 보스가 없어요.":"2인 이상 파티가 없어요.")+'</strong><span>전체 보기를 선택하면 모든 보스를 볼 수 있어요.</span></div>';
     return;
   }
   var cols=visible.length,rowCols=desktopRowColumns(cols);
-  h+='<div class="character-columns '+(partyOnly?"is-party-filtered":"")+'" style="--cols:'+cols+';--row-cols:'+rowCols+'">';
+  h+='<div class="character-columns '+(filterMode!=="all"?"is-party-filtered":"")+'" style="--cols:'+cols+';--row-cols:'+rowCols+'">';
   visible.forEach(function(item){
     var p=item.p,pi=item.pi,w=weekly(pi),m=monthly(pi);
     var charIncome=characterWeeklyIncome(pi),missingPrices=characterMissingPriceCount(pi);
     h+='<section class="character-column owner-themed" data-theme="'+theme+'" data-character-index="'+pi+'">'+
       '<header class="character-column-head">'+
         '<div class="character-title-row">'+
-          '<span class="drag-dots '+(unlocked&&!partyOnly?"order-enabled":"")+'" '+(unlocked&&!partyOnly?'draggable="true" data-drag-character="'+pi+'" title="드래그해서 캐릭터 순서 변경"':'aria-hidden="true"')+'>⠿</span>'+
+          '<span class="drag-dots '+(unlocked&&filterMode==="all"?"order-enabled":"")+'" '+(unlocked&&filterMode==="all"?'draggable="true" data-drag-character="'+pi+'" title="드래그해서 캐릭터 순서 변경"':'aria-hidden="true"')+'>⠿</span>'+
           '<input class="column-player-name player-input" data-player="'+pi+'" value="'+esc(p)+'" '+(unlocked?"":"disabled")+'>'+
           (pi===0?'<span class="representative-badge">대표</span>':'')+
           (w>=LIMIT?'<span class="complete-badge">완료</span>':'')+
@@ -2088,7 +2099,7 @@ function renderDesktop(){
   h+='</div>';
   root.innerHTML=h;
   bindCommon(root);
-  bindCharacterReorder(root,unlocked&&!partyOnly);
+  bindCharacterReorder(root,unlocked&&filterMode==="all");
 }
 function mobileMemberInputs(c,bi,pi,editable){
   if(!c.count)return'<div class="solo">인원수를 선택해 주세요</div>';
@@ -2099,7 +2110,7 @@ function mobileMemberInputs(c,bi,pi,editable){
 function renderMobile(){
   var box=document.getElementById("mobileBoard"),st=state(),o=owner();
   if(!st||!o){box.innerHTML='<div class="mobile-loading">보스판이 없습니다.</div>';return}
-  var unlocked=isUnlocked(o.id),theme=ownerTheme(o.name),partyOnly=PARTY_ONLY;
+  var unlocked=isUnlocked(o.id),theme=ownerTheme(o.name),filterMode=PARTY_FILTER;
 
   var pi=activeChar(),w=weekly(pi),m=monthly(pi);
   var strip='<div class="character-strip">'+st.players.map(function(p,i){
@@ -2127,14 +2138,14 @@ function renderMobile(){
   var weeklyList=BOSSES.filter(function(b){
     if(MONTHLY.has(b))return false;
     var c=st.cells[b][pi]||emptyCell();
-    if(partyOnly)return isMultiPartyCell(c);
+    if(filterMode!=="all")return matchesPartyFilter(c,filterMode);
     if(w>=LIMIT&&!planned(c))return false;
     return true;
   });
   var monthlyList=BOSSES.filter(function(b){
     if(!MONTHLY.has(b))return false;
-    if(!partyOnly)return true;
-    return isMultiPartyCell(st.cells[b][pi]||emptyCell());
+    if(filterMode==="all")return true;
+    return matchesPartyFilter(st.cells[b][pi]||emptyCell(),filterMode);
   });
 
   if(weeklyList.length){
@@ -2151,8 +2162,8 @@ function renderMobile(){
       list+=compactBossCard(b,bi,c,pi,unlocked);
     });
   }
-  if(partyOnly&&!weeklyList.length&&!monthlyList.length){
-    list+='<div class="party-filter-empty compact"><strong>2인 이상 파티가 없어요.</strong><span>다른 캐릭터를 선택하거나 필터를 해제해 주세요.</span></div>';
+  if(filterMode!=="all"&&!weeklyList.length&&!monthlyList.length){
+    list+='<div class="party-filter-empty compact"><strong>'+(filterMode==="solo"?"등록된 1인 보스가 없어요.":"2인 이상 파티가 없어요.")+'</strong><span>다른 캐릭터를 선택하거나 전체 보기를 눌러 주세요.</span></div>';
   }
   list+='</div>';
 
@@ -2359,8 +2370,9 @@ document.getElementById("saveBoardBtn").onclick=function(){
 document.getElementById("reloadBtn").onclick=function(){if(dirty&&!confirm("저장하지 않은 변경사항이 있습니다. 저장하지 않고 DB 내용을 다시 불러올까요?"))return;dirty=false;updateSaveUI();loadRemote(true)};
 document.getElementById("shareBtn").onclick=function(){var url=location.origin+location.pathname;if(navigator.share){navigator.share({title:"보스 현황판",url:url}).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){toast("홈페이지 주소를 복사했어요.")})}else{prompt("주소를 복사해 주세요.",url)}};
 
-var partyOnlyBtn=document.getElementById("partyOnlyBtn");
-if(partyOnlyBtn)partyOnlyBtn.addEventListener("click",togglePartyOnly);
+Array.prototype.forEach.call(document.querySelectorAll("[data-party-filter]"),function(btn){
+  btn.onclick=function(){setPartyFilterMode(btn.dataset.partyFilter)};
+});
 
 Array.prototype.forEach.call(document.querySelectorAll("[data-page-view]"),function(btn){
   btn.onclick=function(){setPageView(btn.dataset.pageView)};
