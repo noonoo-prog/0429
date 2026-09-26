@@ -5394,6 +5394,73 @@ html[data-theme="dark"] .compact-boss-card.is-cleared{
   color:#9a7070;
 }
 
+/* Desktop route readability */
+@media(min-width:761px){
+  .route-panel,
+  #routePanel{max-width:1120px}
+  .route-simple-head{margin-bottom:20px}
+  .route-simple-head>div>span{font-size:12px}
+  .route-simple-head strong{font-size:25px}
+  .route-simple-head p{font-size:13px}
+  .route-step-title strong,
+  .route-character-simple-head strong{font-size:18px}
+  .route-step-title p,
+  .route-character-simple-head p{font-size:12px}
+  .route-step-title>span,
+  .route-character-simple-head>div>span{width:29px;height:29px;font-size:12px}
+  .route-character-simple-head>div{grid-template-columns:29px minmax(0,1fr)}
+  .route-character-simple-head>button{min-height:36px;font-size:11px}
+  .route-character-quick-group{padding:16px 0}
+  .route-character-owner-head{margin-bottom:10px}
+  .route-character-owner-head>strong{font-size:16px}
+  .route-character-owner-actions>button{min-height:34px;padding:0 10px;font-size:11px}
+  .route-character-buttons{gap:9px}
+  .route-character-chip,
+  .route-character-quick-btn{min-height:44px}
+  .route-character-quick-btn{padding:0 12px;gap:7px}
+  .route-character-quick-btn b{max-width:180px;font-size:12.5px}
+  .route-character-quick-btn small{min-width:21px;height:21px;font-size:10px}
+  .route-character-exclude-btn{flex-basis:38px;width:38px;min-height:44px;font-size:17px}
+  .route-step-parties{padding-top:20px}
+  .route-selected-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .route-selected-party{align-items:flex-start;min-height:92px;padding:13px}
+  .route-selected-party-main{align-items:flex-start;flex-direction:column;gap:8px}
+  .route-choice-main b{font-size:16px}
+  .route-choice-main i{font-size:11px}
+  .route-choice-members{gap:4px}
+  .route-choice-members .route-member{padding:5px 7px}
+  .route-choice-members .route-member i{font-size:9px}
+  .route-choice-members .route-member b{font-size:11px}
+  .route-party-exclude{min-height:34px;font-size:11px}
+  .route-selection-summary{font-size:12px}
+  .route-selection-summary b{font-size:15px}
+  .route-build-btn{min-height:46px;font-size:13px}
+  .route-simple-result{max-width:980px;margin-left:auto;margin-right:auto;padding:20px}
+  .route-simple-result>header span{font-size:11px}
+  .route-simple-result>header strong{font-size:22px}
+  .route-transition{min-height:42px}
+  .route-transition b{font-size:12px}
+  .route-group{padding:14px 16px}
+  .route-order{font-size:11px}
+  .route-members{gap:6px}
+  .route-member{padding:6px 9px}
+  .route-member i{font-size:10px}
+  .route-member b{font-size:12px}
+  .route-bosses{gap:7px;margin-top:11px;padding-left:48px}
+  .route-boss{font-size:12px;padding:6px 9px}
+  .route-boss i{font-size:10px}
+  .route-note{font-size:11px}
+  .route-save-section{padding-top:18px}
+  .route-save-head strong{font-size:15px}
+  .route-save-head span{font-size:11px}
+  .route-save-grid{gap:10px}
+  .route-save-slot{padding:12px}
+  .route-save-slot>div:first-child b{font-size:12px}
+  .route-save-slot>div:first-child span{font-size:10px}
+  .route-save-slot>button,
+  .route-save-actions button{min-height:34px;font-size:11px}
+}
+
 /* Mobile */
 @media(max-width:760px){
   .route-panel,
