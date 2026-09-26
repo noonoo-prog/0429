@@ -2961,18 +2961,27 @@ html,body{
     padding:7px 5px;
   }
   .character-run-head{
-    min-height:48px;
-    padding:7px 8px;
+    min-height:58px;
+    padding:9px 10px;
+    flex-wrap:wrap;
   }
+  .character-run-head>div:first-child strong{font-size:14px}
+  .character-run-head>div:first-child span{font-size:10px}
   .boss-run-row{
-    min-height:44px;
-    padding:6px 8px;
+    min-height:52px;
+    padding:8px 9px;
   }
   .boss-run-name strong{
-    font-size:11px;
+    font-size:13px;
+  }
+  .boss-run-name small{
+    font-size:10px;
+  }
+  .boss-run-meso small{
+    font-size:9px;
   }
   .boss-run-meso b{
-    font-size:10.5px;
+    font-size:12px;
   }
 }
 
@@ -3112,10 +3121,21 @@ html,body{
 .month-day:hover{
   background:color-mix(in srgb,var(--owner-accent,#626a76) 4%,#fff);
 }
-.month-day.selected{
+ .month-day.selected{
   z-index:1;
   background:color-mix(in srgb,var(--owner-accent,#626a76) 8%,#fff);
   box-shadow:inset 0 0 0 2px var(--owner-accent,#626a76);
+}
+.month-day:has(.month-day-runs em:not(.more)){
+  background:color-mix(in srgb,var(--owner-accent,#626a76) 5%,#fff);
+  box-shadow:inset 0 3px 0 var(--owner-accent,#626a76);
+}
+.month-day:has(.month-day-runs em:not(.more)) .month-day-date{
+  color:var(--owner-accent,#626a76);
+  font-weight:950;
+}
+.month-day:has(.month-day-runs em:not(.more)).selected{
+  box-shadow:inset 0 0 0 2px var(--owner-accent,#626a76),inset 0 4px 0 var(--owner-accent,#626a76);
 }
 .month-day.outside{
   background:#f7f8fa;
@@ -3555,6 +3575,12 @@ html[data-theme="dark"] .calendar-day:hover{
 html[data-theme="dark"] .month-day.selected,
 html[data-theme="dark"] .calendar-day.selected{
   background:color-mix(in srgb,var(--owner-accent,#626a76) 8%,var(--surface));
+}
+html[data-theme="dark"] .month-day:has(.month-day-runs em:not(.more)){
+  background:color-mix(in srgb,var(--owner-accent,#626a76) 9%,var(--surface));
+}
+html[data-theme="dark"] .month-day:has(.month-day-runs em:not(.more)).selected{
+  background:color-mix(in srgb,var(--owner-accent,#626a76) 14%,var(--surface));
 }
 html[data-theme="dark"] .checklist-month-meso,
 html[data-theme="dark"] .calendar-day b{
@@ -4118,16 +4144,16 @@ html[data-theme="dark"] .party-filter-btn.active{
   .week-run-money small,
   .week-run-money em{font-size:10px}
   .week-run-money b{font-size:17px}
-  .character-run-head>div:first-child strong{font-size:14px}
-  .character-run-head>div:first-child span{font-size:10px}
-  .character-run-head small{font-size:9.5px}
-  .character-run-head b{font-size:14px}
-  .character-run-head em{font-size:10px}
-  .boss-run-row{min-height:48px;padding:7px 10px}
-  .boss-run-name strong{font-size:12.5px}
-  .boss-run-name small{font-size:9.5px}
-  .boss-run-meso small{font-size:9px}
-  .boss-run-meso b{font-size:12px}
+   .character-run-head>div:first-child strong{font-size:16px}
+   .character-run-head>div:first-child span{font-size:11px}
+   .character-run-head small{font-size:10px}
+   .character-run-head b{font-size:15px}
+   .character-run-head em{font-size:10.5px}
+   .boss-run-row{min-height:54px;padding:8px 10px}
+   .boss-run-name strong{font-size:14px}
+   .boss-run-name small{font-size:10.5px}
+   .boss-run-meso small{font-size:10px}
+   .boss-run-meso b{font-size:13px}
   .boss-toggle-all{font-size:11px}
 }
 
