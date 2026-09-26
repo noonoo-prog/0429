@@ -4618,9 +4618,9 @@ html[data-theme="dark"] .compact-count-inline-select{
   border-color:var(--owner-line,#bfc5cc);
 }
 .compact-boss-card.is-cleared{
-  border-color:color-mix(in srgb,var(--success) 48%,var(--line));
-  background:color-mix(in srgb,var(--success) 7%,var(--surface));
-  box-shadow:inset 3px 0 0 var(--success);
+  border-color:#67717d;
+  background:#eef0f3;
+  box-shadow:inset 3px 0 0 #39424d;
 }
 .compact-boss-card.is-cleared .compact-boss-name{
   text-decoration:line-through;
@@ -4633,8 +4633,9 @@ html[data-theme="dark"] .compact-count-inline-select{
   opacity:.58;
 }
 html[data-theme="dark"] .compact-boss-card.is-cleared{
-  border-color:color-mix(in srgb,var(--success) 40%,var(--line));
-  background:color-mix(in srgb,var(--success) 8%,var(--surface));
+  border-color:#78828e;
+  background:#343b44;
+  box-shadow:inset 3px 0 0 #a1a9b3;
 }
 @media(min-width:761px){
   .character-boss-list .compact-boss-card.is-set:not(.is-cleared){
