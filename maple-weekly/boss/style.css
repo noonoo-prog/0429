@@ -3099,7 +3099,7 @@ html,body{
   appearance:none;
   position:relative;
   min-width:0;
-  min-height:132px;
+  min-height:72px;
   padding:9px 8px 8px;
   border:0;
   border-right:1px solid #dfe3e8;
@@ -3198,18 +3198,18 @@ html,body{
     margin:0 4px;
   }
   .month-day{
-    min-height:88px;
+    min-height:64px;
     padding:6px 4px;
   }
-  .month-day-date{
-    font-size:8.5px;
+   .month-day-date{
+    font-size:10px;
   }
   .month-day-runs{
     gap:2px;
     margin-top:5px;
   }
-  .month-day-runs em{
-    font-size:6.7px;
+   .month-day-runs em{
+    font-size:8px;
   }
   .month-day-runs em i,
   .month-day-runs em strong{
@@ -3218,7 +3218,7 @@ html,body{
   .month-day-total{
     margin-top:5px;
     padding-top:3px;
-    font-size:7px;
+    font-size:8px;
   }
   .selected-day-panel{
     margin:9px 4px 8px;
@@ -3280,8 +3280,8 @@ html,body{
   top:0;
   z-index:3;
 }
-.month-day{
-  min-height:126px;
+ .month-day{
+  min-height:72px;
 }
 .selected-day-panel{
   scroll-margin-top:16px;
@@ -3350,8 +3350,8 @@ html,body{
   }
 }
 @media(max-width:760px){
-  .month-day{
-    min-height:82px;
+   .month-day{
+    min-height:64px;
   }
   .selected-day-head{
     min-height:64px;
@@ -4107,7 +4107,7 @@ html[data-theme="dark"] .party-filter-btn.active{
   .checklist-month-meso{font-size:13px}
   .checklist-owner-note{font-size:12px}
   .calendar-weekdays span{font-size:12px;padding:10px 5px}
-  .month-day{min-height:145px;padding:11px 10px 10px}
+   .month-day{min-height:72px;padding:11px 10px 10px}
   .month-day-date{font-size:12px}
   .month-day-runs{gap:4px;margin-top:9px}
   .month-day-runs em{font-size:10.5px;line-height:1.3}
