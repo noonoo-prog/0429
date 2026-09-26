@@ -4566,35 +4566,38 @@ html[data-theme="dark"] .compact-count-inline-select{
 }
 
 
-/* Six-column PC board: keep boss names readable in narrow cards */
+/* Six-column PC board: one compact line per boss, as in the reference */
 @media(min-width:1280px){
-  .character-boss-list .compact-boss-card{padding:9px 8px}
+  .character-boss-list .compact-boss-card{padding:5px 6px}
   .character-boss-list .compact-main{
-    grid-template-columns:58px minmax(0,1fr);
-    column-gap:7px;
-    row-gap:3px;
+    grid-template-columns:54px minmax(0,1fr) 46px;
+    column-gap:5px;
+    row-gap:0;
+    min-height:26px;
   }
   .character-boss-list .compact-difficulty{
-    width:58px;
-    min-width:58px;
-    max-width:58px;
-    font-size:9px;
+    width:54px;
+    min-width:54px;
+    max-width:54px;
+    height:23px;
+    font-size:8.5px;
   }
-  .character-boss-list .compact-boss-name{font-size:13px}
-  .character-boss-list .compact-party-count{font-size:10px}
+  .character-boss-list .compact-boss-name{font-size:12px}
+  .character-boss-list .compact-party-count{font-size:9px}
   .character-boss-list .compact-income-slot{
-    grid-column:2;
-    grid-row:2;
-    width:58px;
-    min-width:58px;
-    max-width:58px;
+    grid-column:3;
+    grid-row:1;
+    width:46px;
+    min-width:46px;
+    max-width:46px;
     justify-self:end;
   }
+  .character-boss-list .compact-income{font-size:10px}
   .character-boss-list .compact-party-members{
-    padding-left:65px;
-    margin-top:4px;
+    padding-left:59px;
+    margin-top:2px;
   }
-  .character-boss-list .compact-member{font-size:10.5px}
+  .character-boss-list .compact-member{font-size:9px}
 }
 
 /* view-only weekly boss completion toggle */
