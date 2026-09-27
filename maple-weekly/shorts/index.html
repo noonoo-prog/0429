@@ -10,7 +10,7 @@
 <meta property="og:description" content="옥수수목금 위 · 콩국수목금 아래, 보스 수익과 사용 메소를 한 장에 정리">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://noonoo-prog.github.io/0429/shorts/">
-<link rel="stylesheet" href="./style-v2.css?v=20260928-spend-v4">
+<link rel="stylesheet" href="./style-v2.css?v=20260928-manual-v5">
 </head>
 <body>
 <main class="shell">
@@ -18,7 +18,7 @@
   <div class="top-center">
    <p class="top-label">BOSS INCOME · DAILY SHORTS</p>
    <h1>오늘의 보스 수익</h1>
-   <p>옥수수목금 <span style="color:var(--yellow)">●</span> 콩국수목금 <span style="color:var(--pink)">●</span> 체크한 보스부터 사용 메소까지 · 매일 한 장의 쇼츠 이미지로 정리</p>
+   <p>옥수수목금 <span style="color:var(--yellow)">●</span> 콩국수목금 <span style="color:var(--pink)">●</span> 보스판 기록과 사용 메소를 한 장의 쇼츠 이미지로 정리</p>
   </div>
   <div class="top-right">
    <span class="color-key corn"><i></i>옥수수목금</span>
@@ -64,7 +64,7 @@
         <button id="syncNow" type="button">보스판 동기화</button>
         <button id="unlinkBossChar" type="button">연결 해제</button>
       </div>
-      <p class="sync-foot">연결된 캐릭터의 체크·해제는 양쪽 사이트에 반영돼요. 주간 사용 메소는 쇼츠 기록판에만 저장됩니다.</p>
+      <p class="sync-foot">보스 체크는 기존 보스판에서 관리하고, 쇼츠에는 결과만 불러와요.</p>
     </div>
    </section>
    <section class="panel">
@@ -79,43 +79,17 @@
     <div class="summary">
       <div class="stat"><span>선택 캐릭터 · 오늘 수익</span><strong id="statDay">0 메소</strong></div>
       <div class="stat"><span>선택 캐릭터 · 주간 수익</span><strong id="statWeek">0 메소</strong></div>
-      <div class="stat expense"><span>선택 캐릭터 · 주간 사용</span><strong id="statSpend">0 메소</strong></div>
-      <div class="stat net"><span>선택 캐릭터 · 주간 순수익</span><strong id="statNet">0 메소</strong></div>
-      <div class="stat wide"><span>선택한 주인 · 모든 캐릭터의 주간 순수익 합계</span><strong id="statBoth">0 메소</strong></div>
+      <div class="stat expense"><span id="statSpendLabel">오늘 사용</span><strong id="statSpend">0 메소</strong></div>
+      <div class="stat net"><span id="statNetLabel">오늘 순수익</span><strong id="statNet">0 메소</strong></div>
     </div>
    </section>
    <section class="panel shared-expense-panel">
-    <div class="panel-heading"><h2>추가 사용 메소</h2><span class="muted">내역별 · 홈페이지 자동 저장</span></div>
+    <div class="panel-heading"><h2>사용 메소</h2><span class="muted">내역별 · 저장 버튼으로 등록</span></div>
     <p id="ownerExpenseDate" class="expense-date"></p>
-    <p class="muted expense-explain">사용처와 금액을 여러 건 적을 수 있어요. 캐릭터별로 이미 적은 금액은 중복 입력하지 마세요.</p>
+    <p class="muted expense-explain">사용처와 금액을 여러 건 적고 저장 버튼을 눌러 주세요.</p>
     <div id="ownerExpenseGrid" class="owner-expense-grid"></div>
-    <p id="spendSyncState" class="spend-sync-state" role="status" aria-live="polite">홈페이지 저장 연결 중…</p>
-   </section>
-   <section class="panel">
-    <div class="panel-heading"><h2>사용 메소 기록</h2><span class="muted">일별 입력 → 주간 자동 합산</span></div>
-    <div id="expenseDate" class="expense-date"></div>
-    <div class="expense-grid">
-      <div>
-       <label class="expense-label" for="expenseInput">이 날짜에 사용한 메소</label>
-       <input id="expenseInput" class="expense-input" type="text" inputmode="decimal" placeholder="예: 120000000 또는 1억 2000만" autocomplete="off">
-       <span id="expenseInvalid" role="status"></span>
-       <label class="expense-label" for="expenseNote" style="margin-top:12px">무엇에 썼나요? (선택)</label>
-       <input id="expenseNote" class="expense-note" type="text" maxlength="80" placeholder="예: 스타포스, 큐브, 강화" autocomplete="off">
-       <p class="note">입력 즉시 자동 저장돼요. 다른 날짜와 다른 캐릭터의 기록은 그대로 유지돼요.</p>
-      </div>
-      <div class="expense-recap">
-       <div><span>선택한 날 사용</span><strong id="expenseDayTotal">0 메소</strong></div>
-       <div><span>이번 주 사용 합계</span><strong id="expenseTotal">0 메소</strong></div>
-       <div class="net"><span>이번 주 순수익</span><strong id="expenseNet">0 메소</strong></div>
-      </div>
-    </div>
-   </section>
-   <section class="panel">
-    <div class="panel-heading"><h2>주간 보스 체크</h2><span id="bossCount" class="boss-count">0 / 12</span></div>
-    <p class="section-intro muted">지금 선택한 캐릭터의 보스만 체크해요. 날짜·난이도·파티 인원도 각각 따로 저장돼요.</p>
-    <p id="bossSyncNote" class="sync-boss-note">보스판 연결을 확인하고 있어요.</p>
-    <div id="bossList" class="boss-list"></div>
-    <p class="note">결정석은 1인 가격을 기준으로 파티 인원수만큼 나눠 계산해요. 검은 마법사는 아래 월간 구역에 분리했어요.</p>
+    <button id="saveSpend" class="spend-save-button" type="button" disabled>사용 메소 저장</button>
+    <p id="spendSyncState" class="spend-sync-state" role="status" aria-live="polite">저장할 내역이 없어요.</p>
    </section>
    <section class="panel">
     <div class="panel-heading"><h2>검은 마법사</h2><span class="boss-count">월 1회 · 별도</span></div>
@@ -136,6 +110,6 @@
   </aside>
  </div>
 </main>
-<script src="./app-v2.js?v=20260928-spend-v4" defer></script>
+<script src="./app-v2.js?v=20260928-manual-v5" defer></script>
 </body>
 </html>
