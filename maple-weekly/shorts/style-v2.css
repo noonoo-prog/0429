@@ -129,3 +129,26 @@ button{cursor:pointer}button:disabled{opacity:.44;cursor:default}
 @media(max-width:1050px){.layout{grid-template-columns:minmax(0,1.2fr) minmax(300px,.9fr);gap:12px}.shell{width:calc(100% - 24px)}.panel{padding:15px}.boss-list{grid-template-columns:1fr}.top{align-items:start}}
 @media(max-width:730px){.shell{width:calc(100% - 22px);padding:15px 0 35px}.layout{display:flex;flex-direction:column}.controls,.preview-section{width:100%}.preview-section{order:-1;position:static}.canvas-frame{max-width:300px}.panel,.preview-panel{padding:15px;margin-bottom:12px}.top{flex-direction:column;gap:11px}.top-right{width:100%;justify-content:flex-start}.top h1{font-size:29px}.top p{font-size:12px}.owner-tab{padding:10px;gap:9px}.owner-tab small{font-size:10px}.boss-list{grid-template-columns:1fr;max-height:none}.summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:380px){.owner-tab small{display:none}.days{gap:3px}.day{min-height:53px}.day-name{font-size:12px}.day-date{font-size:9px}.expense-grid{grid-template-columns:1fr}.week-actions button{padding:0 8px}.top h1{font-size:27px}.preview-tabs button{font-size:10px;padding:0 2px}}
+
+
+/* Bidirectional boss-board sync. Uses each owner's distinctive accent. */
+.boss-sync-area{margin-top:16px;padding:14px;border:1px solid var(--border);border-radius:13px;background:var(--field)}
+.boss-sync-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:900}
+.boss-sync-heading a{color:var(--muted);font-size:11px;text-decoration:none;white-space:nowrap}
+.boss-sync-heading a:hover{text-decoration:underline}
+.sync-icon{display:inline-flex;align-items:center;justify-content:center;width:23px;height:23px;border-radius:8px;background:linear-gradient(120deg,var(--yellow),var(--pink));color:#221922;font-size:16px;margin-right:4px}
+.sync-state{font-size:12px;line-height:1.5;margin:11px 0 7px;color:var(--muted);font-weight:800}
+.sync-state.linked{color:var(--yellow)}
+:root[data-theme="light"] .sync-state.linked{color:#8f631b}
+.sync-help{margin:0 0 12px}
+.sync-line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}
+.sync-line select{min-width:0;width:100%;height:37px;padding:0 8px;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:9px;font-size:12px}
+.sync-line button,.sync-actions button{height:37px;padding:0 11px;border-radius:9px;background:var(--panel2);color:var(--text);border:1px solid var(--border);font-size:12px;font-weight:800}
+.sync-line .sync-connect{background:var(--yellow);border-color:var(--yellow);color:#28200c}
+:root[data-owner="콩국수목금"] .sync-line .sync-connect{background:var(--pink);border-color:var(--pink);color:#fff}
+.sync-actions{display:flex;gap:6px;margin-top:7px}
+.sync-foot,.sync-boss-note{font-size:11px;line-height:1.6;color:var(--muted);margin:10px 0 0}
+.sync-boss-note{margin:0 0 11px;padding:8px 10px;border-left:3px solid var(--yellow);background:var(--field);border-radius:5px}
+:root[data-owner="콩국수목금"] .sync-boss-note{border-left-color:var(--pink)}
+.boss-controls select:disabled{opacity:.68;cursor:not-allowed}
+@media(max-width:400px){.boss-sync-area{padding:10px}.sync-help,.sync-foot{font-size:10px}.sync-line select{font-size:11px}}
