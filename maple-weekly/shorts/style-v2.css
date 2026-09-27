@@ -232,3 +232,15 @@ button{cursor:pointer}button:disabled{opacity:.44;cursor:default}
   color:var(--muted);font-size:10px;line-height:16px;min-height:16px;
   font-variant-numeric:tabular-nums}
 .spend-row .spend-amount:focus+.spend-delete+.spend-korean{color:var(--text)}
+
+/* Extra income v7 */
+.stat.income{border-color:#5b9a79;background:color-mix(in srgb,#3ba97c,var(--field) 94%)}
+.stat.income strong{color:#7bdda9}
+:root[data-theme="light"] .stat.income strong{color:#25875a}
+.net-total{grid-column:1/-1}
+.shared-income-panel{border-top:2px solid #5ba985}
+.owner-income-card:first-child,.owner-income-card:last-child{border-top-color:#5aa782}
+.owner-income-card .owner-expense-result strong{color:#80d3aa}
+:root[data-theme="light"] .owner-income-card .owner-expense-result strong{color:#27875b}
+.income-save-button{background:linear-gradient(95deg,#64c897,#a9dfbf);color:#123d2a}
+.income-save-button:disabled{background:var(--field);color:var(--muted);border:1px solid var(--border)}
