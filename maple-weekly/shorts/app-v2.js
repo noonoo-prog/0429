@@ -322,7 +322,7 @@ function changeBlack(kind,value){
 function spendChanged(e){
   const input=e.target,owner=input.dataset.spendAmount||input.dataset.spendNote;
   if(!OWNERS.includes(owner))return;
-  const date=dayKey(),week=weekKey(),id=input.dataset.spendId;
+  const date=dayKey(),id=input.dataset.spendId;
   const rows=ownerSpendRows(owner,date),record=rows.find(r=>r.id===id);
   if(!record)return;
   if(input.dataset.spendAmount){
@@ -338,18 +338,18 @@ function spendChanged(e){
   setOwnerSpendRows(owner,date,rows);
   $("ownerTotal-"+owner).textContent=format(dayExpense(date,owner));
   renderStats();drawShort();
-  queueSpendSave(owner,date,week,rows);
+  
 }
 function spendClick(e){
   const add=e.target.closest("[data-spend-add]");
   if(add){
-    const owner=add.dataset.spendAdd,date=dayKey(),week=weekKey();
+    const owner=add.dataset.spendAdd,date=dayKey();
     const rows=ownerSpendRows(owner,date);
     if(rows.length>=40){notify("하루 최대 40건까지 적을 수 있어요.");return}
     const id="s"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
     rows.push({id,amount:0,note:""});
     setOwnerSpendRows(owner,date,rows);
-    queueSpendSave(owner,date,week,rows);
+    
     renderOwnerExpenses();drawShort();
     const field=$("ownerExpenseGrid").querySelector('[data-spend-note="'+owner+'"][data-spend-id="'+id+'"]');
     if(field)field.focus();
@@ -357,24 +357,25 @@ function spendClick(e){
   }
   const del=e.target.closest("[data-spend-delete]");
   if(del){
-    const owner=del.dataset.spendDelete,date=dayKey(),week=weekKey();
+    const owner=del.dataset.spendDelete,date=dayKey();
     const rows=ownerSpendRows(owner,date);
     const row=rows.find(r=>r.id===del.dataset.spendId);
     if(!row)return;
     if((row.amount>0||row.note)&&!confirm("'"+(row.note||"사용 내역")+"'을(를) 삭제할까요?"))return;
     const next=rows.filter(r=>r.id!==row.id);
     setOwnerSpendRows(owner,date,next);
-    queueSpendSave(owner,date,week,next);
+    
     renderOwnerExpenses();renderStats();drawShort();
   }
 }
 
 function navigateWeek(ms){
-  if(ms<BASE)return;S.week=ms;S.day=ms===currentWeek()?Math.min(6,Math.max(0,Math.floor((todayKST()-ms)/DAY))):0;
+  if(ms<BASE||ms===S.week||!leaveSpendDate())return;
+  S.week=ms;S.day=ms===currentWeek()?Math.min(6,Math.max(0,Math.floor((todayKST()-ms)/DAY))):0;
   S.follow=ms===currentWeek();loadWeek();loadMonth();mergeRemoteRecords();render();pullSpend(weekKey());
 }
 function todayKST(){const d=new Date(Date.now()+9*3600000);return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())}
-function setDay(day){S.day=day;loadMonth();mergeRemoteRecords();render()}
+function setDay(day){if(day===S.day||!leaveSpendDate())return;S.day=day;loadMonth();mergeRemoteRecords();render()}
 function rounded(ctx,x,y,w,h,r,fill,stroke){
   ctx.beginPath();
   if(ctx.roundRect)ctx.roundRect(x,y,w,h,r);
@@ -871,10 +872,13 @@ function boot(){
   loadProfiles();S.prefs=load(KEY_PREFS,{})||{};S.theme=load(KEY_THEME,"dark")==="light"?"light":"dark";
   S.week=currentWeek();S.day=Math.min(6,Math.max(0,Math.floor((todayKST()-S.week)/DAY)));
   loadWeek();loadMonth();register();render();refreshBossSync(true);pullSpend(weekKey(),true);
-  setInterval(()=>{const w=currentWeek();if(S.follow&&S.week!==w){navigateWeek(w);notify("새 주간으로 넘어왔어요. 지난 기록은 지난주에서 볼 수 있어요.")}if(!document.hidden&&Date.now()-SYNC.lastCheck>9000)refreshBossSync(false)},4000);
-  if(document.addEventListener)document.addEventListener("visibilitychange",()=>{if(!document.hidden){refreshBossSync(false);pullSpend(weekKey());retrySpend()}});
-  if(typeof window!=="undefined"&&window.addEventListener)window.addEventListener("focus",()=>{refreshBossSync(false);pullSpend(weekKey());retrySpend()});
-  setInterval(()=>{if(!document.hidden&&Date.now()-SPEND_SYNC.lastLoad>30000)pullSpend(weekKey())},15000);
+  setInterval(()=>{const w=currentWeek();if(S.follow&&S.week!==w&&!hasDraftSpendDate()&&!SPEND_MANUAL.saving){navigateWeek(w);notify("새 주간으로 넘어왔어요. 지난 기록은 지난주에서 볼 수 있어요.")}if(!document.hidden&&Date.now()-SYNC.lastCheck>9000)refreshBossSync(false)},4000);
+  if(document.addEventListener)document.addEventListener("visibilitychange",()=>{if(!document.hidden){refreshBossSync(false);pullSpend(weekKey())}});
+  if(typeof window!=="undefined"&&window.addEventListener){
+    window.addEventListener("focus",()=>{refreshBossSync(false);pullSpend(weekKey())});
+    window.addEventListener("beforeunload",e=>{if(hasDraftSpendDate()){e.preventDefault();e.returnValue=""}});
+  }
+  setInterval(()=>{if(!document.hidden&&Date.now()-SPEND_MANUAL.lastLoad>30000)pullSpend(weekKey())},15000);
 }
 boot();
 })();
