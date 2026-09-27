@@ -86,6 +86,7 @@ let CHECKLIST_SAVING="";
 let ROUTE_RESULT_READY=false;
 let ROUTE_LOADED_RUNS=null;
 let ROUTE_LOADED_SLOT=0;
+let REMAINING_ONLY=localStorage.getItem("boss-board-remaining-only-v1")==="1";
 let ROUTE_SLOT_ROWS=[],ROUTE_SLOTS_LOADED=false,ROUTE_SLOTS_LOADING=false,ROUTE_SLOTS_ERROR="",ROUTE_SLOT_BUSY=0,ROUTE_NAME_DRAFTS={};
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(m){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]})}
@@ -169,6 +170,8 @@ function updatePartyFilterUI(){
   var row=document.getElementById("partyFilterRow");
   if(!row)return;
   row.hidden=PAGE_VIEW!=="board";
+  var remainingButton=document.getElementById("remainingBossFilter");
+  if(remainingButton){remainingButton.classList.toggle("active",REMAINING_ONLY);remainingButton.setAttribute("aria-pressed",String(REMAINING_ONLY));}
   var o=owner();
   row.classList.add("owner-themed");
   if(o)row.setAttribute("data-theme",ownerTheme(o.name));
@@ -2063,11 +2066,12 @@ function renderDesktop(){
     var full=weekly(pi)>=LIMIT;
     var bosses=BOSSES.filter(function(b){
       var c=st.cells[b][pi]||emptyCell();
+      if(REMAINING_ONLY&&(!planned(c)||boardBossChecked(b,pi)))return false;
       if(filterMode!=="all")return matchesPartyFilter(c,filterMode);
       if(full && !MONTHLY.has(b) && !planned(c))return false;
       return true;
     });
-    if(filterMode==="all"||bosses.length)visible.push({p:p,pi:pi,bosses:bosses});
+    if(REMAINING_ONLY||filterMode==="all"||bosses.length)visible.push({p:p,pi:pi,bosses:bosses});
   });
 
   var ownerIncome=ownerWeeklyIncome(),ownerMissing=ownerMissingPriceCount();
@@ -2113,6 +2117,7 @@ function renderDesktop(){
         h+=compactBossCard(b,bi,c,pi,unlocked);
       });
     }
+    if(REMAINING_ONLY&&!item.bosses.length)h+='<div class="remaining-empty">조건에 맞는 남은 보스가 없어요.</div>';
     h+='</div></section>';
   });
   if(unlocked)h+='<button class="add-character-column" data-add-character="1"><strong>＋ 캐릭터 추가</strong><span>새 캐릭터 열 만들기</span></button>';
@@ -2159,12 +2164,14 @@ function renderMobile(){
   var weeklyList=BOSSES.filter(function(b){
     if(MONTHLY.has(b))return false;
     var c=st.cells[b][pi]||emptyCell();
+    if(REMAINING_ONLY&&(!planned(c)||boardBossChecked(b,pi)))return false;
     if(filterMode!=="all")return matchesPartyFilter(c,filterMode);
     if(w>=LIMIT&&!planned(c))return false;
     return true;
   });
   var monthlyList=BOSSES.filter(function(b){
     if(!MONTHLY.has(b))return false;
+    if(REMAINING_ONLY&&(!planned(st.cells[b][pi])||boardBossChecked(b,pi)))return false;
     if(filterMode==="all")return true;
     return matchesPartyFilter(st.cells[b][pi]||emptyCell(),filterMode);
   });
@@ -2183,7 +2190,9 @@ function renderMobile(){
       list+=compactBossCard(b,bi,c,pi,unlocked);
     });
   }
-  if(filterMode!=="all"&&!weeklyList.length&&!monthlyList.length){
+  if(REMAINING_ONLY&&!weeklyList.length&&!monthlyList.length){
+    list+='<div class="remaining-empty">조건에 맞는 남은 보스가 없어요.</div>';
+  }else if(filterMode!=="all"&&!weeklyList.length&&!monthlyList.length){
     list+='<div class="party-filter-empty compact"><strong>'+(filterMode==="solo"?"등록된 1인 보스가 없어요.":"2인 이상 파티가 없어요.")+'</strong><span>다른 캐릭터를 선택하거나 전체 보기를 눌러 주세요.</span></div>';
   }
   list+='</div>';
@@ -2398,6 +2407,12 @@ Array.prototype.forEach.call(document.querySelectorAll("[data-party-filter]"),fu
 Array.prototype.forEach.call(document.querySelectorAll("[data-page-view]"),function(btn){
   btn.onclick=function(){setPageView(btn.dataset.pageView)};
 });
+
+document.getElementById("remainingBossFilter").onclick=function(){
+  REMAINING_ONLY=!REMAINING_ONLY;
+  localStorage.setItem("boss-board-remaining-only-v1",String(REMAINING_ONLY?1:0));
+  renderDesktop();renderMobile();updatePartyFilterUI();
+};
 
 window.addEventListener("resize",function(){clearTimeout(window.__bossResize);window.__bossResize=setTimeout(guardedRender,120)});
 window.addEventListener("pageshow",function(e){if(e.persisted)loadRemote(false)});

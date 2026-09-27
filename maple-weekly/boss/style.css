@@ -5742,3 +5742,15 @@ html[data-theme="dark"] .compact-boss-card.is-cleared .compact-boss-name{color:#
   .character-remaining{font-size:13px}
   .character-remaining strong{font-size:15px}
 }
+
+/* Remaining-boss filter and stronger cleared-name strike */
+.compact-boss-card.is-cleared .compact-boss-name{
+  text-decoration-thickness:2px;text-decoration-color:#45505e;
+}
+html[data-theme="dark"] .compact-boss-card.is-cleared .compact-boss-name{
+  text-decoration-color:#d0d7df;
+}
+.party-filter-row{flex-wrap:wrap}
+.remaining-filter{margin-left:6px}
+.remaining-empty{padding:14px 8px;color:var(--muted);font-size:12px;line-height:1.6;text-align:center}
+@media(max-width:760px){.remaining-filter{margin-left:0}}
