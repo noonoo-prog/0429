@@ -40,7 +40,50 @@ function monthKey(){return dayKey().slice(0,7)}
 function currentWeek(){const k=new Date(Date.now()+9*3600000),utc=Date.UTC(k.getUTCFullYear(),k.getUTCMonth(),k.getUTCDate());return BASE+Math.max(0,Math.floor((utc-BASE)/WEEK))*WEEK}
 function format(n){n=Math.floor(Number(n)||0);const neg=n<0;n=Math.abs(n);if(!n)return"0 메소";const e=Math.floor(n/1e8),m=Math.floor(n%1e8/1e4),rest=n%1e4;const bits=[];if(e)bits.push(e.toLocaleString("ko-KR")+"억");if(m)bits.push(m.toLocaleString("ko-KR")+"만");if(rest)bits.push(rest.toLocaleString("ko-KR"));return (neg?"−":"")+bits.join(" ")+" 메소"}
 function compact(n){return format(n).replace(" 메소","")}
-function amountFromInput(raw){const s=String(raw||"").trim().replace(/[\s,]/g,"").replace(/메소/g,"");if(!s)return 0;if(/^\d+(?:\.\d+)?$/.test(s))return Math.floor(Number(s));const m=s.match(/^(?:(\d+(?:\.\d+)?)억)?(?:(\d+(?:\.\d+)?)만)?(?:(\d+))?$/);if(!m||!m[0])return null;const n=(Number(m[1]||0)*1e8)+(Number(m[2]||0)*1e4)+Number(m[3]||0);return Number.isFinite(n)&&n>=0?Math.floor(n):null}
+function amountFromInput(raw){
+  const value=String(raw||"").trim().replace(/[\s,]/g,"").replace(/메소|원/g,"");
+  if(!value)return 0;
+  if(/^\d+$/.test(value)){
+    const number=Number(value);
+    return Number.isSafeInteger(number)&&number<=999999999999999?number:null;
+  }
+  // 1억, 0.1억, 1억 2000만, 3천만, 10,000,000 all work.
+  const m=value.match(/^(?:(\d+(?:\.\d+)?)억)?(?:(\d+(?:\.\d+)?)천만)?(?:(\d+(?:\.\d+)?)만)?(\d+)?$/);
+  if(!m||!/[억만]/.test(value))return null;
+  const number=Number(m[1]||0)*100000000+
+    Number(m[2]||0)*10000000+Number(m[3]||0)*10000+Number(m[4]||0);
+  if(!Number.isFinite(number)||number<0||number>999999999999999)return null;
+  return Math.floor(number+0.000001);
+}
+function commaAmount(n){return Number(n).toLocaleString("ko-KR",{maximumFractionDigits:0})}
+function eokAmount(n){
+  if(!Number.isFinite(n)||n<=0)return "";
+  if(n>=1000000)return (n/100000000).toLocaleString("ko-KR",{maximumFractionDigits:8})+"억";
+  return format(n);
+}
+function formatPlainAmountDuringTyping(input){
+  const original=input.value;
+  if(!/^\d[\d,]*$/.test(original))return;
+  const caret=input.selectionStart;
+  const digitsBefore=typeof caret==="number"?(original.slice(0,caret).match(/\d/g)||[]).length:null;
+  const formatted=original.replace(/,/g,"").replace(/\B(?=(\d{3})+(?!\d))/g,",");
+  if(original===formatted)return;
+  input.value=formatted;
+  if(digitsBefore!==null&&typeof input.setSelectionRange==="function"){
+    let position=0,count=0;
+    for(;position<formatted.length&&count<digitsBefore;position++)if(/\d/.test(formatted[position]))count++;
+    try{input.setSelectionRange(position,position)}catch{}
+  }
+}
+function formatAmountOnBlur(event){
+  const input=event.target;
+  if(!input.dataset.spendAmount)return;
+  const n=amountFromInput(input.value);
+  if(n===null||n>999999999999999)return;
+  input.value=input.value.trim()?commaAmount(n):"";
+  const badge=input.closest(".spend-row")?.querySelector(".spend-korean");
+  if(badge)badge.textContent=eokAmount(n);
+}
 function emptyRecords(){return{bosses:{},expenses:{}}}
 function startingProfiles(){return{characters:[{id:"corn-1",owner:OWNERS[0],name:"옥수수 1"},{id:"bean-1",owner:OWNERS[1],name:"콩국수 1"}],selected:"corn-1"}}
 function allChars(){return S.profiles.characters}
@@ -213,8 +256,9 @@ function renderOwnerExpenses(){
       '<div class="spend-rows">'+(rows.length?rows.map(row=>
         '<div class="spend-row">'+
           '<input class="spend-note" aria-label="사용 내역" data-spend-note="'+owner+'" data-spend-id="'+esc(row.id)+'" maxlength="80" type="text" autocomplete="off" placeholder="어디에 썼나요?" value="'+esc(row.note)+'">'+
-          '<input class="spend-amount" aria-label="사용 메소" data-spend-amount="'+owner+'" data-spend-id="'+esc(row.id)+'" inputmode="decimal" type="text" autocomplete="off" placeholder="금액" value="'+(row.amount||"")+'">'+
-          '<button class="spend-delete" aria-label="내역 삭제" type="button" data-spend-delete="'+owner+'" data-spend-id="'+esc(row.id)+'">×</button></div>'
+          '<input class="spend-amount" aria-label="사용 메소" data-spend-amount="'+owner+'" data-spend-id="'+esc(row.id)+'" inputmode="decimal" type="text" autocomplete="off" placeholder="금액" value="'+(row.amount?commaAmount(row.amount):"")+'">'+
+          '<button class="spend-delete" aria-label="내역 삭제" type="button" data-spend-delete="'+owner+'" data-spend-id="'+esc(row.id)+'">×</button>'+
+          '<span class="spend-korean" aria-label="억 환산 금액">'+eokAmount(row.amount)+'</span></div>'
       ).join(""):'<p class="spend-empty">사용 내역이 없어요.</p>')+'</div>'+
       '<div class="owner-expense-result"><span>오늘 사용</span><strong id="ownerTotal-'+owner+'">'+format(dayExpense(date,owner))+'</strong></div>'+
     '</div>';
@@ -320,7 +364,7 @@ function changeBlack(kind,value){
   saveMonth();renderMonthly();renderStats();drawShort();if(kind==="check"||kind==="move"||(S.month.byId[S.charId]&&(kind==="diff"||kind==="party")))maybeSyncCurrentBoss(BLACK,S.month.byId[S.charId],weekKey(),dayKey());
 }
 function spendChanged(e){
-  if(SPEND_MANUAL.saving)return;
+  if(SPEND_MANUAL.saving||e.isComposing)return;
   const input=e.target,owner=input.dataset.spendAmount||input.dataset.spendNote;
   if(!OWNERS.includes(owner))return;
   const date=dayKey(),id=input.dataset.spendId;
@@ -335,6 +379,9 @@ function spendChanged(e){
     }
     input.removeAttribute("aria-invalid");
     record.amount=value;
+    formatPlainAmountDuringTyping(input);
+    const hint=input.closest(".spend-row")?.querySelector(".spend-korean");
+    if(hint)hint.textContent=eokAmount(value);
   }else record.note=input.value.slice(0,80);
   setOwnerSpendRows(owner,date,rows);
   $("ownerTotal-"+owner).textContent=format(dayExpense(date,owner));
@@ -864,6 +911,7 @@ function register(){
   $("monthlyCard").addEventListener("change",e=>{if(e.target.id==="blackCheck")changeBlack("check");if(e.target.id==="blackDiff")changeBlack("diff",e.target.value);if(e.target.id==="blackParty")changeBlack("party",e.target.value)});
   $("monthlyCard").addEventListener("click",e=>{if(e.target.id==="moveBlack")changeBlack("move")});
   $("ownerExpenseGrid").addEventListener("input",spendChanged);
+  $("ownerExpenseGrid").addEventListener("focusout",formatAmountOnBlur);
   $("ownerExpenseGrid").addEventListener("click",spendClick);
   $("saveSpend").addEventListener("click",saveSpendManual);
   $("download").addEventListener("click",download);
