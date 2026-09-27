@@ -55,7 +55,7 @@ function loadProfiles(){
 }
 function keyWeek(){return PREFIX+"week-"+weekKey()}
 function keyMonth(k){return PREFIX+"month-"+k}
-function normalWeek(obj){if(!obj||typeof obj!=="object")obj={};if(!obj.byId||typeof obj.byId!=="object")obj.byId={};return obj}
+function normalWeek(obj){if(!obj||typeof obj!=="object")obj={};if(!obj.byId||typeof obj.byId!=="object")obj.byId={};if(!obj.ownerExpenses||typeof obj.ownerExpenses!=="object")obj.ownerExpenses={};return obj}
 function records(charId){if(!S.weeks.byId[charId])S.weeks.byId[charId]=emptyRecords();const r=S.weeks.byId[charId];if(!r.bosses)r.bosses={};if(!r.expenses)r.expenses={};return r}
 function loadWeek(){
   let s=load(keyWeek(),null);
@@ -113,7 +113,15 @@ function dayItems(date,scope){
 }
 function dayIncome(date,scope){return dayItems(date,scope).reduce((a,x)=>a+x.amount,0)}
 function weekIncome(scope){let v=0;allChars().forEach(c=>{if(!isInScope(c,scope))return;BOSSES.forEach(b=>{const r=records(c.id).bosses[b[0]];if(r)v+=savedAmount(b,r)})});return v}
-function dayExpense(date,scope){let v=0;allChars().forEach(c=>{if(isInScope(c,scope))v+=Number(records(c.id).expenses[date]?.amount||0)});return v}
+function ownerExtraExpense(owner,date){
+  return Math.max(0,Number(S.weeks.ownerExpenses?.[owner]?.[date]?.amount||0));
+}
+function dayExpense(date,scope){
+  let v=0;
+  allChars().forEach(c=>{if(isInScope(c,scope))v+=Number(records(c.id).expenses[date]?.amount||0)});
+  OWNERS.forEach(owner=>{if(scope==="all"||scope===owner)v+=ownerExtraExpense(owner,date)});
+  return v;
+}
 function weekExpense(scope){let v=0;for(let i=0;i<7;i++)v+=dayExpense(iso(S.week+i*DAY),scope);return v}
 function monthIncome(scope){let v=0;allChars().forEach(c=>{if(isInScope(c,scope)){const r=S.month.byId[c.id];if(r)v+=savedAmount(BLACK,r)}});return v}
 function notify(msg){const n=$("status");if(!n)return;n.textContent=msg;clearTimeout(notify.t);notify.t=setTimeout(()=>{n.textContent=""},3500)}
@@ -142,6 +150,22 @@ function renderStats(){
   $("expenseTotal").textContent=format(spentWeek);
   $("expenseNet").textContent=format(earnedWeek-spentWeek);
   $("expenseDayTotal").textContent=format(dayExpense(date,scope));
+}
+function renderOwnerExpenses(){
+  const date=dayKey();
+  $("ownerExpenseDate").textContent=date.replaceAll("-",".")+" · 두 사람 추가 사용";
+  $("ownerExpenseGrid").innerHTML=OWNERS.map(owner=>{
+    const record=S.weeks.ownerExpenses?.[owner]?.[date]||{amount:0,note:""};
+    const color=OWNER_META[owner].color;
+    return `<div class="owner-expense-card" data-owner-card="${owner}">
+      <div class="owner-expense-head"><span class="owner-expense-dot" style="background:${color}"></span><strong>${owner}</strong></div>
+      <label class="expense-label" for="shared-${owner}">추가 사용 메소</label>
+      <input id="shared-${owner}" data-owner-extra="${owner}" class="expense-input" type="text" inputmode="decimal" autocomplete="off" placeholder="예: 1억 2000만" value="${record.amount||""}">
+      <label class="expense-label" for="shared-note-${owner}" style="margin-top:10px">사용 내역 (선택)</label>
+      <input id="shared-note-${owner}" data-owner-note="${owner}" class="expense-note" type="text" maxlength="80" autocomplete="off" placeholder="예: 강화, 큐브" value="${esc(record.note||"")}">
+      <div class="owner-expense-result">오늘 총사용 <strong id="ownerTotal-${owner}">${format(dayExpense(date,owner))}</strong></div>
+    </div>`;
+  }).join("");
 }
 function renderExpense(){
   const e=active().expenses[dayKey()]||{amount:0,note:""};
@@ -183,7 +207,7 @@ function renderPreviewTabs(){
 function render(){
   document.documentElement.dataset.theme=S.theme;document.documentElement.dataset.owner=S.owner;
   $("themeToggle").textContent=S.theme==="dark"?"☀ 라이트 모드":"☾ 다크 모드";
-  renderOwners();renderCharacters();renderWeekNav();renderStats();renderExpense();renderBosses();renderMonthly();renderPreviewTabs();renderSyncStatus();renderSyncNotes();drawShort();
+  renderOwners();renderCharacters();renderWeekNav();renderStats();renderExpense();renderOwnerExpenses();renderBosses();renderMonthly();renderSyncStatus();renderSyncNotes();drawShort();
 }
 function addCharacter(){
   const owner=S.owner;const value=$("newCharInput").value.trim();
@@ -251,6 +275,26 @@ function changeBlack(kind,value){
   }
   saveMonth();renderMonthly();renderStats();drawShort();if(kind==="check"||kind==="move"||(S.month.byId[S.charId]&&(kind==="diff"||kind==="party")))maybeSyncCurrentBoss(BLACK,S.month.byId[S.charId],weekKey(),dayKey());
 }
+function editOwnerExpense(e){
+  const input=e.target;
+  const owner=input.dataset.ownerExtra||input.dataset.ownerNote;
+  if(!OWNERS.includes(owner))return;
+  const root=$("ownerExpenseGrid");
+  const amountInput=root.querySelector('[data-owner-extra="'+owner+'"]');
+  const noteInput=root.querySelector('[data-owner-note="'+owner+'"]');
+  const amount=amountFromInput(amountInput.value);
+  if(amount===null||amount>999999999999999){
+    amountInput.setAttribute("aria-invalid","true");
+    notify("금액은 숫자 또는 '1억 2000만' 형식으로 입력해 주세요.");
+    return;
+  }
+  amountInput.removeAttribute("aria-invalid");
+  if(!S.weeks.ownerExpenses[owner])S.weeks.ownerExpenses[owner]={};
+  S.weeks.ownerExpenses[owner][dayKey()]={amount,note:noteInput.value};
+  saveWeek();
+  $("ownerTotal-"+owner).textContent=format(dayExpense(dayKey(),owner));
+  renderStats();drawShort();
+}
 function editExpense(){
   const text=$("expenseInput").value;
   const amount=amountFromInput(text);
@@ -283,55 +327,90 @@ function txt(ctx,v,x,y,size,color,weight,align){
 }
 function fitting(ctx,v,width,start,min){let n=start;while(n>min){ctx.font="900 "+n+'px "Apple SD Gothic Neo",Pretendard,sans-serif';if(ctx.measureText(v).width<=width)break;n-=2}return n}
 function crop(ctx,v,w){while(v.length>1&&ctx.measureText(v).width>w)v=v.slice(0,-2)+"…";return v}
+function drawOwnerHalf(ctx,owner,y,date){
+  const color=OWNER_META[owner].color,isCorn=owner===OWNERS[0];
+  const x=50,w=980,h=788,entries=dayItems(date,owner);
+  const gain=dayIncome(date,owner),spent=dayExpense(date,owner),net=gain-spent;
+  const weekGain=weekIncome(owner),weekSpent=weekExpense(owner),weekNet=weekGain-weekSpent;
+  // Two owner areas are equally tall and use only their own point colors.
+  const panel=ctx.createLinearGradient(x,y,x+w,y+h);
+  panel.addColorStop(0,isCorn?"#29271f":"#30222e");
+  panel.addColorStop(.47,"#1b2431");panel.addColorStop(1,"#151d2a");
+  rounded(ctx,x,y,w,h,30,panel,"#445366");
+  rounded(ctx,x+18,y+18,8,h-36,4,color);
+  const badgeX=x+74;
+  rounded(ctx,badgeX,y+33,82,82,22,isCorn?"#eac65b":"#f66baf");
+  txt(ctx,isCorn?"옥":"콩",badgeX+41,y+92,44,isCorn?"#372a11":"#fff","900","center");
+  txt(ctx,owner,x+176,y+89,46,"#fff9ec","900");
+  const chars=ownerChars(owner).length;
+  txt(ctx,chars+"개 캐릭터 · 오늘 잡은 보스 "+entries.length+"개",x+178,y+126,24,"#bfcadb","700");
+  rounded(ctx,x+w-197,y+52,147,51,16,isCorn?"#554a2a":"#583047");
+  txt(ctx,isCorn?"CORN":"PINK",x+w-124,y+86,25,color,"900","center");
+  // Primary earnings row. Values deliberately use separate cards to aid reading on mobile.
+  const gap=13,pad=32,cardW=(w-2*pad-2*gap)/3,start=x+pad,statY=y+164;
+  const cells=[["오늘 수익",gain,"#fff5d7"],["오늘 사용",spent,"#d3e1ef"],["오늘 순수익",net,net<0?"#ffb7c8":color]];
+  cells.forEach((cell,i)=>{
+    const xx=start+i*(cardW+gap);
+    rounded(ctx,xx,statY,cardW,141,19,"#0e1725","#405065");
+    txt(ctx,cell[0],xx+20,statY+40,25,"#aabdd0","800");
+    const value=compact(cell[1]);
+    txt(ctx,value,xx+20,statY+104,fitting(ctx,value,cardW-36,50,22),cell[2],"900");
+  });
+  rounded(ctx,x+pad,y+323,w-pad*2,107,19,"#243141","#415267");
+  const second=[["주간 수익",weekGain],["주간 사용",weekSpent],["주간 순수익",weekNet]];
+  const wkWidth=(w-pad*2)/3;
+  second.forEach((part,i)=>{
+    const xx=x+pad+wkWidth*i;
+    if(i){ctx.fillStyle="#405264";ctx.fillRect(xx,y+341,2,70)}
+    txt(ctx,part[0],xx+19,y+361,23,"#a6b9cb","750");
+    const value=compact(part[1]);
+    txt(ctx,value,xx+19,y+402,fitting(ctx,value,wkWidth-40,36,20),i===2?(weekNet<0?"#ffb7c8":color):"#f7f0df","900");
+  });
+  txt(ctx,"오늘 잡은 보스",x+pad,y+481,30,"#f8f1e8","900");
+  txt(ctx,entries.length+"개",x+w-pad,y+481,25,color,"900","right");
+  ctx.fillStyle="#415469";ctx.fillRect(x+pad,y+499,w-2*pad,2);
+  if(!entries.length){
+    rounded(ctx,x+pad,y+531,w-2*pad,130,19,"#1e2c3c","#3c4e60");
+    txt(ctx,"체크한 보스가 아직 없어요",x+w/2,y+605,29,"#a8bbcb","800","center");
+  }else{
+    const visible=entries.slice(0,6);
+    visible.forEach((item,i)=>{
+      const col=i>=3?1:0,row=i%3,cx=x+pad+col*(cardW*1.5+gap),cy=y+520+row*75;
+      const ww=(w-pad*2-gap)/2;
+      rounded(ctx,cx,cy,ww,66,14,"#203043","#384e62");
+      rounded(ctx,cx+11,cy+11,8,44,4,color);
+      txt(ctx,crop(ctx,item.name,260),cx+32,cy+28,23,"#f6f8fa","900");
+      const desc=item.c.name+" · "+item.diff+(item.monthly?" · 월간":"");
+      txt(ctx,crop(ctx,desc,240),cx+32,cy+53,18,"#aebfd0","700");
+      const val=compact(item.amount);
+      txt(ctx,val,cx+ww-13,cy+49,fitting(ctx,val,175,23,15),color,"900","right");
+    });
+    if(entries.length>6)txt(ctx,"외 "+(entries.length-6)+"개 보스도 수익 합계에 포함돼요.",x+pad,y+764,21,"#a6b9c9","700");
+  }
+}
 function drawShort(){
   const canvas=$("shortCanvas"),ctx=canvas.getContext("2d");if(!ctx)return;
-  const scope=S.view,date=dayKey(),list=dayItems(date,scope),income=dayIncome(date,scope),expense=dayExpense(date,scope),net=income-expense,weekly=weekIncome(scope),weeklySpend=weekExpense(scope);
-  const base=scope==="all"?"#efca82":scope==="char:"+S.charId?OWNER_META[S.owner].color:OWNER_META[scope]?.color||"#efca82";
-  const bg=ctx.createLinearGradient(0,0,1080,1920);bg.addColorStop(0,"#202c3b");bg.addColorStop(.55,"#111c2b");bg.addColorStop(1,"#0b1321");
-  ctx.fillStyle=bg;ctx.fillRect(0,0,1080,1920);
-  const glow=ctx.createRadialGradient(900,120,1,900,120,680);glow.addColorStop(0,base+"44");glow.addColorStop(1,"#00000000");ctx.fillStyle=glow;ctx.fillRect(0,0,1080,1920);
-  rounded(ctx,68,78,945,65,17,"#0f1a2b","#526477");
-  rounded(ctx,81,90,16,40,8,OWNER_META[OWNERS[0]].color);
-  rounded(ctx,103,90,16,40,8,OWNER_META[OWNERS[1]].color);
-  txt(ctx,"옥수수목금  ×  콩국수목금",145,123,35,"#f2e8d2","900");
-  txt(ctx,"BOSS  /  DAILY SHORTS",68,213,37,base,"900");
-  txt(ctx,date.replaceAll("-",".")+" · "+DAYS[S.day]+"요일",68,268,32,"#adbdcb","800");
-  const title=scope==="all"?"오늘의 합산 수익":scope==="char:"+S.charId?selectedChar().name+" 수익":scope+" 합계";
-  txt(ctx,title,68,350,fitting(ctx,title,940,60,32),"#fff","900");
-  rounded(ctx,62,395,956,390,36,"#203144","#4b5e71");
-  txt(ctx,"오늘 벌어들인 메소",100,456,33,base,"800");
-  txt(ctx,compact(income),100,571,fitting(ctx,compact(income),850,106,45),"#fff3d0","900");
-  ctx.fillStyle="#46596b";ctx.fillRect(102,615,868,2);
-  txt(ctx,"오늘 사용",101,672,31,"#adbece","700");txt(ctx,"−"+compact(expense),977,672,41,"#f9b9c7","900","right");
-  txt(ctx,"오늘 순수익",101,744,33,"#d3e3ea","900");txt(ctx,compact(net),976,744,fitting(ctx,compact(net),580,48,26),net<0?"#ffacc6":base,"900","right");
-  rounded(ctx,62,812,956,151,29,"#182735","#455769");
-  txt(ctx,"이번 주 수익",98,870,28,"#afbecd","700");txt(ctx,compact(weekly),976,870,37,"#f3d394","900","right");
-  txt(ctx,"이번 주 사용",98,932,27,"#afbecd","700");txt(ctx,compact(weeklySpend),976,932,35,"#ffafc1","900","right");
-  txt(ctx,"TODAY'S BOSS",70,1040,35,"#f5f0e4","900");
-  txt(ctx,list.length+" CLEARED",1010,1040,28,"#a5bac9","800","right");
-  ctx.fillStyle="#60758a";ctx.fillRect(67,1060,944,2);
-  if(!list.length){rounded(ctx,69,1100,942,214,23,"#172637","#3b5264");txt(ctx,"아직 잡은 보스가 없어요",99,1200,43,"#d5e3eb","800");txt(ctx,"날짜를 선택하고 보스를 체크해 주세요.",99,1255,27,"#8ea6b6","600")}
-  else{
-    list.slice(0,14).forEach((r,i)=>{
-      const x=69+(i>=7?473:0),y=1090+(i%7)*86;
-      rounded(ctx,x,y,463,76,15,"#1c2d3e","#395165");
-      rounded(ctx,x+10,y+12,46,48,11,OWNER_META[r.c.owner].color);
-      txt(ctx,OWNER_META[r.c.owner].short,x+33,y+46,26,"#161922","900","center");
-      txt(ctx,crop(ctx,r.name,252),x+69,y+30,24,"#e8eff3","900");
-      txt(ctx,r.c.name+" · "+r.diff+(r.monthly?" · 월간":""),x+69,y+59,19,"#aabac8","700");
-      txt(ctx,compact(r.amount),x+448,y+62,fitting(ctx,compact(r.amount),202,25,17),OWNER_META[r.c.owner].color,"900","right");
-    });
-    if(list.length>14)txt(ctx,"외 "+(list.length-14)+"개 보스 · 위 합계에 포함",75,1735,24,"#b2bfcd","700");
-  }
-  rounded(ctx,69,1747,942,102,22,"#253141","#7f7464");
-  txt(ctx,"주간 순수익",98,1810,33,"#d3e1e9","900");
-  txt(ctx,compact(weekly-weeklySpend),976,1812,fitting(ctx,compact(weekly-weeklySpend),580,45,28),base,"900","right");
-  txt(ctx,"검은 마법사는 월간 보스 · 주간 누적 제외",70,1901,24,"#8ca3b6","700");
-  txt(ctx,"SHORTS  ·  9 : 16",1010,1901,22,"#9badba","700","right");
+  const w=1080,h=1920,date=dayKey();
+  ctx.clearRect(0,0,w,h);
+  const bg=ctx.createLinearGradient(0,0,1080,1920);
+  bg.addColorStop(0,"#0f1320");bg.addColorStop(.52,"#0d1420");bg.addColorStop(1,"#10131c");
+  ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+  ctx.fillStyle="#efbc32";ctx.fillRect(50,43,72,7);
+  ctx.fillStyle="#fb5b9d";ctx.fillRect(122,43,72,7);
+  txt(ctx,"오늘의 보스 수익",50,105,60,"#fdf8ee","900");
+  txt(ctx,date.replaceAll("-",".")+"  /  "+DAYS[S.day]+"요일",1025,105,29,"#b8c6d5","800","right");
+  drawOwnerHalf(ctx,OWNERS[0],155,date);
+  drawOwnerHalf(ctx,OWNERS[1],963,date);
+  const todayGain=dayIncome(date,"all"),todaySpend=dayExpense(date,"all");
+  rounded(ctx,50,1773,980,94,21,"#1d2939","#4b596e");
+  txt(ctx,"오늘 합산 순수익",79,1831,31,"#ccd5e0","800");
+  const net=compact(todayGain-todaySpend);
+  txt(ctx,net,1003,1832,fitting(ctx,net,580,49,28),todayGain-todaySpend<0?"#ffa7b9":"#f0d78b","900","right");
+  txt(ctx,"검은 마법사: 잡은 날의 수익에 포함 · 주간 수익에서는 제외",50,1900,23,"#9bacbc","700");
 }
 function download(){
   const canvas=$("shortCanvas"),a=document.createElement("a");
-  a.download="boss-shorts-"+dayKey()+"-"+(S.view.startsWith("char:")?selectedChar().name:S.view)+".png";
+  a.download="boss-shorts-"+dayKey()+"-옥수수-콩국수.png";
   if(canvas.toBlob){
     canvas.toBlob(blob=>{if(!blob){notify("이미지 저장에 실패했어요.");return}const url=URL.createObjectURL(blob);a.href=url;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)},"image/png");
   }else{a.href=canvas.toDataURL("image/png");a.click()}
@@ -616,6 +695,7 @@ function register(){
   $("monthlyCard").addEventListener("click",e=>{if(e.target.id==="moveBlack")changeBlack("move")});
   $("expenseInput").addEventListener("input",editExpense);
   $("expenseNote").addEventListener("input",editExpense);
+  $("ownerExpenseGrid").addEventListener("input",editOwnerExpense);
   $("previewTabs").addEventListener("click",e=>{const b=e.target.closest("[data-scope]");if(!b)return;S.view=b.dataset.scope;renderPreviewTabs();drawShort()});
   $("download").addEventListener("click",download);
   $("syncNow").addEventListener("click",()=>refreshBossSync(true));
