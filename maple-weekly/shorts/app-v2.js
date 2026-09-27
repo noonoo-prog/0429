@@ -103,18 +103,18 @@ function dayItems(date,scope){
     if(!isInScope(c,scope))return;
     BOSSES.forEach(b=>{
       const rec=records(c.id).bosses[b[0]];
-      if(rec&&(rec.day||rec.date)===date)arr.push({c,name:b[0],diff:rec.diff,party:rec.party,monthly:false,amount:earned(b,rec.diff,rec.party)});
+      if(rec&&(rec.day||rec.date)===date)arr.push({c,name:b[0],diff:rec.diff,party:rec.party,monthly:false,amount:savedAmount(b,rec)});
     });
     const black=m[c.id];
-    if(black&&(black.day||black.date)===date)arr.push({c,name:BLACK[0],diff:black.diff,party:black.party,monthly:true,amount:earned(BLACK,black.diff,black.party)});
+    if(black&&(black.day||black.date)===date)arr.push({c,name:BLACK[0],diff:black.diff,party:black.party,monthly:true,amount:savedAmount(BLACK,black)});
   });
   return arr.sort((a,b)=>b.amount-a.amount);
 }
 function dayIncome(date,scope){return dayItems(date,scope).reduce((a,x)=>a+x.amount,0)}
-function weekIncome(scope){let v=0;allChars().forEach(c=>{if(!isInScope(c,scope))return;BOSSES.forEach(b=>{const r=records(c.id).bosses[b[0]];if(r)v+=earned(b,r.diff,r.party)})});return v}
+function weekIncome(scope){let v=0;allChars().forEach(c=>{if(!isInScope(c,scope))return;BOSSES.forEach(b=>{const r=records(c.id).bosses[b[0]];if(r)v+=savedAmount(b,r)})});return v}
 function dayExpense(date,scope){let v=0;allChars().forEach(c=>{if(isInScope(c,scope))v+=Number(records(c.id).expenses[date]?.amount||0)});return v}
 function weekExpense(scope){let v=0;for(let i=0;i<7;i++)v+=dayExpense(iso(S.week+i*DAY),scope);return v}
-function monthIncome(scope){let v=0;allChars().forEach(c=>{if(isInScope(c,scope)){const r=S.month.byId[c.id];if(r)v+=earned(BLACK,r.diff,r.party)}});return v}
+function monthIncome(scope){let v=0;allChars().forEach(c=>{if(isInScope(c,scope)){const r=S.month.byId[c.id];if(r)v+=savedAmount(BLACK,r)}});return v}
 function notify(msg){const n=$("status");if(!n)return;n.textContent=msg;clearTimeout(notify.t);notify.t=setTimeout(()=>{n.textContent=""},3500)}
 function renderOwners(){
   $("ownerTabs").innerHTML=OWNERS.map(owner=>`<button type="button" class="owner-tab ${S.owner===owner?"active":""}" data-owner="${owner}"><span class="owner-dot"></span><span>${owner}</span><small>${ownerChars(owner).length}캐릭터</small></button>`).join("");
@@ -155,21 +155,21 @@ function renderBosses(){
   const rec=active().bosses;const date=dayKey();
   $("bossCount").textContent=counted()+" / 12";
   $("bossList").innerHTML=BOSSES.map((b,i)=>{
-    const r=rec[b[0]],p=r||pref(b),other=r&&(r.day||r.date)!==date;
+    const r=rec[b[0]],p=configuration(selectedChar(),b)||r||pref(b),other=r&&(r.day||r.date)!==date;const pending=SYNC.pending.has(syncKey(selectedChar(),remoteBossName(b[0]),weekKey()));
     return `<article class="boss-card ${r?"done":""} ${other?"other-day":""}">
-      <label class="boss-top"><input type="checkbox" data-kind="check" data-index="${i}" ${r?"checked":""}><span class="boss-name">${b[0]}</span>${r?`<span class="done-badge">${other?esc((r.day||r.date).slice(5).replace("-","/"))+" 완료":"오늘 완료"}</span>`:""}</label>
-      <div class="boss-controls"><select aria-label="${b[0]} 난이도" data-kind="diff" data-index="${i}">${optionsFor(b,p.diff)}</select><select aria-label="${b[0]} 파티 인원" data-kind="party" data-index="${i}">${partyOptions(p.party)}</select></div>
-      <div class="price-line"><span>내 결정석 수익</span><strong>${compact(earned(b,p.diff,p.party))}</strong></div>
+      <label class="boss-top"><input type="checkbox" data-kind="check" data-index="${i}" ${r?"checked":""} ${pending?"disabled":""}><span class="boss-name">${b[0]}</span>${r?`<span class="done-badge">${other?esc((r.day||r.date).slice(5).replace("-","/"))+" 완료":"오늘 완료"}</span>`:""}</label>
+      <div class="boss-controls"><select aria-label="${b[0]} 난이도" data-kind="diff" data-index="${i}" ${configuration(selectedChar(),b)?"disabled title=\"보스판에서 난이도 변경\"":""}>${optionsFor(b,p.diff)}</select><select aria-label="${b[0]} 파티 인원" data-kind="party" data-index="${i}" ${configuration(selectedChar(),b)?"disabled title=\"보스판에서 인원 변경\"":""}>${partyOptions(p.party)}</select></div>
+      <div class="price-line"><span>내 결정석 수익</span><strong>${compact(r?savedAmount(b,r):earned(b,p.diff,p.party))}</strong></div>
       ${other?`<button type="button" class="move-button" data-kind="move" data-index="${i}">선택 날짜로 이동 →</button>`:""}
     </article>`;
   }).join("");
 }
 function renderMonthly(){
-  const r=S.month.byId[S.charId],p=r||pref(BLACK),other=r&&(r.day||r.date)!==dayKey();
+  const r=S.month.byId[S.charId],p=configuration(selectedChar(),BLACK)||r||pref(BLACK),other=r&&(r.day||r.date)!==dayKey();
   $("monthlyCard").innerHTML=`<article class="boss-card ${r?"done":""}">
     <label class="boss-top"><input type="checkbox" id="blackCheck" ${r?"checked":""}><span class="boss-name">검은 마법사 · 월 1회</span>${r?`<span class="done-badge">${esc((r.day||r.date).slice(5).replace("-","/"))} 완료</span>`:""}</label>
-    <div class="boss-controls"><select id="blackDiff">${optionsFor(BLACK,p.diff)}</select><select id="blackParty">${partyOptions(p.party)}</select></div>
-    <div class="price-line"><span>월간 별도 수익</span><strong>${compact(earned(BLACK,p.diff,p.party))}</strong></div>
+    <div class="boss-controls"><select id="blackDiff" ${configuration(selectedChar(),BLACK)?"disabled":""}>${optionsFor(BLACK,p.diff)}</select><select id="blackParty" ${configuration(selectedChar(),BLACK)?"disabled":""}>${partyOptions(p.party)}</select></div>
+    <div class="price-line"><span>월간 별도 수익</span><strong>${compact(r?savedAmount(BLACK,r):earned(BLACK,p.diff,p.party))}</strong></div>
     ${other?'<button type="button" class="move-button" id="moveBlack">선택 날짜로 이동 →</button>':""}
   </article>`;
   $("monthLabel").textContent=monthKey().replace("-","년 ")+"월 · "+selectedChar().name;
@@ -182,7 +182,7 @@ function renderPreviewTabs(){
 function render(){
   document.documentElement.dataset.theme=S.theme;document.documentElement.dataset.owner=S.owner;
   $("themeToggle").textContent=S.theme==="dark"?"☀ 라이트 모드":"☾ 다크 모드";
-  renderOwners();renderCharacters();renderWeekNav();renderStats();renderExpense();renderBosses();renderMonthly();renderPreviewTabs();drawShort();
+  renderOwners();renderCharacters();renderWeekNav();renderStats();renderExpense();renderBosses();renderMonthly();renderPreviewTabs();renderSyncStatus();renderSyncNotes();drawShort();
 }
 function addCharacter(){
   const owner=S.owner;const value=$("newCharInput").value.trim();
@@ -210,7 +210,7 @@ function changeBoss(t){
     const p=r||pref(b),diff=k==="diff"?t.value:p.diff,party=k==="party"?Number(t.value):p.party;
     setPref(b,diff,party);if(r){r.diff=diff;r.party=party}
   }
-  saveWeek();const list=$("bossList"),y=list.scrollTop;renderBosses();list.scrollTop=y;renderStats();drawShort();
+  saveWeek();const changed=active().bosses[b[0]]||null;const list=$("bossList"),y=list.scrollTop;renderBosses();list.scrollTop=y;renderStats();drawShort();if(k==="check"||k==="move"||(changed&&(k==="diff"||k==="party")))maybeSyncCurrentBoss(b,changed,weekKey(),dayKey());
 }
 function changeBlack(kind,value){
   const r=S.month.byId[S.charId],p=r||pref(BLACK);
@@ -221,7 +221,7 @@ function changeBlack(kind,value){
     const diff=kind==="diff"?value:p.diff,party=kind==="party"?Number(value):p.party;
     setPref(BLACK,diff,party);if(r){r.diff=diff;r.party=party}
   }
-  saveMonth();renderMonthly();renderStats();drawShort();
+  saveMonth();renderMonthly();renderStats();drawShort();if(kind==="check"||kind==="move"||(S.month.byId[S.charId]&&(kind==="diff"||kind==="party")))maybeSyncCurrentBoss(BLACK,S.month.byId[S.charId],weekKey(),dayKey());
 }
 function editExpense(){
   const text=$("expenseInput").value;
@@ -233,10 +233,10 @@ function editExpense(){
 }
 function navigateWeek(ms){
   if(ms<BASE)return;S.week=ms;S.day=ms===currentWeek()?Math.min(6,Math.max(0,Math.floor((todayKST()-ms)/DAY))):0;
-  S.follow=ms===currentWeek();loadWeek();loadMonth();render();
+  S.follow=ms===currentWeek();loadWeek();loadMonth();mergeRemoteRecords();render();
 }
 function todayKST(){const d=new Date(Date.now()+9*3600000);return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())}
-function setDay(day){S.day=day;loadMonth();render()}
+function setDay(day){S.day=day;loadMonth();mergeRemoteRecords();render()}
 function rounded(ctx,x,y,w,h,r,fill,stroke){
   ctx.beginPath();
   if(ctx.roundRect)ctx.roundRect(x,y,w,h,r);
@@ -308,6 +308,208 @@ function download(){
     canvas.toBlob(blob=>{if(!blob){notify("이미지 저장에 실패했어요.");return}const url=URL.createObjectURL(blob);a.href=url;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)},"image/png");
   }else{a.href=canvas.toDataURL("image/png");a.click()}
 }
+
+/* The existing boss board owns the shared checklist.
+   No PIN or administrator credential is used or stored here. */
+const BOSS_API="https://ibqpjcedzcllacbamrnu.supabase.co/functions/v1/boss-board-api";
+const BOSS_PUBLIC_KEY="sb_publishable_s-EiUNh66D17Xd3JFGUyvA_aNEDNMKq";
+const REMOTE_OWNER_NAMES={"옥수수목금":"오똑","콩국수목금":"츠죠"};
+const REMOTE_NAMES={"가디언 엔젤 슬라임":"가엔슬","진 힐라":"진힐라","선택받은 세렌":"세렌","감시자 칼로스":"칼로스","최초의 대적자":"대적자","찬란한 흉성":"흉성"};
+const LOCAL_NAMES=Object.fromEntries(BOSSES.concat([BLACK]).map(b=>[REMOTE_NAMES[b[0]]||b[0],b[0]]));
+const SOLO_BOSSES=new Set(["데미안","루시드","윌","더스크","진힐라","듄켈"]);
+const SYNC={owners:[],rows:[],busy:false,pending:new Set(),ready:false,lastCheck:0,lastOwners:0,error:""};
+function remoteOwner(owner){return SYNC.owners.find(o=>o.name===REMOTE_OWNER_NAMES[owner])||null}
+function remoteBossName(name){return REMOTE_NAMES[name]||name}
+function linked(c){return c&&c.remoteCharacter&&remoteOwner(c.owner)&&remoteOwner(c.owner).board&&remoteOwner(c.owner).board.players.includes(c.remoteCharacter)}
+function syncKey(c,boss,week){const o=remoteOwner(c.owner);return o?o.id+"|"+(week||weekKey())+"|"+c.remoteCharacter+"|"+boss:""}
+function configuration(c,b){
+  const o=remoteOwner(c.owner),name=remoteBossName(b[0]);
+  if(!o||!linked(c)||!o.board)return null;
+  const pi=o.board.players.indexOf(c.remoteCharacter);
+  const row=(o.board.cells||{})[name];
+  const cell=Array.isArray(row)?row[pi]:null;
+  if(!cell||!cell.difficulty||cell.difficulty==="x")return null;
+  const diff=cell.difficulty,party=SOLO_BOSSES.has(name)?1:Math.max(1,Number(cell.count)||1);
+  if(!b[1].some(x=>x[0]===diff))return null;
+  return{diff,party,amount:earned(b,diff,party)};
+}
+function savedAmount(b,r){return r&&r.fromBoss===true&&Number.isFinite(Number(r.mesoEarned))?Math.max(0,Number(r.mesoEarned)):earned(b,r.diff,r.party)}
+async function bossApi(action,payload){
+  const res=await fetch(BOSS_API,{
+    method:"POST",mode:"cors",cache:"no-store",
+    headers:{"Content-Type":"application/json","apikey":BOSS_PUBLIC_KEY},
+    body:JSON.stringify(Object.assign({action},payload||{}))
+  });
+  const raw=await res.text();let data;
+  try{data=JSON.parse(raw)}catch{data={}}
+  if(!res.ok||data.ok===false)throw new Error(data.error||"연동 서버 요청 실패 ("+res.status+")");
+  return data;
+}
+function importBossCharacters(){
+  let changed=false,added=0;
+  OWNERS.forEach(owner=>{
+    const board=remoteOwner(owner)?.board;
+    if(!board||!Array.isArray(board.players))return;
+    // Preserve existing records stored under the initial default character.
+    const primary=owner==="옥수수목금"?"corn-1":"bean-1";
+    const placeholder=owner==="옥수수목금"?"옥수수 1":"콩국수 1";
+    const main=allChars().find(c=>c.id===primary&&c.owner===owner&&c.name===placeholder&&!c.remoteCharacter);
+    if(main&&board.players.includes(owner)&&!ownerChars(owner).some(c=>c.name===owner&&c.id!==main.id)){
+      main.name=owner;main.remoteCharacter=owner;changed=true;
+    }
+    board.players.forEach(name=>{
+      const nick=String(name||"").trim();
+      if(!nick)return;
+      let c=ownerChars(owner).find(x=>x.remoteCharacter===nick)||ownerChars(owner).find(x=>x.name===nick);
+      if(c){
+        if(!c.remoteCharacter){c.remoteCharacter=nick;changed=true}
+        return;
+      }
+      const id=(owner===OWNERS[0]?"board-c-":"board-b-")+Array.from(nick).map(x=>x.codePointAt(0).toString(36)).join("-");
+      if(allChars().some(x=>x.id===id))return;
+      S.profiles.characters.push({id,owner,name:nick,remoteCharacter:nick});added++;changed=true;
+    });
+  });
+  if(changed)save(KEY_PROFILES,S.profiles);
+  return added;
+}
+function remoteRowsFor(c,week){
+  const o=remoteOwner(c.owner);
+  if(!o||!linked(c))return[];
+  return SYNC.rows.filter(r=>r.owner_id===o.id&&r.character_name===c.remoteCharacter&&r.week_start===week);
+}
+function mergeRemoteRecords(){
+  if(!SYNC.ready)return false;
+  let changedWeek=false,changedMonth=false;
+  allChars().forEach(c=>{
+    if(!linked(c))return;
+    const rec=records(c.id).bosses;
+    remoteRowsFor(c,weekKey()).forEach(r=>{
+      const name=LOCAL_NAMES[r.boss_name];if(!name||name===BLACK[0])return;
+      if(SYNC.pending.has(syncKey(c,r.boss_name,r.week_start)))return;
+      if(!r.completed){
+        if(rec[name]){delete rec[name];changedWeek=true}
+        return;
+      }
+      const b=BOSSES.find(x=>x[0]===name);if(!b)return;
+      const config=configuration(c,b),before=rec[name]||{};
+      const diff=config?.diff||before.diff||defaultDiff(b),party=config?.party||before.party||1;
+      const next={day:r.run_date||r.week_start,diff,party,mesoEarned:Math.max(0,Number(r.meso_earned)||0),fromBoss:true};
+      if(JSON.stringify(before)!==JSON.stringify(next)){rec[name]=next;changedWeek=true}
+    });
+    // Black Mage is monthly and may have been checked in a different week.
+    const month=monthKey();
+    const candidate=SYNC.rows.filter(r=>r.owner_id===remoteOwner(c.owner).id&&r.character_name===c.remoteCharacter&&r.boss_name===BLACK[0]&&(r.run_date||r.week_start).slice(0,7)===month)
+      .sort((a,b)=>String(a.updated_at||"").localeCompare(String(b.updated_at||"")));
+    if(!candidate.length)return;
+    const r=candidate[candidate.length-1];
+    if(SYNC.pending.has(syncKey(c,BLACK[0],r.week_start)))return;
+    if(!r.completed){
+      if(S.month.byId[c.id]){delete S.month.byId[c.id];changedMonth=true}
+      return;
+    }
+    const old=S.month.byId[c.id]||{},cfg=configuration(c,BLACK);
+    const next={day:r.run_date||r.week_start,diff:cfg?.diff||old.diff||defaultDiff(BLACK),party:cfg?.party||old.party||1,mesoEarned:Math.max(0,Number(r.meso_earned)||0),fromBoss:true};
+    if(JSON.stringify(old)!==JSON.stringify(next)){S.month.byId[c.id]=next;changedMonth=true}
+  });
+  if(changedWeek)saveWeek();
+  if(changedMonth)saveMonth();
+  return changedWeek||changedMonth;
+}
+function renderSyncStatus(){
+  const el=$("syncState"),c=selectedChar();
+  const o=remoteOwner(S.owner);
+  if(!SYNC.ready){
+    el.textContent=SYNC.error?"보스판 연결 실패 · 쇼츠 기록은 정상 사용 가능":"보스판 체크 기록 연결 중…";
+  }else{
+    const nick=linked(c)?c.remoteCharacter:null;
+    el.textContent=nick?"✓ 보스판 연결됨 · "+o.name+" → "+nick:"보스판 미연결 · 캐릭터 연결을 선택해 주세요";
+  }
+  el.classList.toggle("linked",!!linked(c));
+  $("syncNow").disabled=SYNC.busy;
+  $("syncNow").textContent=SYNC.busy?"불러오는 중…":"보스판 동기화";
+  const select=$("remoteNameSelect"),prior=select.value;
+  const players=o?.board?.players||[];
+  select.innerHTML='<option value="">연결할 보스판 캐릭터 선택</option>'+players.map(n=>{
+    const other=ownerChars(S.owner).find(x=>x.id!==c.id&&x.remoteCharacter===n);
+    return '<option value="'+esc(n)+'" '+(other?'disabled':'')+'>' +esc(n)+(other?' · 다른 캐릭터와 연결됨':'')+'</option>';
+  }).join("");
+  select.value=c.remoteCharacter&&players.includes(c.remoteCharacter)?c.remoteCharacter:(players.includes(prior)?prior:"");
+  $("remoteNameSelect").disabled=!SYNC.ready;
+  $("linkBossChar").disabled=!SYNC.ready;
+  $("unlinkBossChar").disabled=!c.remoteCharacter;
+}
+function renderSyncNotes(){
+  const c=selectedChar(),linkedNow=!!linked(c),board=remoteOwner(c.owner)?.board;
+  const pi=linkedNow?board.players.indexOf(c.remoteCharacter):-1;
+  $("bossSyncNote").textContent=!linkedNow?"보스판 닉네임과 연결하면 체크 상태가 양쪽에 반영돼요.":("보스판에 설정된 보스만 양쪽에서 체크됩니다. 설정되지 않은 보스와 파풀라투스는 쇼츠에서만 기록돼요.");
+}
+function connectBossChar(){
+  const name=$("remoteNameSelect").value,c=selectedChar();
+  if(!name){notify("연결할 보스판 캐릭터를 선택해 주세요.");return}
+  if(ownerChars(c.owner).some(x=>x.id!==c.id&&x.remoteCharacter===name)){notify("이미 다른 쇼츠 캐릭터와 연결된 닉네임이에요.");return}
+  c.remoteCharacter=name;save(KEY_PROFILES,S.profiles);
+  mergeRemoteRecords();render();
+  notify("보스판 '"+name+"'와 연결했어요.");
+}
+async function refreshBossSync(forceOwners){
+  if(SYNC.busy)return;
+  if(typeof fetch!=="function"){SYNC.error="network unavailable";renderSyncStatus();return}
+  SYNC.busy=true;renderSyncStatus();
+  try{
+    if(forceOwners||!SYNC.owners.length||Date.now()-SYNC.lastOwners>60000){
+      const data=await bossApi("bootstrap");
+      SYNC.owners=(data.owners||[]).filter(o=>o.name==="오똑"||o.name==="츠죠");
+      SYNC.lastOwners=Date.now();
+      importBossCharacters();
+    }
+    const data=await bossApi("checklist_bootstrap");
+    SYNC.rows=Array.isArray(data.bossRunChecklists)?data.bossRunChecklists:[];
+    SYNC.ready=true;SYNC.error="";SYNC.lastCheck=Date.now();
+    mergeRemoteRecords();render();
+  }catch(err){
+    SYNC.error=String(err?.message||err);
+    if(!SYNC.ready)render();
+    renderSyncStatus();
+    if(forceOwners)notify("보스판 연결 실패: "+SYNC.error);
+  }finally{SYNC.busy=false;renderSyncStatus()}
+}
+function updateRemoteRow(item){
+  const idx=SYNC.rows.findIndex(r=>r.owner_id===item.owner_id&&r.week_start===item.week_start&&r.character_name===item.character_name&&r.boss_name===item.boss_name);
+  if(idx>=0)SYNC.rows[idx]=item;else SYNC.rows.push(item);
+}
+function pushBossCheck(c,b,week,day,rec){
+  if(!SYNC.ready||!linked(c))return;
+  const bossName=remoteBossName(b[0]),cfg=configuration(c,b);
+  if(!LOCAL_NAMES[bossName]||!cfg){
+    if(rec)notify(b[0]+"은(는) 보스 현황판에 설정되지 않아 쇼츠에만 저장했어요.");
+    return;
+  }
+  const key=syncKey(c,bossName,week);
+  if(SYNC.pending.has(key))return;
+  const remoteRec=rec?{...rec,diff:cfg.diff,party:cfg.party}:null;
+  // Use the original board's configured difficulty/party payout, matching /boss/.
+  const mesoEarned=remoteRec?cfg.amount:0;
+  if(rec){
+    rec.diff=cfg.diff;rec.party=cfg.party;rec.mesoEarned=mesoEarned;rec.fromBoss=true;
+    if(b[0]===BLACK[0])saveMonth();else saveWeek();
+  }
+  SYNC.pending.add(key);
+  renderBosses();renderMonthly();renderStats();drawShort();
+  bossApi("save_boss_run_check",{
+    ownerId:remoteOwner(c.owner).id,weekStart:week,runDate:day,
+    characterName:c.remoteCharacter,bossName,completed:!!rec,mesoEarned
+  }).then(data=>{
+    if(data.item)updateRemoteRow(data.item);
+    SYNC.pending.delete(key);mergeRemoteRecords();
+    render();notify(b[0]+" 체크가 보스판에도 저장됐어요.");
+  }).catch(err=>{
+    SYNC.pending.delete(key);render();
+    notify("보스판 저장 실패: "+(err?.message||"연결 오류")+" · 쇼츠 기록만 남았어요.");
+  });
+}
+function maybeSyncCurrentBoss(b,rec,week,day){pushBossCheck(selectedChar(),b,week,day,rec)}
+
 function register(){
   $("ownerTabs").addEventListener("click",e=>{const b=e.target.closest("[data-owner]");if(!b)return;S.owner=b.dataset.owner;const c=ownerChars(S.owner)[0];selectChar(c.id)});
   $("characterList").addEventListener("click",e=>{const b=e.target.closest("[data-char-id]");if(b)selectChar(b.dataset.charId)});
@@ -328,12 +530,16 @@ function register(){
   $("expenseNote").addEventListener("input",editExpense);
   $("previewTabs").addEventListener("click",e=>{const b=e.target.closest("[data-scope]");if(!b)return;S.view=b.dataset.scope;renderPreviewTabs();drawShort()});
   $("download").addEventListener("click",download);
+  $("syncNow").addEventListener("click",()=>refreshBossSync(true));
+  $("linkBossChar").addEventListener("click",connectBossChar);
+  $("unlinkBossChar").addEventListener("click",()=>{const c=selectedChar();delete c.remoteCharacter;save(KEY_PROFILES,S.profiles);render();notify("보스판 연결을 해제했어요. 쇼츠 기록은 그대로예요.")});
+
 }
 function boot(){
   loadProfiles();S.prefs=load(KEY_PREFS,{})||{};S.theme=load(KEY_THEME,"dark")==="light"?"light":"dark";
   S.week=currentWeek();S.day=Math.min(6,Math.max(0,Math.floor((todayKST()-S.week)/DAY)));
-  loadWeek();loadMonth();register();render();
-  setInterval(()=>{const w=currentWeek();if(S.follow&&S.week!==w){navigateWeek(w);notify("새 주간으로 넘어왔어요. 지난 기록은 지난주에서 볼 수 있어요.")}},30000);
+  loadWeek();loadMonth();register();render();refreshBossSync(true);
+  setInterval(()=>{const w=currentWeek();if(S.follow&&S.week!==w){navigateWeek(w);notify("새 주간으로 넘어왔어요. 지난 기록은 지난주에서 볼 수 있어요.")}if(!document.hidden&&Date.now()-SYNC.lastCheck>9000)refreshBossSync(false)},4000);
 }
 boot();
 })();
