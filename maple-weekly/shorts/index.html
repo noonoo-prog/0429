@@ -3,464 +3,111 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#101827">
-<title>보스 수익 쇼츠 | 옥수수목금 × 콩국수목금</title>
-<meta name="description" content="요일별 보스 결정석 수익 기록과 9:16 유튜브 쇼츠 이미지 제작">
+<meta name="theme-color" content="#141822">
+<title>옥수수목금 × 콩국수목금 | 쇼츠 보스 수익</title>
+<meta name="description" content="캐릭터별 보스 결정석 수익·주간 사용 메소·순수익을 기록하고 유튜브 쇼츠용 이미지를 저장하세요.">
 <meta property="og:title" content="옥수수목금 × 콩국수목금 · 보스 수익">
-<style>
-:root{font-family:Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;color:#eaf1fb;background:#0b121e;font-synthesis:none}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse 82% 45% at 80% 0%,#1e3141 0%,#0b121e 60%),#0b121e;color:#eaf1fb}
-button,select,input{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.4}
-.shell{max-width:1340px;margin:auto;padding:28px 22px 58px}
-.top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:26px}
-.eyebrow{color:#e6c570;letter-spacing:.2em;font-weight:900;font-size:11px}.top h1{margin:7px 0 5px;font-size:clamp(23px,3vw,36px);letter-spacing:-.05em}
-.top p{margin:0;color:#9daec3;font-size:13px;line-height:1.6}
-.top-chip{border:1px solid #4e4950;background:#232732;color:#f0dca6;padding:9px 13px;border-radius:100px;font-size:12px;white-space:nowrap}
-.layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(310px,.8fr);gap:24px;align-items:start}
-.controls,.preview-section{min-width:0}
-.panel{border:1px solid #2a3a4d;background:linear-gradient(165deg,#162337,#111c2c);border-radius:19px;padding:19px;margin-bottom:15px;box-shadow:0 14px 30px #030b164d}
-.panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
-.panel-heading h2{font-size:15px;letter-spacing:-.04em;margin:0}
-.muted{color:#9baec1;font-size:12px;line-height:1.6}
-.char-tabs,.week-actions,.days,.preview-tabs{display:flex;gap:7px;flex-wrap:wrap}
-.char-button{flex:1;min-width:124px;min-height:48px;padding:7px 11px;border-radius:11px;text-align:left;border:1px solid #3a4d62;background:#1a2a3c;color:#bdd0df;font-size:14px;font-weight:850}
-.char-button[data-char="옥수수목금"]{--accent:#f4c85a}.char-button[data-char="콩국수목금"]{--accent:#79d4cf}
-.char-button.active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:#263345;color:#fff}
-.char-button:before{content:"";display:inline-block;width:8px;height:8px;border-radius:100%;background:var(--accent);margin-right:8px}
-.week-actions{align-items:center;justify-content:space-between}.week-actions button,.preview-tabs button{border-radius:9px;border:1px solid #3b4e63;color:#dce8f2;background:#213045;min-height:35px;padding:0 12px;font-size:12px;font-weight:700}
-.week-actions button.active,.preview-tabs button.active{background:#e5c779;border-color:#e5c779;color:#1b2430}
-.week-range{display:block;margin:12px 0 0;color:#cad9e8;font-size:13px;font-weight:800}
-.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
-.day{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:4px;align-items:center;min-height:62px;padding:7px 2px;background:#1b2a3b;border:1px solid #35485a;color:#d0dce7;border-radius:10px}
-.day .day-name{font-size:13px;font-weight:900}.day .day-date{font-size:10px;color:#8da0b6}
-.day[data-day="토"] .day-name{color:#7bbafa}.day[data-day="일"] .day-name{color:#f8a1b6}
-.day.active{background:#e8c977;border-color:#e8c977;color:#152236;box-shadow:0 4px 20px #c7a55d33}
-.day.active .day-name,.day.active .day-date{color:#172238}
-.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:13px 0 0}
-.stat{min-width:0;border:1px solid #37495a;background:#0d1928;border-radius:12px;padding:12px 10px}
-.stat span{display:block;color:#a5b6c6;font-size:11px;margin-bottom:8px}.stat strong{display:block;color:#fbf4df;font-size:clamp(12px,1.8vw,16px);line-height:1.3;letter-spacing:-.04em;overflow-wrap:anywhere}
-.stat:first-child{background:#292c31;border-color:#746342}
-.note{border-left:2px solid #bc9d55;padding-left:9px;margin:11px 0 0;color:#9caec1;font-size:11px;line-height:1.6}
-.boss-count{color:#e8cd85;background:#292e37;border:1px solid #5a4d31;padding:4px 8px;border-radius:7px;font-size:12px;font-weight:800}
-.boss-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:640px;overflow-y:auto;padding-right:4px;scrollbar-color:#475d72 transparent}
-.boss-card{border:1px solid #2f4052;background:#111e2e;border-radius:12px;padding:12px;min-width:0}
-.boss-card.done{background:#1b302f;border-color:#508d77}
-.boss-card.other-day{background:#222737;border-color:#75664e}
-.boss-top{display:flex;align-items:center;gap:9px;cursor:pointer;min-width:0}
-.boss-top input{width:19px;height:19px;accent-color:#e8c977;flex:none;cursor:pointer}
-.boss-name{font-weight:800;font-size:13px;min-width:0;overflow-wrap:anywhere;line-height:1.35}
-.done-badge{margin-left:auto;flex:none;color:#96d8ba;font-size:10px;border:1px solid #507c6e;border-radius:99px;padding:2px 5px}
-.other-day .done-badge{color:#e3c588;border-color:#736a4c}
-.boss-controls{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:6px;margin-top:10px}
-.boss-controls select,.monthly-controls select{min-width:0;width:100%;border:1px solid #3f5365;color:#e0ebf1;background:#243449;border-radius:7px;min-height:34px;padding:0 5px;font-size:12px}
-.price-line{display:flex;justify-content:space-between;align-items:center;gap:5px;margin:9px 0 0;color:#a5b5c4;font-size:11px}
-.price-line strong{font-size:12px;color:#f3da90;white-space:nowrap}
-.move-button{margin-top:8px;background:#303545;color:#efdeb3;border:1px solid #6c6248;border-radius:7px;padding:6px 9px;font-size:11px;width:100%}
-.monthly-card{margin-top:5px}.monthly-card .boss-controls{grid-template-columns:minmax(0,1fr) 95px}
-.monthly-stats{display:flex;justify-content:space-between;gap:10px;margin:12px 0 0;color:#b6c2ce;font-size:12px}.monthly-stats strong{color:#ead394}
-.preview-section{position:sticky;top:14px}
-.preview-panel{padding:16px;border:1px solid #34465b;border-radius:20px;background:#121e30;box-shadow:0 18px 40px #030b16aa}
-.preview-header{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 13px;gap:10px}
-.preview-header h2{margin:0;font-size:15px}.preview-header span{color:#9aaec0;font-size:11px}
-.preview-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-bottom:12px}
-.preview-tabs button{min-width:0;padding:0 5px;white-space:nowrap;font-size:11px}
-.canvas-frame{max-width:400px;margin:auto;border:1px solid #3c4e60;border-radius:13px;overflow:hidden;background:#101c2b;box-shadow:0 9px 25px #010a1599}
-#shortCanvas{display:block;width:100%;height:auto;aspect-ratio:9/16}
-.download{margin-top:13px;width:100%;min-height:45px;border:0;border-radius:11px;color:#142130;background:linear-gradient(105deg,#f3d48b,#efd38b,#c9edd0);font-size:14px;font-weight:900;letter-spacing:-.02em}
-.download:hover{filter:brightness(1.08)}
-.bottom-note{margin:9px 2px 0;color:#9cadaf;font-size:11px;line-height:1.7}
-.status{margin-top:10px;min-height:16px;color:#d9c17d;font-size:11px}
-@media(max-width:1020px){.layout{grid-template-columns:minmax(0,1.2fr) minmax(280px,.85fr);gap:14px}.shell{padding:19px 14px 40px}.panel{padding:15px}.boss-list{grid-template-columns:1fr}}
-@media(max-width:700px){.top{margin-bottom:18px;align-items:start}.top-chip{display:none}.layout{display:flex;flex-direction:column}.controls,.preview-section{width:100%}.preview-section{position:static;order:-1}.preview-panel{padding:14px}.canvas-frame{max-width:320px}.panel{margin-bottom:11px}.boss-list{grid-template-columns:1fr;max-height:570px}.stat strong{font-size:13px}.week-actions button{min-height:34px}.top h1{font-size:27px}.top p{font-size:12px}}
-@media(min-width:470px) and (max-width:700px){.boss-list{grid-template-columns:1fr 1fr}}
-@media(prefers-reduced-motion:no-preference){.day,.char-button,.download{transition:.16s ease}}
-</style>
+<meta property="og:description" content="캐릭터별 주간 보스 수익을 기록하고 쇼츠 이미지로 저장">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://noonoo-prog.github.io/0429/shorts/">
+<link rel="stylesheet" href="./style-v2.css?v=20260928b">
 </head>
 <body>
-<div class="shell">
-<header class="top">
- <div><div class="eyebrow">BOSS INCOME · DAILY SHORTS</div><h1>주간 보스 수익 기록</h1><p>옥수수목금 × 콩국수목금 · 체크하고 세로 이미지로 저장</p></div>
- <div class="top-chip">매주 목요일 00:00 KST 갱신</div>
-</header>
-<main class="layout">
- <section class="controls">
-  <div class="panel">
-   <div class="panel-heading"><h2>캐릭터 선택</h2><span class="muted">각각 별도 기록</span></div>
-   <div id="charTabs" class="char-tabs"></div>
+<main class="shell">
+ <header class="top">
+  <div class="top-center">
+   <p class="top-label">BOSS INCOME · DAILY SHORTS</p>
+   <h1>오늘 보스, 얼마 벌었지?</h1>
+   <p>옥수수목금 <span style="color:var(--yellow)">●</span> 콩국수목금 <span style="color:var(--pink)">●</span> 캐릭터별 수익 기록과 쇼츠 이미지</p>
   </div>
-  <div class="panel">
-   <div class="panel-heading"><h2>주차 · 날짜</h2><span class="muted">목요일부터 수요일까지</span></div>
-   <div class="week-actions">
-     <button id="prevWeek" type="button">〈 지난주</button>
-     <button id="thisWeek" type="button">이번 주</button>
-     <button id="nextWeek" type="button">다음주 〉</button>
-   </div>
-   <div class="week-range" id="weekRange"></div>
-   <div class="days" id="dayTabs" style="margin-top:12px"></div>
-   <div class="summary">
-     <div class="stat"><span>선택 캐릭터 · 오늘</span><strong id="statDay">0 메소</strong></div>
-     <div class="stat"><span>선택 캐릭터 · 주간</span><strong id="statWeek">0 메소</strong></div>
-     <div class="stat"><span>두 캐릭터 · 오늘</span><strong id="statBoth">0 메소</strong></div>
-   </div>
-   <p class="note">하루 합계에는 당일 검은 마법사 수익이 포함됩니다. 주간 합계에서는 월간 보스인 검은 마법사를 제외합니다.</p>
+  <div class="top-right">
+   <span class="color-key corn"><i></i>옥수수목금</span>
+   <span class="color-key"><i></i>콩국수목금</span>
+   <button id="themeToggle" class="theme-toggle" type="button" title="다크/라이트 모드 전환">☀ 라이트 모드</button>
   </div>
-  <div class="panel">
-    <div class="panel-heading"><h2>주간 보스 체크</h2><span class="boss-count" id="bossCount">0 / 12</span></div>
-    <p class="muted" style="margin:0 0 13px">잡은 날짜를 고른 다음 체크해요. 결정석 가격은 1인 기준이며, 2인 이상이면 인원수로 나눠 계산해요.</p>
-    <div class="boss-list" id="bossList"></div>
-  </div>
-  <div class="panel">
-    <div class="panel-heading"><h2>월간 · 검은 마법사</h2><span class="boss-count">월 1회</span></div>
-    <p class="muted" style="margin:0 0 12px">월별로 따로 기록해요. 주간 12회 제한과 주간 수익에는 포함하지 않아요.</p>
-    <div class="monthly-card" id="monthlyCard"></div>
-    <div class="monthly-stats"><span id="monthLabel">이번 달 검은 마법사</span><strong id="monthAmount">0 메소</strong></div>
-  </div>
-  <div id="status" class="status" role="status" aria-live="polite"></div>
- </section>
- <aside class="preview-section">
-  <div class="preview-panel">
-    <div class="preview-header"><h2>쇼츠 미리보기</h2><span>9:16 · 1080×1920</span></div>
-    <div class="preview-tabs" id="previewTabs"></div>
-    <div class="canvas-frame"><canvas id="shortCanvas" width="1080" height="1920" role="img" aria-label="선택한 날짜의 쇼츠용 보스 수익 이미지"></canvas></div>
+ </header>
+ <div class="layout">
+  <section class="controls" aria-label="보스 수익 기록">
+   <section class="panel">
+    <div class="panel-heading"><h2>주인 선택</h2><span class="muted">각자 캐릭터를 따로 관리해요</span></div>
+    <div id="ownerTabs" class="owner-tabs"></div>
+   </section>
+   <section class="panel">
+    <div class="panel-heading"><h2 id="activeCharTitle">캐릭터</h2><span class="muted" id="characterHint"></span></div>
+    <div id="characterList" class="character-list" aria-label="등록한 캐릭터"></div>
+    <div class="char-editor">
+      <label for="newCharInput">캐릭터 추가 · 개수 제한 없음</label>
+      <input id="newCharInput" type="text" maxlength="30" autocomplete="off" placeholder="새 캐릭터 이름">
+      <button id="addChar" type="button">＋ 추가</button>
+    </div>
+    <div class="char-editor renamer">
+      <label for="renameCharInput">선택한 캐릭터 이름 수정</label>
+      <input id="renameCharInput" type="text" maxlength="30" autocomplete="off" placeholder="수정할 이름">
+      <button id="renameChar" type="button">이름 저장</button>
+      <span class="muted">이름을 바꿔도 기존 보스 기록은 사라지지 않아요.</span>
+    </div>
+   </section>
+   <section class="panel">
+    <div class="panel-heading"><h2>주차와 날짜</h2><span class="muted">목요일 00:00(KST) 새 주간</span></div>
+    <div class="week-actions">
+      <button id="prevWeek" type="button">〈 지난주</button>
+      <button id="thisWeek" type="button">이번 주</button>
+      <button id="nextWeek" type="button">다음주 〉</button>
+    </div>
+    <div id="weekRange" class="week-range"></div>
+    <div id="dayTabs" class="days"></div>
+    <div class="summary">
+      <div class="stat"><span>선택 캐릭터 · 오늘 수익</span><strong id="statDay">0 메소</strong></div>
+      <div class="stat"><span>선택 캐릭터 · 주간 수익</span><strong id="statWeek">0 메소</strong></div>
+      <div class="stat expense"><span>선택 캐릭터 · 주간 사용</span><strong id="statSpend">0 메소</strong></div>
+      <div class="stat net"><span>선택 캐릭터 · 주간 순수익</span><strong id="statNet">0 메소</strong></div>
+      <div class="stat wide"><span>선택한 주인 · 모든 캐릭터의 주간 순수익 합계</span><strong id="statBoth">0 메소</strong></div>
+    </div>
+   </section>
+   <section class="panel">
+    <div class="panel-heading"><h2>사용 메소 기록</h2><span class="muted">일별 입력 → 주간 자동 합산</span></div>
+    <div id="expenseDate" class="expense-date"></div>
+    <div class="expense-grid">
+      <div>
+       <label class="expense-label" for="expenseInput">이 날짜에 사용한 메소</label>
+       <input id="expenseInput" class="expense-input" type="text" inputmode="decimal" placeholder="예: 120000000 또는 1억 2000만" autocomplete="off">
+       <span id="expenseInvalid" role="status"></span>
+       <label class="expense-label" for="expenseNote" style="margin-top:12px">무엇에 썼나요? (선택)</label>
+       <input id="expenseNote" class="expense-note" type="text" maxlength="80" placeholder="예: 스타포스, 큐브, 강화" autocomplete="off">
+       <p class="note">입력 즉시 자동 저장돼요. 다른 날짜와 다른 캐릭터의 기록은 그대로 유지돼요.</p>
+      </div>
+      <div class="expense-recap">
+       <div><span>선택한 날 사용</span><strong id="expenseDayTotal">0 메소</strong></div>
+       <div><span>이번 주 사용 합계</span><strong id="expenseTotal">0 메소</strong></div>
+       <div class="net"><span>이번 주 순수익</span><strong id="expenseNet">0 메소</strong></div>
+      </div>
+    </div>
+   </section>
+   <section class="panel">
+    <div class="panel-heading"><h2>주간 보스 체크</h2><span id="bossCount" class="boss-count">0 / 12</span></div>
+    <p class="section-intro muted">지금 선택한 캐릭터의 보스만 체크해요. 날짜·난이도·파티 인원도 각각 따로 저장돼요.</p>
+    <div id="bossList" class="boss-list"></div>
+    <p class="note">결정석은 1인 가격을 기준으로 파티 인원수만큼 나눠 계산해요. 검은 마법사는 아래 월간 구역에 분리했어요.</p>
+   </section>
+   <section class="panel">
+    <div class="panel-heading"><h2>검은 마법사</h2><span class="boss-count">월 1회 · 별도</span></div>
+    <div id="monthlyCard"></div>
+    <div class="monthly-stats"><span id="monthLabel">월간 합계</span><strong id="monthAmount">0 메소</strong></div>
+    <p class="note">잡은 날의 일일 수익에는 포함되지만, 주간 12보스와 주간 수익 합계에는 포함되지 않아요.</p>
+   </section>
+   <div id="status" class="status" role="status" aria-live="polite"></div>
+  </section>
+  <aside class="preview-section">
+   <div class="preview-panel">
+    <div class="preview-header"><h2>유튜브 쇼츠 미리보기</h2><span>9:16 · 1080 × 1920</span></div>
+    <div id="previewTabs" class="preview-tabs"></div>
+    <div class="canvas-frame"><canvas id="shortCanvas" width="1080" height="1920" aria-label="오늘의 보스 수익 쇼츠 이미지" role="img"></canvas></div>
     <button id="download" class="download" type="button">쇼츠 이미지 PNG 저장 ↓</button>
-    <p class="bottom-note">오른쪽 화면 그대로 고화질 PNG로 저장돼요. 캡처해도 되고 저장한 이미지를 영상에 넣어도 돼요.</p>
-  </div>
- </aside>
+    <p class="preview-hint">전체·주인별·선택 캐릭터별로 쇼츠 이미지를 저장할 수 있어요. 기록은 현재 기기의 브라우저에 저장됩니다.</p>
+   </div>
+  </aside>
+ </div>
 </main>
-</div>
-<script>
-(function(){
-"use strict";
-var CHARS=["옥수수목금","콩국수목금"];
-var ACCENTS=["#f2ca66","#80d8d3"];
-var WEEKLY=[
- ["스우",[["노말",835],["하드",4890],["익스트림",54500]]],
- ["데미안",[["노말",875],["하드",4640]]],
- ["가디언 엔젤 슬라임",[["노말",1270],["카오스",7130]]],
- ["루시드",[["이지",1490],["노말",1780],["하드",5970]]],
- ["윌",[["이지",1610],["노말",2050],["하드",7320]]],
- ["더스크",[["노말",2200],["카오스",6630]]],
- ["진 힐라",[["노말",6760],["하드",10000]]],
- ["듄켈",[["노말",2370],["하드",8960]]],
- ["선택받은 세렌",[["노말",16700],["하드",30200],["익스트림",184000]]],
- ["감시자 칼로스",[["이지",23800],["노말",47900],["카오스",123000],["익스트림",410400]]],
- ["최초의 대적자",[["이지",26100],["노말",53200],["하드",139000],["익스트림",471200]]],
- ["카링",[["이지",32000],["노말",59300],["하드",156000],["익스트림",538700]]],
- ["찬란한 흉성",[["노말",57600],["하드",267800]]],
- ["벨로나",[["이지",39600],["노말",82400],["하드",295000]]],
- ["림보",[["노말",99500],["하드",238500]]],
- ["발드릭스",[["노말",132000],["하드",307800]]],
- ["유피테르",[["노말",156000],["하드",484500]]],
- ["파풀라투스",[["카오스",665]]]
-];
-var BLACK_MAGE=["검은 마법사",[["하드",66500],["익스트림",874000]]];
-var DAILY_MS=86400000,WEEK_MS=604800000;
-var BASE=Date.UTC(2026,8,24);
-var WEEK_PREFIX="corn-soy-shorts-week-v1-";
-var MONTH_PREFIX="corn-soy-shorts-month-v1-";
-var PREF_KEY="corn-soy-shorts-difficulty-v1";
-var state={chars:{},prefs:{},month:{},weekStart:BASE,dayIndex:0,charIndex:0,preview:"all",followCurrent:true};
-function byId(id){return document.getElementById(id)}
-function put(id,s){byId(id).textContent=s}
-function safeGet(key){try{return localStorage.getItem(key)}catch(e){return null}}
-function safeSet(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true}catch(e){put("status","저장 공간에 접근할 수 없어요. 일반 브라우저 탭에서 다시 열어주세요.");return false}}
-function readJson(key,fallback){try{var v=safeGet(key);return v?JSON.parse(v):fallback}catch(e){return fallback}}
-function two(n){return String(n).padStart(2,"0")}
-function iso(ms){var d=new Date(ms);return d.getUTCFullYear()+"-"+two(d.getUTCMonth()+1)+"-"+two(d.getUTCDate())}
-function monthId(day){return day.slice(0,7)}
-function formatDate(ms){var d=new Date(ms);return two(d.getUTCMonth()+1)+"."+two(d.getUTCDate())}
-function todayMs(){var k=new Date(Date.now()+9*3600000);return Date.UTC(k.getUTCFullYear(),k.getUTCMonth(),k.getUTCDate())}
-function currentWeek(){return BASE+Math.max(0,Math.floor((todayMs()-BASE)/WEEK_MS))*WEEK_MS}
-function dayDate(){return iso(state.weekStart+DAILY_MS*state.dayIndex)}
-function currentWeekData(){return state.chars[CHARS[state.charIndex]]}
-function priceWan(boss,diff){var options=boss[1];for(var i=0;i<options.length;i++)if(options[i][0]===diff)return options[i][1];return options[0][1]}
-function defaultDiff(boss){return boss[1].some(function(x){return x[0]==="노말"})?"노말":boss[1][0][0]}
-function earnings(wan,party){return Math.floor(wan*10000/Math.max(1,Number(party)||1))}
-function fmt(n){
- n=Math.max(0,Math.floor(n));if(!n)return"0 메소";
- var e=Math.floor(n/100000000),m=Math.floor(n%100000000/10000),r=n%10000;
- var a=[];if(e)a.push(e.toLocaleString("ko-KR")+"억");
- if(m)a.push(m.toLocaleString("ko-KR")+"만");
- if(r)a.push(r.toLocaleString("ko-KR"));
- return a.join(" ")+" 메소";
-}
-function fmtShort(n){return fmt(n).replace(" 메소","")}
-function emptyWeek(){return{chars:{옥수수목금:{},콩국수목금:{}}}}
-function emptyMonth(){return{옥수수목금:null,콩국수목금:null}}
-function loadWeek(){var k=WEEK_PREFIX+iso(state.weekStart);var s=readJson(k,emptyWeek());state.chars=Object.assign(emptyWeek().chars,s&&s.chars||{})}
-function saveWeek(){safeSet(WEEK_PREFIX+iso(state.weekStart),{chars:state.chars})}
-function loadMonth(){state.month=Object.assign(emptyMonth(),readJson(MONTH_PREFIX+monthId(dayDate()),emptyMonth()))}
-function saveMonth(){safeSet(MONTH_PREFIX+monthId(dayDate()),state.month)}
-function loadPrefs(){state.prefs=readJson(PREF_KEY,{})||{}}
-function getPreference(boss){var k=CHARS[state.charIndex]+"|"+boss[0];var p=state.prefs[k];return p&&p.diff&&p.party?p:{diff:defaultDiff(boss),party:1}}
-function setPreference(boss,diff,party){state.prefs[CHARS[state.charIndex]+"|"+boss[0]]={diff:diff,party:party};safeSet(PREF_KEY,state.prefs)}
-function bossRecord(boss){return currentWeekData()[boss[0]]||null}
-function allItems(date,scope){
- var item=[],m=readJson(MONTH_PREFIX+monthId(date),emptyMonth())||{};
- CHARS.forEach(function(c,ci){
-  if(scope!=="all"&&scope!==c)return;
-  var records=state.chars[c]||{};
-  WEEKLY.forEach(function(b){
-   var r=records[b[0]];
-   if(r&&r.day===date)item.push({name:b[0],diff:r.diff,party:r.party,char:ci,monthly:false,amount:earnings(priceWan(b,r.diff),r.party)});
-  });
-  var black=m[c];
-  if(black&&black.day===date)item.push({name:"검은 마법사",diff:black.diff,party:black.party,char:ci,monthly:true,amount:earnings(priceWan(BLACK_MAGE,black.diff),black.party)});
- });
- return item.sort(function(a,b){return b.amount-a.amount});
-}
-function sumDaily(date,scope){return allItems(date,scope).reduce(function(total,r){return total+r.amount},0)}
-function sumWeekly(scope){
- var total=0;
- CHARS.forEach(function(c){if(scope!=="all"&&scope!==c)return;
-  var rec=state.chars[c]||{};
-  WEEKLY.forEach(function(b){var r=rec[b[0]];if(r)total+=earnings(priceWan(b,r.diff),r.party)});
- });
- return total;
-}
-function sumMonthly(scope){
- var total=0;
- CHARS.forEach(function(c){if(scope!=="all"&&scope!==c)return;
-  var r=state.month[c];if(r)total+=earnings(priceWan(BLACK_MAGE,r.diff),r.party);
- });
- return total;
-}
-function checkedCount(){return Object.keys(currentWeekData()).length}
-function notice(s){put("status",s);clearTimeout(notice.timer);notice.timer=setTimeout(function(){put("status","")},3500)}
-function setWeek(ms){
- if(ms<BASE)return;
- state.weekStart=ms;state.dayIndex=(ms===currentWeek()?Math.max(0,Math.min(6,Math.floor((todayMs()-ms)/DAILY_MS))):0);
- state.followCurrent=ms===currentWeek();
- loadWeek();loadMonth();render();
-}
-function setDay(index){state.dayIndex=index;loadMonth();render()}
-function renderTabs(){
- byId("charTabs").innerHTML=CHARS.map(function(c,i){return '<button type="button" class="char-button '+(i===state.charIndex?'active':'')+'" data-char="'+c+'" data-i="'+i+'">'+c+'</button>'}).join("");
- byId("weekRange").textContent=iso(state.weekStart)+"  ~  "+iso(state.weekStart+6*DAILY_MS);
- byId("prevWeek").disabled=state.weekStart<=BASE;
- byId("thisWeek").classList.toggle("active",state.weekStart===currentWeek());
- byId("dayTabs").innerHTML=["목","금","토","일","월","화","수"].map(function(day,i){
-  return '<button type="button" class="day '+(i===state.dayIndex?'active':'')+'" data-i="'+i+'" data-day="'+day+'"><span class="day-name">'+day+'</span><span class="day-date">'+formatDate(state.weekStart+DAILY_MS*i)+'</span></button>';
- }).join("");
- byId("previewTabs").innerHTML=[["all","둘 다"],[CHARS[0],"옥수수"],[CHARS[1],"콩국수"]].map(function(x){
-  return '<button type="button" data-scope="'+x[0]+'" class="'+(state.preview===x[0]?'active':'')+'">'+x[1]+'</button>';
- }).join("");
-}
-function optionsFor(boss,chosen){return boss[1].map(function(x){return '<option value="'+x[0]+'"'+(x[0]===chosen?' selected':'')+'>'+x[0]+'</option>'}).join("")}
-function partyOptions(chosen){var o="";for(var i=1;i<=12;i++)o+='<option value="'+i+'"'+(i===Number(chosen)?' selected':'')+'>'+i+'인</option>';return o}
-function renderRows(){
- var records=currentWeekData(),date=dayDate(),n=checkedCount();
- put("bossCount",n+" / 12");
- byId("bossList").innerHTML=WEEKLY.map(function(b,i){
-  var r=records[b[0]],p=r||getPreference(b),done=!!r,other=done&&r.day!==date;
-  var amount=earnings(priceWan(b,p.diff),p.party);
-  return '<div class="boss-card '+(done?'done ':'')+(other?'other-day':'')+'">'
-   +'<label class="boss-top"><input type="checkbox" data-type="check" data-i="'+i+'"'+(done?' checked':'')+'>'
-   +'<span class="boss-name">'+b[0]+'</span>'
-   +(done?'<span class="done-badge">'+(other?r.day.slice(5).replace("-","/")+' 완료':"✓ 오늘 완료")+'</span>':'')+'</label>'
-   +'<div class="boss-controls"><select aria-label="'+b[0]+' 난이도" data-type="diff" data-i="'+i+'">'+optionsFor(b,p.diff)+'</select>'
-   +'<select aria-label="'+b[0]+' 파티 인원" data-type="party" data-i="'+i+'">'+partyOptions(p.party)+'</select></div>'
-   +'<div class="price-line"><span>내 결정석 수익 · '+p.party+'인</span><strong>'+fmtShort(amount)+'</strong></div>'
-   +(other?'<button class="move-button" type="button" data-type="move" data-i="'+i+'">선택한 날짜로 옮기기 →</button>':'')
-   +'</div>';
- }).join("");
-}
-function renderMonthly(){
- var r=state.month[CHARS[state.charIndex]],p=r||getPreference(BLACK_MAGE),other=r&&r.day!==dayDate();
- byId("monthlyCard").innerHTML='<div class="boss-card '+(r?'done ':'')+(other?'other-day':'')+'">'
-  +'<label class="boss-top"><input type="checkbox" id="blackCheck"'+(r?' checked':'')+'>'
-  +'<span class="boss-name">검은 마법사</span>'
-  +(r?'<span class="done-badge">'+(other?r.day.slice(5).replace("-","/")+' 완료':'✓ 오늘 완료')+'</span>':'')
-  +'</label><div class="boss-controls monthly-controls">'
-  +'<select aria-label="검은 마법사 난이도" id="blackDiff">'+optionsFor(BLACK_MAGE,p.diff)+'</select>'
-  +'<select aria-label="검은 마법사 파티 인원" id="blackParty">'+partyOptions(p.party)+'</select>'
-  +'</div><div class="price-line"><span>월간 별도 · 내 수익</span><strong>'+fmtShort(earnings(priceWan(BLACK_MAGE,p.diff),p.party))+'</strong></div>'
-  +(other?'<button type="button" class="move-button" id="moveBlack">선택한 날짜로 옮기기 →</button>':'')
-  +'</div>';
- put("monthLabel",monthId(dayDate()).replace("-","년 ")+"월 · 이 캐릭터 월간");
- put("monthAmount",fmt(sumMonthly(CHARS[state.charIndex])));
-}
-function renderStats(){
- var date=dayDate(),name=CHARS[state.charIndex];
- put("statDay",fmt(sumDaily(date,name)));
- put("statWeek",fmt(sumWeekly(name)));
- put("statBoth",fmt(sumDaily(date,"all")));
-}
-function render(){
- renderTabs();renderStats();renderRows();renderMonthly();drawShort();
-}
-function setRowValue(i,type,v){
- var b=WEEKLY[i],r=bossRecord(b),p=r||getPreference(b);
- var diff=type==="diff"?v:p.diff,party=type==="party"?Number(v):p.party;
- if(r){r.diff=diff;r.party=party;saveWeek()}
- setPreference(b,diff,party);renderKeepingScroll();
-}
-function renderKeepingScroll(){
- var list=byId("bossList"),y=list.scrollTop;
- render();byId("bossList").scrollTop=y;
-}
-function processRowEvent(el){
- var i=Number(el.dataset.i),b=WEEKLY[i];if(!b)return;
- var r=bossRecord(b),kind=el.dataset.type,date=dayDate();
- if(kind==="diff"||kind==="party"){setRowValue(i,kind,el.value);return}
- if(kind==="check"){
-  if(r){delete currentWeekData()[b[0]]}
-  else{
-   if(checkedCount()>=12){notice("캐릭터당 주간 보스는 최대 12개예요.");renderKeepingScroll();return}
-   var p=getPreference(b);
-   currentWeekData()[b[0]]={diff:p.diff,party:p.party,day:date};
-  }
- }else if(kind==="move"&&r)r.day=date;
- saveWeek();renderKeepingScroll();
-}
-function processMonthly(kind,value){
- var c=CHARS[state.charIndex],r=state.month[c],p=r||getPreference(BLACK_MAGE);
- if(kind==="check"){state.month[c]=r?null:{diff:p.diff,party:p.party,day:dayDate()}}
- else if(kind==="move"){if(r)r.day=dayDate()}
- else{
-  var diff=kind==="diff"?value:p.diff,party=kind==="party"?Number(value):p.party;
-  if(r){r.diff=diff;r.party=party}
-  setPreference(BLACK_MAGE,diff,party);
- }
- saveMonth();render();
-}
-function circle(ctx,x,y,r,color){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=color;ctx.fill()}
-function round(ctx,x,y,w,h,r,fill,stroke){
- ctx.beginPath();ctx.roundRect(x,y,w,h,r);
- if(fill){ctx.fillStyle=fill;ctx.fill()}
- if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke()}
-}
-function label(ctx,text,x,y,size,color,weight){ctx.font=(weight||"700")+" "+size+'px "Apple SD Gothic Neo",Pretendard,"Malgun Gothic",sans-serif';ctx.fillStyle=color;ctx.fillText(text,x,y)}
-function fit(ctx,text,maxWidth,size,min){
- var current=size;ctx.font="800 "+current+'px "Apple SD Gothic Neo",Pretendard,"Malgun Gothic",sans-serif';
- while(ctx.measureText(text).width>maxWidth&&current>(min||22)){current-=2;ctx.font="800 "+current+'px "Apple SD Gothic Neo",Pretendard,"Malgun Gothic",sans-serif'}
- return current;
-}
-function trunc(ctx,text,maxWidth){
- if(ctx.measureText(text).width<=maxWidth)return text;
- while(text.length>1&&ctx.measureText(text+"…").width>maxWidth)text=text.slice(0,-1);
- return text+"…";
-}
-function drawShort(){
- var canvas=byId("shortCanvas"),ctx=canvas.getContext("2d");if(!ctx)return;
- var w=1080,h=1920,scope=state.preview,date=dayDate();
- var entries=allItems(date,scope),daily=sumDaily(date,scope),weekly=sumWeekly(scope),monthly=sumMonthly(scope);
- ctx.clearRect(0,0,w,h);
- var background=ctx.createLinearGradient(0,0,w,h);
- background.addColorStop(0,"#1b3443");background.addColorStop(.45,"#0c1828");background.addColorStop(1,"#080f1b");
- ctx.fillStyle=background;ctx.fillRect(0,0,w,h);
- var glow=ctx.createRadialGradient(885,300,8,885,300,790);
- glow.addColorStop(0,"#af885c43");glow.addColorStop(1,"#00000000");ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
- var second=ctx.createRadialGradient(45,1380,10,45,1380,760);
- second.addColorStop(0,"#2a7c9142");second.addColorStop(1,"#00000000");ctx.fillStyle=second;ctx.fillRect(0,0,w,h);
- ctx.globalAlpha=.065;ctx.strokeStyle="#d4e1df";ctx.lineWidth=1;
- for(var grid=90;grid<w;grid+=100){ctx.beginPath();ctx.moveTo(grid,0);ctx.lineTo(grid,h);ctx.stroke()}
- for(var gy=80;gy<h;gy+=100){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(w,gy);ctx.stroke()}ctx.globalAlpha=1;
- ctx.fillStyle="#f2cd7d";ctx.fillRect(72,96,70,7);
- label(ctx,"B O S S   /   D A I L Y   I N C O M E",161,110,28,"#efdbab","800");
- label(ctx,"오늘의 보스 결산",70,220,77,"#f6f5ef","900");
- var shortDays=["목","금","토","일","월","화","수"];
- label(ctx,date.replaceAll("-",".")+"  ·  "+shortDays[state.dayIndex]+"요일",74,277,34,"#aabfd2","700");
- round(ctx,68,335,944,385,38,"#1b2b39","#466071");
- label(ctx,scope==="all"?"두 캐릭터 · 오늘 총수익":scope+" · 오늘 수익",109,401,34,"#f3d58f","800");
- var hero=fmtShort(daily),hs=fit(ctx,hero,865,103,47);
- label(ctx,hero,103,535,hs,"#fff5d9","900");
- label(ctx,"메소",108,578,27,"#c4b89b","800");
- ctx.strokeStyle="#465460";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(108,609);ctx.lineTo(968,609);ctx.stroke();
- label(ctx,"이번 주 결정석 누적",109,669,29,"#b4c4d2","700");
- var wtxt=fmtShort(weekly);var ws=fit(ctx,wtxt,550,44,28);
- label(ctx,wtxt,955-ctx.measureText(wtxt).width,670,ws,"#e8dcba","800");
-
- round(ctx,68,754,456,170,27,"#1b2e37","#426c70");
- circle(ctx,109,800,11,ACCENTS[0]);label(ctx,CHARS[0],133,813,33,"#f5e4bb","800");
- var c0=fmtShort(sumDaily(date,CHARS[0])),c0s=fit(ctx,c0,394,47,29);
- label(ctx,c0,107,883,c0s,"#ffedbe","900");
- round(ctx,540,754,472,170,27,"#172f39","#426d72");
- circle(ctx,582,800,11,ACCENTS[1]);label(ctx,CHARS[1],604,813,33,"#d8f7f1","800");
- var c1=fmtShort(sumDaily(date,CHARS[1])),c1s=fit(ctx,c1,410,47,29);
- label(ctx,c1,580,883,c1s,"#ccf2ed","900");
-
- label(ctx,"TODAY'S BOSS",70,1004,37,"#f3e9ce","900");
- label(ctx,entries.length+" CLEARED",786,1004,28,"#a9c3d0","700");
- ctx.fillStyle="#5e746e";ctx.fillRect(70,1023,940,2);
- if(!entries.length){
-  round(ctx,70,1073,940,280,25,"#172837","#344a5a");
-  label(ctx,"오늘은 아직 잡은 보스가 없어요",155,1196,42,"#b7c8d5","800");
-  label(ctx,"보스에 체크하면 여기에 자동으로 기록됩니다.",155,1259,28,"#869aaa","600");
- }else{
-  var show=entries.slice(0,16),cols=2,rows=8;
-  show.forEach(function(e,i){
-    var col=Math.floor(i/rows),row=i%rows,x=70+col*477,y=1053+row*78,c=ACCENTS[e.char];
-    round(ctx,x,y,465,70,15,"#1c2d3c","#385064");
-    round(ctx,x+8,y+12,45,46,9,e.char===0?"#5f5637":"#24575d");
-    label(ctx,e.char===0?"옥":"콩",x+20,y+45,25,"#fff1d7","900");
-    var name=e.name;
-    label(ctx,trunc(ctx,name,251),x+65,y+30,26,"#ecf0f3","800");
-    label(ctx,e.diff+"  ·  "+e.party+"인"+(e.monthly?"  · 월간":""),x+65,y+57,21,"#a6bac9","700");
-    var value=fmtShort(e.amount);
-    var size=fit(ctx,value,220,26,19);
-    ctx.font="800 "+size+'px "Apple SD Gothic Neo",Pretendard,"Malgun Gothic",sans-serif';
-    var tw=ctx.measureText(value).width;
-    label(ctx,value,x+450-tw,y+58,size,c,"800");
-  });
-  if(entries.length>16)label(ctx,"외 "+(entries.length-16)+"개 보스 수익도 오늘 합계에 포함되어 있어요.",71,1716,25,"#aabcc9","700");
- }
- round(ctx,69,1734,942,94,18,"#28313b","#776643");
- label(ctx,"이번 달 검은 마법사  ·  주간 합계와 별도",92,1773,23,"#d4c6a6","700");
- var mtxt=fmtShort(monthly),ms=fit(ctx,mtxt,465,40,26);ctx.font="900 "+ms+'px "Apple SD Gothic Neo",Pretendard,"Malgun Gothic",sans-serif';
- label(ctx,mtxt,990-ctx.measureText(mtxt).width,1792,ms,"#f3d795","900");
- label(ctx,"옥수수목금    ×    콩국수목금",71,1877,28,"#b2c6d0","800");
- label(ctx,"THU → WED  |  "+formatDate(state.weekStart),697,1877,24,"#7996a9","700");
-}
-function download(){
- var c=byId("shortCanvas"),a=document.createElement("a");
- a.download="boss-shorts-"+dayDate()+"-"+(state.preview==="all"?"both":state.preview)+".png";
- try{
-  c.toBlob(function(blob){
-   if(!blob){notice("이미지 생성에 실패했어요.");return}
-   var url=URL.createObjectURL(blob);a.href=url;a.click();setTimeout(function(){URL.revokeObjectURL(url)},1000);
-  },"image/png");
- }catch(e){notice("이 브라우저에서는 이미지 저장에 실패했어요. 미리보기를 캡처해주세요.")}
-}
-byId("charTabs").addEventListener("click",function(e){
- var t=e.target.closest("[data-char]");if(!t)return;
- state.charIndex=Number(t.dataset.i);render();
-});
-byId("dayTabs").addEventListener("click",function(e){
- var t=e.target.closest("[data-i]");if(t)setDay(Number(t.dataset.i));
-});
-byId("prevWeek").addEventListener("click",function(){setWeek(state.weekStart-WEEK_MS)});
-byId("thisWeek").addEventListener("click",function(){setWeek(currentWeek())});
-byId("nextWeek").addEventListener("click",function(){setWeek(state.weekStart+WEEK_MS)});
-byId("previewTabs").addEventListener("click",function(e){
- var t=e.target.closest("[data-scope]");if(!t)return;state.preview=t.dataset.scope;render();
-});
-byId("bossList").addEventListener("change",function(e){
- var el=e.target;if(!el.dataset.type)return;processRowEvent(el);
-});
-byId("bossList").addEventListener("click",function(e){
- var el=e.target.closest('[data-type="move"]');if(el)processRowEvent(el);
-});
-byId("monthlyCard").addEventListener("change",function(e){
- var id=e.target.id;if(id==="blackCheck")processMonthly("check");
- else if(id==="blackDiff")processMonthly("diff",e.target.value);
- else if(id==="blackParty")processMonthly("party",e.target.value);
-});
-byId("monthlyCard").addEventListener("click",function(e){
- if(e.target.id==="moveBlack")processMonthly("move");
-});
-byId("download").addEventListener("click",download);
-function boot(){
- state.weekStart=currentWeek();
- state.dayIndex=Math.max(0,Math.min(6,Math.floor((todayMs()-state.weekStart)/DAILY_MS)));
- loadPrefs();loadWeek();loadMonth();render();
-}
-boot();
-setInterval(function(){
- var wk=currentWeek();
- if(state.followCurrent&&state.weekStart!==wk){setWeek(wk);notice("목요일 00:00 · 새 주간으로 전환됐어요. 지난 기록은 지난주에서 볼 수 있어요.")}
-},30000);
-})();
-</script>
+<script src="./app-v2.js?v=20260928b" defer></script>
 </body>
 </html>
