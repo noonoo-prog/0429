@@ -10,7 +10,7 @@
 <meta property="og:description" content="옥수수목금 위 · 콩국수목금 아래, 보스 수익과 사용 메소를 한 장에 정리">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://noonoo-prog.github.io/0429/shorts/">
-<link rel="stylesheet" href="./style-v2.css?v=20260928-income-v7">
+<link rel="stylesheet" href="./style-v2.css?v=20260928-collapsible-v8">
 </head>
 <body>
 <main class="shell">
@@ -32,7 +32,13 @@
     <div class="panel-heading"><h2>주인 선택</h2><span class="muted">각자 캐릭터를 따로 관리해요</span></div>
     <div id="ownerTabs" class="owner-tabs"></div>
    </section>
-   <section class="panel">
+   <details class="panel character-collapsible" id="characterManageDetails">
+    <summary class="character-collapse-trigger">
+      <span class="character-collapse-title">캐릭터 관리 · 보스판 연동</span>
+      <span class="character-collapse-active" id="collapsedCharName">선택 캐릭터</span>
+      <span class="character-collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="character-collapsible-body">
     <div class="panel-heading"><h2 id="activeCharTitle">캐릭터</h2><span class="muted" id="characterHint"></span></div>
     <div id="characterList" class="character-list" aria-label="등록한 캐릭터"></div>
     <p class="muted character-remove-help">이름 옆 × 버튼으로 쇼츠 목록에서만 삭제해요. 같은 이름으로 다시 추가하면 기록이 복원돼요.</p>
@@ -66,7 +72,8 @@
       </div>
       <p class="sync-foot">보스 체크는 기존 보스판에서 관리하고, 쇼츠에는 결과만 불러와요.</p>
     </div>
-   </section>
+    </div>
+   </details>
    <section class="panel">
     <div class="panel-heading"><h2>주차와 날짜</h2><span class="muted">목요일 00:00(KST) 새 주간</span></div>
     <div class="week-actions">
@@ -119,6 +126,6 @@
   </aside>
  </div>
 </main>
-<script src="./app-v2.js?v=20260928-income-v7" defer></script>
+<script src="./app-v2.js?v=20260928-collapsible-v8" defer></script>
 </body>
 </html>
