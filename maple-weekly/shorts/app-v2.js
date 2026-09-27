@@ -23,7 +23,7 @@ const BOSSES=[
  ["유피테르",[["노말",156000],["하드",484500]]],
  ["파풀라투스",[["카오스",665]]]
 ];
-const BLACK=["검은 마법사",[["하드",65000],["익스트림",874000]]];
+const BLACK=["검은 마법사",[["하드",46500],["익스트림",568000]]];
 const BASE=Date.UTC(2026,8,24),DAY=86400000,WEEK=7*DAY;
 const PREFIX="boss-shorts-v2-",KEY_PROFILES=PREFIX+"profiles",KEY_PREFS=PREFIX+"preferences",KEY_THEME=PREFIX+"theme";
 const $=id=>document.getElementById(id);
