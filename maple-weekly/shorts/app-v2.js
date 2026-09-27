@@ -410,7 +410,7 @@ function renderOwners(){
 }
 function renderCharacters(){
   $("characterList").innerHTML=ownerChars(S.owner).map(c=>`<span class="character-entry"><button type="button" class="character-chip ${c.id===S.charId?"active":""}" data-char-id="${esc(c.id)}">${esc(c.name)}</button><button type="button" class="character-remove" data-archive-id="${esc(c.id)}" title="쇼츠 목록에서 제거" aria-label="${esc(c.name)} 캐릭터 삭제" ${ownerChars(c.owner).length<=1?"disabled":""}>×</button></span>`).join("");
-  const c=selectedChar();$("activeCharTitle").textContent=c.name;
+  const c=selectedChar();$("activeCharTitle").textContent=c.name;$("collapsedCharName").textContent=c.name;
   $("renameCharInput").value=c.name;
   $("characterHint").textContent=S.owner+" · "+ownerChars(S.owner).length+"개 캐릭터 등록됨";
 }
