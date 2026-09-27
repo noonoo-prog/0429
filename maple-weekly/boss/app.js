@@ -1952,6 +1952,14 @@ function toggleBoardBossCheck(bi,pi){
     saveBossRunCheck(weekStart,runDate,characterName,boss,pi,!completed);
   }
 }
+function remainingBossesHtml(pi){
+  var st=state();
+  if(!CHECKLIST_LOADED)return '<div class="character-remaining">남은 보스 확인 중…</div>';
+  var count=BOSSES.filter(function(b){
+    return !MONTHLY.has(b)&&planned(st.cells[b]&&st.cells[b][pi])&&!boardBossChecked(b,pi);
+  }).length;
+  return '<div class="character-remaining" title="이번 주에 설정한 주간 보스 중 아직 잡지 않은 수 · 월간 보스 제외">남은 보스 <strong>'+count+'</strong></div>';
+}
 function compactBossCard(b,bi,c,pi,unlocked){
   var auto=!!c._sync,editable=unlocked&&!auto,mon=MONTHLY.has(b);
   var checkable=!unlocked&&planned(c),checked=planned(c)&&boardBossChecked(b,pi);
@@ -1969,6 +1977,7 @@ function compactBossCard(b,bi,c,pi,unlocked){
       :'<span class="compact-income-slot"><span class="compact-income missing">미등록</span></span>';
   }
   return '<article class="compact-boss-card '+(planned(c)?"is-set ":"is-empty ")+(auto?"is-sync ":"")+(mon?"is-monthly ":"")+(checkable?"is-checkable ":"")+(checked?"is-cleared":"")+'" '+(checkable?'data-board-check-bi="'+bi+'" data-board-check-pi="'+pi+'" aria-pressed="'+(checked?"true":"false")+'" title="클릭해서 이번 주 보스 체크"':"")+'>'+
+    (checked?'<span class="boss-cleared-mark" aria-label="잡은 보스">✓</span>':'')+
     '<div class="compact-main">'+
       compactDifficultySelect(c,editable,bi,pi)+
       '<div class="compact-name-wrap"><div class="compact-title-line"><strong class="compact-boss-name">'+esc(b)+'</strong>'+compactCountSelect(c,editable,bi,pi)+'</div>'+sync+'</div>'+
@@ -2084,6 +2093,7 @@ function renderDesktop(){
           '<strong class="column-count '+(w>=LIMIT?"full":"")+'">'+w+'/'+LIMIT+'</strong>'+
           '<button class="remove-player column-remove" data-remove="'+pi+'" '+(unlocked?"":"disabled")+' aria-label="캐릭터 삭제">×</button>'+
         '</div>'+
+        remainingBossesHtml(pi)+
         '<div class="column-sub"><span>주간 수익 '+formatEok(charIncome)+(missingPrices?' · 미등록 '+missingPrices+'건':'')+'</span></div>'+
       '</header>'+
       '<div class="character-boss-list">';
@@ -2133,6 +2143,7 @@ function renderMobile(){
   var charIncome=characterWeeklyIncome(pi),ownerIncome=ownerWeeklyIncome(),missingPrices=characterMissingPriceCount(pi),ownerMissing=ownerMissingPriceCount();
   var summary='<div class="mobile-character-head owner-themed" data-theme="'+theme+'">'+
     '<div><div class="mobile-character-name-line"><strong>'+esc(st.players[pi])+'</strong>'+(pi===0?'<span class="representative-badge">대표</span>':'')+(w>=LIMIT?'<span class="complete-badge">완료</span>':'')+(unlocked?'<button type="button" class="mobile-rename-character" data-rename-character="'+pi+'">수정</button>':'')+'</div>'+
+      remainingBossesHtml(pi)+
       '<span>주간 수익 <b class="mobile-income">'+formatEok(charIncome)+'</b>'+(missingPrices?' · 가격 미등록 '+missingPrices+'건':'')+(w>=LIMIT?' · 미설정 숨김':'')+'</span>'+
     '</div>'+
     '<div class="mobile-char-actions">'+

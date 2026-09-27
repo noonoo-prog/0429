@@ -5718,3 +5718,32 @@ html[data-theme="dark"] .mobile-character-name-line .mobile-rename-character{
   .route-save-actions{margin-top:10px}
   .route-save-slot>div:first-child span{font-size:11px}
 }
+
+/* Cleared boss: fluorescent yellow check; difficulty colors stay intact. */
+.compact-boss-card{position:relative}
+.character-boss-list .compact-boss-card.is-set,
+.mobile-compact-list .compact-boss-card.is-set{padding-left:26px}
+.boss-cleared-mark{
+  position:absolute;left:5px;top:10px;
+  display:grid;place-items:center;width:16px;height:16px;
+  border:1px solid #746800;border-radius:4px;
+  background:#fff200;color:#171900;
+  font-family:Arial,sans-serif;font-size:14px;line-height:1;font-weight:900;
+  pointer-events:none;
+}
+.compact-boss-card.is-cleared{
+  border-color:var(--line);background:var(--surface);box-shadow:none;
+}
+html[data-theme="dark"] .compact-boss-card.is-cleared{
+  border-color:var(--line);background:var(--surface);box-shadow:none;
+}
+html[data-theme="dark"] .boss-cleared-mark{background:#e6dc32;border-color:#e6dc32;color:#171900}
+.character-remaining{margin-top:5px;color:var(--text);font-size:12px;line-height:1.45;font-weight:750}
+.character-remaining strong{font-size:14px;font-weight:950}
+.character-boss-list .compact-title-line{flex-wrap:wrap;gap:1px 4px;white-space:normal}
+.character-boss-list .compact-boss-name{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+@media(max-width:760px){
+  .boss-cleared-mark{top:14px}
+  .character-remaining{font-size:13px}
+  .character-remaining strong{font-size:15px}
+}
