@@ -152,3 +152,8 @@ button{cursor:pointer}button:disabled{opacity:.44;cursor:default}
 :root[data-owner="콩국수목금"] .sync-boss-note{border-left-color:var(--pink)}
 .boss-controls select:disabled{opacity:.68;cursor:not-allowed}
 @media(max-width:400px){.boss-sync-area{padding:10px}.sync-help,.sync-foot{font-size:10px}.sync-line select{font-size:11px}}
+
+.sync-tag{flex:none;white-space:nowrap;border-radius:5px;padding:3px 5px;font-size:9px;font-weight:800;line-height:1.1}
+.sync-tag.is-linked{background:color-mix(in srgb,var(--yellow),transparent 80%);color:var(--yellow);border:1px solid color-mix(in srgb,var(--yellow),transparent 55%)}
+.sync-tag.is-local{background:var(--panel2);color:var(--muted);border:1px solid var(--border)}
+:root[data-theme="light"] .sync-tag.is-linked{color:#886216}
