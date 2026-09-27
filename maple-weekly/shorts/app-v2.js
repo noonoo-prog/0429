@@ -317,26 +317,6 @@ const REMOTE_OWNER_NAMES={"옥수수목금":"오똑","콩국수목금":"츠죠"}
 const REMOTE_NAMES={"가디언 엔젤 슬라임":"가엔슬","진 힐라":"진힐라","선택받은 세렌":"세렌","감시자 칼로스":"칼로스","최초의 대적자":"대적자","찬란한 흉성":"흉성"};
 const LOCAL_NAMES=Object.fromEntries(BOSSES.concat([BLACK]).map(b=>[REMOTE_NAMES[b[0]]||b[0],b[0]]));
 const SOLO_BOSSES=new Set(["데미안","루시드","윌","더스크","진힐라","듄켈"]);
-const BOARD_CRYSTAL_PRICES={
-  "스우":{"노말":8350000,"하드":48900000,"익스트림":545000000},
-  "데미안":{"노말":8750000,"하드":46400000},
-  "가엔슬":{"노말":12700000,"카오스":71300000},
-  "루시드":{"이지":14900000,"노말":17800000,"하드":59700000},
-  "윌":{"이지":16100000,"노말":20500000,"하드":73200000},
-  "더스크":{"노말":22000000,"카오스":66300000},
-  "듄켈":{"노말":23700000,"하드":89600000},
-  "진힐라":{"노말":67600000,"하드":100000000},
-  "세렌":{"노말":167000000,"하드":302000000,"익스트림":1840000000},
-  "칼로스":{"이지":238000000,"노말":479000000,"카오스":1230000000,"익스트림":4140000000},
-  "대적자":{"이지":261000000,"노말":532000000,"하드":1390000000,"익스트림":4712000000},
-  "카링":{"이지":320000000,"노말":593000000,"하드":1560000000,"익스트림":5387000000},
-  "흉성":{"노말":576000000,"하드":2678000000},
-  "벨로나":{"이지":396000000,"노말":824000000,"하드":2950000000},
-  "림보":{"노말":995000000,"하드":2385000000},
-  "발드릭스":{"노말":1320000000,"하드":3078000000},
-  "유피테르":{"노말":1560000000,"하드":4845000000},
-  "검은 마법사":{"하드":465000000,"익스트림":5680000000}
-};
 const SYNC={owners:[],rows:[],busy:false,pending:new Set(),ready:false,lastCheck:0,lastOwners:0,error:""};
 function remoteOwner(owner){return SYNC.owners.find(o=>o.name===REMOTE_OWNER_NAMES[owner])||null}
 function remoteBossName(name){return REMOTE_NAMES[name]||name}
@@ -398,8 +378,20 @@ function remoteRowsFor(c,week){
   if(!o||!linked(c))return[];
   return SYNC.rows.filter(r=>r.owner_id===o.id&&r.character_name===c.remoteCharacter&&r.week_start===week);
 }
+function backupBeforeMerge(){
+  try{
+    const key=PREFIX+"pre-sync-backup-"+weekKey()+"-"+monthKey();
+    if(localStorage.getItem(key)===null){
+      localStorage.setItem(key,JSON.stringify({
+        createdAt:new Date().toISOString(),
+        week:S.weeks,month:S.month
+      }));
+    }
+  }catch{}
+}
 function mergeRemoteRecords(){
   if(!SYNC.ready)return false;
+  backupBeforeMerge();
   let changedWeek=false,changedMonth=false;
   allChars().forEach(c=>{
     if(!linked(c))return;
@@ -439,13 +431,16 @@ function mergeRemoteRecords(){
 function renderSyncStatus(){
   const el=$("syncState"),c=selectedChar();
   const o=remoteOwner(S.owner);
-  if(!SYNC.ready){
-    el.textContent=SYNC.error?"보스판 연결 실패 · 쇼츠 기록은 정상 사용 가능":"보스판 체크 기록 연결 중…";
+  if(SYNC.error){
+    el.textContent="보스판 연결 오류 · 쇼츠 기록은 별도 저장 중";
+  }else if(!SYNC.ready){
+    el.textContent="보스판 체크 기록 연결 중…";
   }else{
     const nick=linked(c)?c.remoteCharacter:null;
     el.textContent=nick?"✓ 보스판 연결됨 · "+o.name+" → "+nick:"보스판 미연결 · 캐릭터 연결을 선택해 주세요";
   }
-  el.classList.toggle("linked",!!linked(c));
+  el.classList.toggle("linked",!!linked(c)&&!SYNC.error);
+  el.classList.toggle("error",!!SYNC.error);
   $("syncNow").disabled=SYNC.busy;
   $("syncNow").textContent=SYNC.busy?"불러오는 중…":"보스판 동기화";
   const select=$("remoteNameSelect"),prior=select.value;
@@ -603,6 +598,8 @@ function boot(){
   S.week=currentWeek();S.day=Math.min(6,Math.max(0,Math.floor((todayKST()-S.week)/DAY)));
   loadWeek();loadMonth();register();render();refreshBossSync(true);
   setInterval(()=>{const w=currentWeek();if(S.follow&&S.week!==w){navigateWeek(w);notify("새 주간으로 넘어왔어요. 지난 기록은 지난주에서 볼 수 있어요.")}if(!document.hidden&&Date.now()-SYNC.lastCheck>9000)refreshBossSync(false)},4000);
+  if(document.addEventListener)document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshBossSync(false)});
+  if(typeof window!=="undefined"&&window.addEventListener)window.addEventListener("focus",()=>refreshBossSync(false));
 }
 boot();
 })();
