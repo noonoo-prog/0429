@@ -1977,7 +1977,6 @@ function compactBossCard(b,bi,c,pi,unlocked){
       :'<span class="compact-income-slot"><span class="compact-income missing">미등록</span></span>';
   }
   return '<article class="compact-boss-card '+(planned(c)?"is-set ":"is-empty ")+(auto?"is-sync ":"")+(mon?"is-monthly ":"")+(checkable?"is-checkable ":"")+(checked?"is-cleared":"")+'" '+(checkable?'data-board-check-bi="'+bi+'" data-board-check-pi="'+pi+'" aria-pressed="'+(checked?"true":"false")+'" title="클릭해서 이번 주 보스 체크"':"")+'>'+
-    (checked?'<span class="boss-cleared-mark" aria-label="잡은 보스">✓</span>':'')+
     '<div class="compact-main">'+
       compactDifficultySelect(c,editable,bi,pi)+
       '<div class="compact-name-wrap"><div class="compact-title-line"><strong class="compact-boss-name">'+esc(b)+'</strong>'+compactCountSelect(c,editable,bi,pi)+'</div>'+sync+'</div>'+
