@@ -469,10 +469,23 @@ const BOSS_PUBLIC_KEY="sb_publishable_s-EiUNh66D17Xd3JFGUyvA_aNEDNMKq";
 /* Shared expenditure records. The existing per-character spending stays on
    this device; only new owner-level extra-spending rows sync to the website. */
 const EXPENSE_API="https://ibqpjcedzcllacbamrnu.supabase.co/functions/v1/boss-shorts-expenses";
-const SPEND_SYNC={outbox:new Map(),timers:new Map(),writing:new Set(),dirty:new Set(),fetching:false,lastLoad:0,error:false};
+const SPEND_MANUAL={drafts:new Map(),localOnly:new Set(),saving:false,fetching:false,lastLoad:0,loadError:false};
 function spendKey(owner,date){return owner+"|"+date}
-function spendState(label){
-  const el=$("spendSyncState");if(el)el.textContent=label;
+function spendState(label){const el=$("spendSyncState");if(el)el.textContent=label}
+function pendingSpendDate(date=dayKey()){
+  return OWNERS.some(owner=>SPEND_MANUAL.drafts.has(spendKey(owner,date))||SPEND_MANUAL.localOnly.has(spendKey(owner,date)));
+}
+function hasDraftSpendDate(date=dayKey()){
+  return OWNERS.some(owner=>SPEND_MANUAL.drafts.has(spendKey(owner,date)));
+}
+function renderSpendStatus(){
+  const btn=$("saveSpend"),date=dayKey();
+  if(btn)btn.disabled=SPEND_MANUAL.saving||!pendingSpendDate(date);
+  if(SPEND_MANUAL.saving){spendState("저장 중…");return}
+  if(hasDraftSpendDate(date)){spendState("저장 전 · 저장 버튼을 눌러 주세요.");return}
+  if(pendingSpendDate(date)){spendState("기존 내역이 있어요. 저장 버튼으로 홈페이지에 등록해 주세요.");return}
+  if(SPEND_MANUAL.loadError){spendState("연결 오류 · 저장 버튼으로 다시 시도해 주세요.");return}
+  spendState("✓ 저장된 내역만 표시해요.");
 }
 async function expenseApi(action,body){
   const res=await fetch(EXPENSE_API,{
@@ -485,86 +498,99 @@ async function expenseApi(action,body){
   if(!res.ok||data.ok===false)throw new Error(data.error||"서버 저장 실패");
   return data;
 }
-function queueSpendSave(owner,date,week,rows,delay=900){
-  const key=spendKey(owner,date);
-  SPEND_SYNC.outbox.set(key,{owner,date,week,items:JSON.parse(JSON.stringify(rows))});
-  SPEND_SYNC.dirty.add(key);
-  if(SPEND_SYNC.timers.has(key))clearTimeout(SPEND_SYNC.timers.get(key));
-  SPEND_SYNC.timers.set(key,setTimeout(()=>sendSpend(key),delay));
-  spendState("기기에 저장됨 · 홈페이지 저장 중…");
-}
-async function sendSpend(key){
-  if(SPEND_SYNC.writing.has(key)||!SPEND_SYNC.outbox.has(key))return;
-  const job=SPEND_SYNC.outbox.get(key);
-  SPEND_SYNC.outbox.delete(key);
-  SPEND_SYNC.writing.add(key);
+async function saveSpendManual(){
+  if(SPEND_MANUAL.saving)return;
+  const date=dayKey(),toSave=OWNERS.filter(owner=>{
+    const key=spendKey(owner,date);
+    return SPEND_MANUAL.drafts.has(key)||SPEND_MANUAL.localOnly.has(key);
+  });
+  if(!toSave.length){renderSpendStatus();return}
+  SPEND_MANUAL.saving=true;renderSpendStatus();
   try{
-    await expenseApi("save",{owner:job.owner,day:job.date,items:job.items});
-    SPEND_SYNC.error=false;
-    if(!SPEND_SYNC.outbox.has(key))SPEND_SYNC.dirty.delete(key);
-    spendState(SPEND_SYNC.dirty.size?"홈페이지 저장 중…":"✓ 홈페이지 저장됨");
-  }catch(e){
-    SPEND_SYNC.error=true;
-    // Never discard local data or a later edit after a network error.
-    if(!SPEND_SYNC.outbox.has(key))SPEND_SYNC.outbox.set(key,job);
-    SPEND_SYNC.dirty.add(key);
-    spendState("연결 오류 · 기기에 저장됨. 다시 시도해요.");
-  }finally{
-    SPEND_SYNC.writing.delete(key);
-    if(SPEND_SYNC.outbox.has(key)&&!SPEND_SYNC.error){
-      if(SPEND_SYNC.timers.has(key))clearTimeout(SPEND_SYNC.timers.get(key));
-      SPEND_SYNC.timers.set(key,setTimeout(()=>sendSpend(key),400));
+    for(const owner of toSave){
+      const rows=ownerSpendRows(owner,date);
+      await expenseApi("save",{owner,day:date,items:rows});
+      if(!S.weeks.ownerExpenses[owner])S.weeks.ownerExpenses[owner]={};
+      S.weeks.ownerExpenses[owner][date]=rows;
+      SPEND_MANUAL.drafts.delete(spendKey(owner,date));
+      SPEND_MANUAL.localOnly.delete(spendKey(owner,date));
+      saveWeek();
     }
+    SPEND_MANUAL.loadError=false;
+    notify("사용 메소 저장 완료!");
+  }catch(e){
+    SPEND_MANUAL.loadError=true;
+    notify("저장 실패: "+String(e?.message||e));
+  }finally{
+    SPEND_MANUAL.saving=false;
+    renderStats();drawShort();renderOwnerExpenses();
+    if(SPEND_MANUAL.loadError){
+      const btn=$("saveSpend");if(btn)btn.disabled=!pendingSpendDate();
+      spendState("저장 실패 · 다시 저장 버튼을 눌러 주세요.");
+    }else renderSpendStatus();
   }
 }
-function retrySpend(){
-  if(SPEND_SYNC.fetching)return;
-  SPEND_SYNC.error=false;
-  for(const key of SPEND_SYNC.outbox.keys())sendSpend(key);
+function leaveSpendDate(){
+  if(SPEND_MANUAL.saving){notify("저장이 끝나면 이동할 수 있어요.");return false}
+  if(!hasDraftSpendDate())return true;
+  if(!confirm("저장하지 않은 사용 메소가 있어요. 입력 내용을 버리고 이동할까요?"))return false;
+  for(const owner of OWNERS)SPEND_MANUAL.drafts.delete(spendKey(owner,dayKey()));
+  renderSpendStatus();
+  return true;
 }
 async function pullSpend(week,showError=false){
-  if(SPEND_SYNC.fetching)return;
-  SPEND_SYNC.fetching=true;
+  if(SPEND_MANUAL.fetching)return;
+  SPEND_MANUAL.fetching=true;
   try{
     const data=await expenseApi("load",{week});
-    SPEND_SYNC.lastLoad=Date.now();
+    SPEND_MANUAL.lastLoad=Date.now();
+    SPEND_MANUAL.loadError=false;
     const remote=new Map((data.rows||[]).map(row=>[spendKey(row.owner,row.day),row]));
     if(week!==weekKey())return;
     let changed=false,backup=false;
-    const missed=[];
     for(let i=0;i<7;i++){
       const date=iso(S.week+i*DAY);
       for(const owner of OWNERS){
         const key=spendKey(owner,date);
-        if(SPEND_SYNC.dirty.has(key))continue;
+        if(SPEND_MANUAL.saving||SPEND_MANUAL.drafts.has(key))continue;
+        const local=savedSpendRows(owner,date);
         if(remote.has(key)){
-          const items=remote.get(key).items||[];
-          if(JSON.stringify(ownerSpendRows(owner,date))!==JSON.stringify(items)){
-            if(!backup){try{const k=PREFIX+"expense-archive-"+week;if(localStorage.getItem(k)===null)localStorage.setItem(k,JSON.stringify(S.weeks.ownerExpenses||{}))}catch{}backup=true}
+          const serverRows=(remote.get(key).items||[]).map(r=>({
+            id:String(r.id),amount:Number(r.amount)||0,note:String(r.note||"")
+          }));
+          const missingLegacy=local.filter(r=>r.id.startsWith("old-")&&!serverRows.some(x=>x.id===r.id));
+          const rows=serverRows.concat(missingLegacy);
+          if(missingLegacy.length)SPEND_MANUAL.localOnly.add(key);
+          else SPEND_MANUAL.localOnly.delete(key);
+          if(JSON.stringify(local)!==JSON.stringify(rows)){
+            if(!backup){
+              try{const archive=PREFIX+"expense-archive-"+week;
+                if(localStorage.getItem(archive)===null)localStorage.setItem(archive,JSON.stringify(S.weeks.ownerExpenses||{}))
+              }catch{}
+              backup=true;
+            }
             if(!S.weeks.ownerExpenses[owner])S.weeks.ownerExpenses[owner]={};
-            S.weeks.ownerExpenses[owner][date]=items;changed=true;
+            S.weeks.ownerExpenses[owner][date]=rows;changed=true;
           }
         }else{
-          const local=ownerSpendRows(owner,date);
-          if(local.length)missed.push({owner,date,items:local});
+          if(local.length)SPEND_MANUAL.localOnly.add(key);
+          else SPEND_MANUAL.localOnly.delete(key);
         }
       }
     }
     if(changed){
       saveWeek();renderStats();drawShort();
-      const active=document.activeElement;
-      if(!(active&&$("ownerExpenseGrid").contains(active)))renderOwnerExpenses();
-      else OWNERS.forEach(owner=>{const el=$("ownerTotal-"+owner);if(el)el.textContent=format(dayExpense(dayKey(),owner))});
+      const active=document.activeElement,grid=$("ownerExpenseGrid");
+      if(!active||!grid.contains(active))renderOwnerExpenses();
+      else OWNERS.forEach(owner=>{const el=$("ownerTotal-"+owner);
+        if(el)el.textContent=format(dayExpense(dayKey(),owner))});
     }
-    // Move saved entries from older local-only versions to the server.
-    missed.forEach(job=>queueSpendSave(job.owner,job.date,week,job.items,200));
-    if(!SPEND_SYNC.dirty.size)spendState("✓ 홈페이지에 저장돼요");
-    retrySpend();
+    renderSpendStatus();
   }catch(e){
-    if(showError)spendState("연결 오류 · 기기에만 저장 중");
-  }finally{SPEND_SYNC.fetching=false}
+    SPEND_MANUAL.loadError=true;
+    if(showError)spendState("홈페이지 연결 오류 · 저장 버튼으로 다시 시도해 주세요.");
+  }finally{SPEND_MANUAL.fetching=false}
 }
-
 const REMOTE_OWNER_NAMES={"옥수수목금":"오똑","콩국수목금":"츠죠"};
 const REMOTE_NAMES={"가디언 엔젤 슬라임":"가엔슬","진 힐라":"진힐라","선택받은 세렌":"세렌","감시자 칼로스":"칼로스","최초의 대적자":"대적자","찬란한 흉성":"흉성"};
 const LOCAL_NAMES=Object.fromEntries(BOSSES.concat([BLACK]).map(b=>[REMOTE_NAMES[b[0]]||b[0],b[0]]));
