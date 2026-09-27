@@ -113,8 +113,34 @@ function dayItems(date,scope){
 }
 function dayIncome(date,scope){return dayItems(date,scope).reduce((a,x)=>a+x.amount,0)}
 function weekIncome(scope){let v=0;allChars().forEach(c=>{if(!isInScope(c,scope))return;BOSSES.forEach(b=>{const r=records(c.id).bosses[b[0]];if(r)v+=savedAmount(b,r)})});return v}
+function ownerSpendRows(owner,date){
+  const value=S.weeks.ownerExpenses?.[owner]?.[date];
+  if(Array.isArray(value))return value.map((r,i)=>({
+    id:String(r.id||"entry-"+i),amount:Math.max(0,Number(r.amount)||0),note:String(r.note||"")
+  }));
+  // Older versions stored one amount and one note for each owner and day.
+  if(value&&typeof value==="object"&&(Number(value.amount)>0||value.note))
+    return[{id:"legacy",amount:Math.max(0,Number(value.amount)||0),note:String(value.note||"")}];
+  return[];
+}
+function setOwnerSpendRows(owner,date,rows){
+  if(!S.weeks.ownerExpenses)S.weeks.ownerExpenses={};
+  if(!S.weeks.ownerExpenses[owner])S.weeks.ownerExpenses[owner]={};
+  S.weeks.ownerExpenses[owner][date]=rows;
+  saveWeek();
+}
 function ownerExtraExpense(owner,date){
-  return Math.max(0,Number(S.weeks.ownerExpenses?.[owner]?.[date]?.amount||0));
+  return ownerSpendRows(owner,date).reduce((sum,r)=>sum+r.amount,0);
+}
+function spendingDetails(owner,date){
+  const entries=ownerSpendRows(owner,date).filter(x=>x.amount>0||x.note)
+    .map(r=>({note:r.note||"추가 사용",amount:r.amount}));
+  ownerChars(owner).forEach(c=>{
+    const e=records(c.id).expenses[date];
+    if(e&&(Number(e.amount)>0||e.note))
+      entries.push({note:e.note||c.name+" 사용",amount:Number(e.amount)||0});
+  });
+  return entries;
 }
 function dayExpense(date,scope){
   let v=0;
@@ -153,18 +179,21 @@ function renderStats(){
 }
 function renderOwnerExpenses(){
   const date=dayKey();
-  $("ownerExpenseDate").textContent=date.replaceAll("-",".")+" · 두 사람 추가 사용";
+  $("ownerExpenseDate").textContent=date.replaceAll("-",".")+" · 날짜별 사용 내역";
   $("ownerExpenseGrid").innerHTML=OWNERS.map(owner=>{
-    const record=S.weeks.ownerExpenses?.[owner]?.[date]||{amount:0,note:""};
+    const rows=ownerSpendRows(owner,date);
     const color=OWNER_META[owner].color;
-    return `<div class="owner-expense-card" data-owner-card="${owner}">
-      <div class="owner-expense-head"><span class="owner-expense-dot" style="background:${color}"></span><strong>${owner}</strong></div>
-      <label class="expense-label" for="shared-${owner}">추가 사용 메소</label>
-      <input id="shared-${owner}" data-owner-extra="${owner}" class="expense-input" type="text" inputmode="decimal" autocomplete="off" placeholder="예: 1억 2000만" value="${record.amount||""}">
-      <label class="expense-label" for="shared-note-${owner}" style="margin-top:10px">사용 내역 (선택)</label>
-      <input id="shared-note-${owner}" data-owner-note="${owner}" class="expense-note" type="text" maxlength="80" autocomplete="off" placeholder="예: 강화, 큐브" value="${esc(record.note||"")}">
-      <div class="owner-expense-result">오늘 총사용 <strong id="ownerTotal-${owner}">${format(dayExpense(date,owner))}</strong></div>
-    </div>`;
+    return '<div class="owner-expense-card" data-owner-card="'+owner+'">'+
+      '<div class="owner-expense-head"><span class="owner-expense-dot" style="background:'+color+'"></span><strong>'+owner+'</strong>'+
+      '<button class="spend-add" type="button" data-spend-add="'+owner+'" '+(rows.length>=40?'disabled':'')+'>＋ 내역</button></div>'+
+      '<div class="spend-rows">'+(rows.length?rows.map(row=>
+        '<div class="spend-row">'+
+          '<input class="spend-note" aria-label="사용 내역" data-spend-note="'+owner+'" data-spend-id="'+esc(row.id)+'" maxlength="80" type="text" autocomplete="off" placeholder="어디에 썼나요?" value="'+esc(row.note)+'">'+
+          '<input class="spend-amount" aria-label="사용 메소" data-spend-amount="'+owner+'" data-spend-id="'+esc(row.id)+'" inputmode="decimal" type="text" autocomplete="off" placeholder="금액" value="'+(row.amount||"")+'">'+
+          '<button class="spend-delete" aria-label="내역 삭제" type="button" data-spend-delete="'+owner+'" data-spend-id="'+esc(row.id)+'">×</button></div>'
+      ).join(""):'<p class="spend-empty">사용 내역이 없어요.</p>')+'</div>'+
+      '<div class="owner-expense-result"><span>오늘 사용</span><strong id="ownerTotal-'+owner+'">'+format(dayExpense(date,owner))+'</strong></div>'+
+    '</div>';
   }).join("");
 }
 function renderExpense(){
@@ -271,25 +300,54 @@ function changeBlack(kind,value){
   }
   saveMonth();renderMonthly();renderStats();drawShort();if(kind==="check"||kind==="move"||(S.month.byId[S.charId]&&(kind==="diff"||kind==="party")))maybeSyncCurrentBoss(BLACK,S.month.byId[S.charId],weekKey(),dayKey());
 }
-function editOwnerExpense(e){
-  const input=e.target;
-  const owner=input.dataset.ownerExtra||input.dataset.ownerNote;
+function spendChanged(e){
+  const input=e.target,owner=input.dataset.spendAmount||input.dataset.spendNote;
   if(!OWNERS.includes(owner))return;
-  const root=$("ownerExpenseGrid");
-  const amountInput=root.querySelector('[data-owner-extra="'+owner+'"]');
-  const noteInput=root.querySelector('[data-owner-note="'+owner+'"]');
-  const amount=amountFromInput(amountInput.value);
-  if(amount===null||amount>999999999999999){
-    amountInput.setAttribute("aria-invalid","true");
-    notify("금액은 숫자 또는 '1억 2000만' 형식으로 입력해 주세요.");
+  const date=dayKey(),week=weekKey(),id=input.dataset.spendId;
+  const rows=ownerSpendRows(owner,date),record=rows.find(r=>r.id===id);
+  if(!record)return;
+  if(input.dataset.spendAmount){
+    const value=amountFromInput(input.value);
+    if(value===null||value>999999999999999){
+      input.setAttribute("aria-invalid","true");
+      $("spendSyncState").textContent="금액을 확인해 주세요.";
+      return;
+    }
+    input.removeAttribute("aria-invalid");
+    record.amount=value;
+  }else record.note=input.value.slice(0,80);
+  setOwnerSpendRows(owner,date,rows);
+  $("ownerTotal-"+owner).textContent=format(dayExpense(date,owner));
+  renderStats();drawShort();
+  queueSpendSave(owner,date,week,rows);
+}
+function spendClick(e){
+  const add=e.target.closest("[data-spend-add]");
+  if(add){
+    const owner=add.dataset.spendAdd,date=dayKey(),week=weekKey();
+    const rows=ownerSpendRows(owner,date);
+    if(rows.length>=40){notify("하루 최대 40건까지 적을 수 있어요.");return}
+    const id="s"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
+    rows.push({id,amount:0,note:""});
+    setOwnerSpendRows(owner,date,rows);
+    queueSpendSave(owner,date,week,rows);
+    renderOwnerExpenses();drawShort();
+    const field=$("ownerExpenseGrid").querySelector('[data-spend-note="'+owner+'"][data-spend-id="'+id+'"]');
+    if(field)field.focus();
     return;
   }
-  amountInput.removeAttribute("aria-invalid");
-  if(!S.weeks.ownerExpenses[owner])S.weeks.ownerExpenses[owner]={};
-  S.weeks.ownerExpenses[owner][dayKey()]={amount,note:noteInput.value};
-  saveWeek();
-  $("ownerTotal-"+owner).textContent=format(dayExpense(dayKey(),owner));
-  renderStats();drawShort();
+  const del=e.target.closest("[data-spend-delete]");
+  if(del){
+    const owner=del.dataset.spendDelete,date=dayKey(),week=weekKey();
+    const rows=ownerSpendRows(owner,date);
+    const row=rows.find(r=>r.id===del.dataset.spendId);
+    if(!row)return;
+    if((row.amount>0||row.note)&&!confirm("'"+(row.note||"사용 내역")+"'을(를) 삭제할까요?"))return;
+    const next=rows.filter(r=>r.id!==row.id);
+    setOwnerSpendRows(owner,date,next);
+    queueSpendSave(owner,date,week,next);
+    renderOwnerExpenses();renderStats();drawShort();
+  }
 }
 function editExpense(){
   const text=$("expenseInput").value;
@@ -301,7 +359,7 @@ function editExpense(){
 }
 function navigateWeek(ms){
   if(ms<BASE)return;S.week=ms;S.day=ms===currentWeek()?Math.min(6,Math.max(0,Math.floor((todayKST()-ms)/DAY))):0;
-  S.follow=ms===currentWeek();loadWeek();loadMonth();mergeRemoteRecords();render();
+  S.follow=ms===currentWeek();loadWeek();loadMonth();mergeRemoteRecords();render();pullSpend(weekKey());
 }
 function todayKST(){const d=new Date(Date.now()+9*3600000);return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())}
 function setDay(day){S.day=day;loadMonth();mergeRemoteRecords();render()}
@@ -325,84 +383,63 @@ function fitting(ctx,v,width,start,min){let n=start;while(n>min){ctx.font="900 "
 function crop(ctx,v,w){while(v.length>1&&ctx.measureText(v).width>w)v=v.slice(0,-2)+"…";return v}
 function drawOwnerHalf(ctx,owner,y,date){
   const color=OWNER_META[owner].color,isCorn=owner===OWNERS[0];
-  const x=50,w=980,h=788,entries=dayItems(date,owner);
-  const gain=dayIncome(date,owner),spent=dayExpense(date,owner),net=gain-spent;
-  const weekGain=weekIncome(owner),weekSpent=weekExpense(owner),weekNet=weekGain-weekSpent;
-  // Two owner areas are equally tall and use only their own point colors.
-  const panel=ctx.createLinearGradient(x,y,x+w,y+h);
-  panel.addColorStop(0,isCorn?"#29271f":"#30222e");
-  panel.addColorStop(.47,"#1b2431");panel.addColorStop(1,"#151d2a");
-  rounded(ctx,x,y,w,h,30,panel,"#445366");
-  rounded(ctx,x+18,y+18,8,h-36,4,color);
-  const badgeX=x+74;
-  rounded(ctx,badgeX,y+33,82,82,22,isCorn?"#eac65b":"#f66baf");
-  txt(ctx,isCorn?"옥":"콩",badgeX+41,y+92,44,isCorn?"#372a11":"#fff","900","center");
-  txt(ctx,owner,x+176,y+89,46,"#fff9ec","900");
-  const chars=ownerChars(owner).length;
-  txt(ctx,chars+"개 캐릭터 · 오늘 잡은 보스 "+entries.length+"개",x+178,y+126,24,"#bfcadb","700");
-  rounded(ctx,x+w-197,y+52,147,51,16,isCorn?"#554a2a":"#583047");
-  txt(ctx,isCorn?"CORN":"PINK",x+w-124,y+86,25,color,"900","center");
-  // Primary earnings row. Values deliberately use separate cards to aid reading on mobile.
-  const gap=13,pad=32,cardW=(w-2*pad-2*gap)/3,start=x+pad,statY=y+164;
-  const cells=[["오늘 수익",gain,"#fff5d7"],["오늘 사용",spent,"#d3e1ef"],["오늘 순수익",net,net<0?"#ffb7c8":color]];
-  cells.forEach((cell,i)=>{
-    const xx=start+i*(cardW+gap);
-    rounded(ctx,xx,statY,cardW,141,19,"#0e1725","#405065");
-    txt(ctx,cell[0],xx+20,statY+40,25,"#aabdd0","800");
-    const value=compact(cell[1]);
-    txt(ctx,value,xx+20,statY+104,fitting(ctx,value,cardW-36,50,22),cell[2],"900");
+  const x=46,w=988,h=795;
+  const income=dayIncome(date,owner),spent=dayExpense(date,owner);
+  const expenses=spendingDetails(owner,date),bosses=dayItems(date,owner);
+  rounded(ctx,x,y,w,h,27,"#ffffff",isCorn?"#e3d3a1":"#efd2e0");
+  rounded(ctx,x+13,y+14,w-26,118,20,isCorn?"#fff4cc":"#ffe1ed");
+  rounded(ctx,x+33,y+32,74,74,20,color);
+  txt(ctx,isCorn?"옥":"콩",x+70,y+85,42,isCorn?"#352900":"#ffffff","900","center");
+  txt(ctx,owner,x+131,y+79,45,"#272432","900");
+  txt(ctx,ownerChars(owner).length+"개 캐릭터",x+134,y+115,23,"#756b73","700");
+  const gap=12,innerX=x+27,cardWidth=(w-54-2*gap)/3,statY=y+153;
+  [["오늘 수익",income],["오늘 사용",spent],["순수익",income-spent]].forEach((item,i)=>{
+    const bx=innerX+i*(cardWidth+gap);
+    rounded(ctx,bx,statY,cardWidth,150,18,isCorn?"#fffaf0":"#fff5f9","#e8e2e7");
+    txt(ctx,item[0],bx+18,statY+42,26,"#62606a","800");
+    const value=compact(item[1]);
+    txt(ctx,value,bx+18,statY+111,fitting(ctx,value,cardWidth-35,47,20),i===2?(income-spent<0?"#b74366":isCorn?"#9c7414":"#c03c78"):"#252735","900");
   });
-  rounded(ctx,x+pad,y+323,w-pad*2,107,19,"#243141","#415267");
-  const second=[["주간 수익",weekGain],["주간 사용",weekSpent],["주간 순수익",weekNet]];
-  const wkWidth=(w-pad*2)/3;
-  second.forEach((part,i)=>{
-    const xx=x+pad+wkWidth*i;
-    if(i){ctx.fillStyle="#405264";ctx.fillRect(xx,y+341,2,70)}
-    txt(ctx,part[0],xx+19,y+361,23,"#a6b9cb","750");
-    const value=compact(part[1]);
-    txt(ctx,value,xx+19,y+402,fitting(ctx,value,wkWidth-40,36,20),i===2?(weekNet<0?"#ffb7c8":color):"#f7f0df","900");
-  });
-  txt(ctx,"오늘 잡은 보스",x+pad,y+481,30,"#f8f1e8","900");
-  txt(ctx,entries.length+"개",x+w-pad,y+481,25,color,"900","right");
-  ctx.fillStyle="#415469";ctx.fillRect(x+pad,y+499,w-2*pad,2);
-  if(!entries.length){
-    rounded(ctx,x+pad,y+531,w-2*pad,130,19,"#1e2c3c","#3c4e60");
-    txt(ctx,"체크한 보스가 아직 없어요",x+w/2,y+605,29,"#a8bbcb","800","center");
-  }else{
-    const visible=entries.slice(0,6);
-    visible.forEach((item,i)=>{
-      const col=i>=3?1:0,row=i%3,cx=x+pad+col*(cardW*1.5+gap),cy=y+520+row*75;
-      const ww=(w-pad*2-gap)/2;
-      rounded(ctx,cx,cy,ww,66,14,"#203043","#384e62");
-      rounded(ctx,cx+11,cy+11,8,44,4,color);
-      txt(ctx,crop(ctx,item.name,260),cx+32,cy+28,23,"#f6f8fa","900");
-      const desc=item.c.name+" · "+item.diff+(item.monthly?" · 월간":"");
-      txt(ctx,crop(ctx,desc,240),cx+32,cy+53,18,"#aebfd0","700");
-      const val=compact(item.amount);
-      txt(ctx,val,cx+ww-13,cy+49,fitting(ctx,val,175,23,15),color,"900","right");
+  const listY=y+337,pad=28,sep=16,colWidth=(w-pad*2-sep)/2;
+  function listPanel(title,items,col){
+    const cx=x+pad+col*(colWidth+sep);
+    txt(ctx,title,cx+5,listY+1,28,"#30313a","900");
+    txt(ctx,String(items.length),cx+colWidth-7,listY+1,25,isCorn?"#997521":"#c04f80","900","right");
+    ctx.fillStyle="#ddd8db";ctx.fillRect(cx,listY+15,colWidth,2);
+    if(!items.length){
+      rounded(ctx,cx,listY+33,colWidth,91,14,"#fafafa","#efeaed");
+      txt(ctx,"기록 없음",cx+colWidth/2,listY+90,24,"#a3a0a8","750","center");
+      return;
+    }
+    items.slice(0,5).forEach((it,i)=>{
+      const ry=listY+34+i*68;
+      rounded(ctx,cx,ry,colWidth,59,13,"#f9f9f9","#eae7e9");
+      rounded(ctx,cx+12,ry+11,5,38,2,color);
+      const name=it.note||it.name;
+      ctx.font='800 23px "Apple SD Gothic Neo",Pretendard,sans-serif';
+      txt(ctx,crop(ctx,name,239),cx+25,ry+26,23,"#373742","800");
+      const sub=it.c?it.c.name+" · "+it.diff:"사용 메소";
+      ctx.font='650 17px "Apple SD Gothic Neo",Pretendard,sans-serif';
+      txt(ctx,crop(ctx,sub,220),cx+25,ry+48,16,"#85818a","650");
+      const value=compact(it.amount);
+      txt(ctx,value,cx+colWidth-12,ry+44,fitting(ctx,value,183,23,15),isCorn?"#9b7214":"#be4d82","900","right");
     });
-    if(entries.length>6)txt(ctx,"외 "+(entries.length-6)+"개 보스도 수익 합계에 포함돼요.",x+pad,y+764,21,"#a6b9c9","700");
+    if(items.length>5)txt(ctx,"외 "+(items.length-5)+"건",cx+5,listY+412,19,"#777580","700");
   }
+  listPanel("사용 내역",expenses,0);
+  listPanel("잡은 보스",bosses,1);
 }
 function drawShort(){
   const canvas=$("shortCanvas"),ctx=canvas.getContext("2d");if(!ctx)return;
-  const w=1080,h=1920,date=dayKey();
-  ctx.clearRect(0,0,w,h);
-  const bg=ctx.createLinearGradient(0,0,1080,1920);
-  bg.addColorStop(0,"#0f1320");bg.addColorStop(.52,"#0d1420");bg.addColorStop(1,"#10131c");
-  ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
-  ctx.fillStyle="#efbc32";ctx.fillRect(50,43,72,7);
-  ctx.fillStyle="#fb5b9d";ctx.fillRect(122,43,72,7);
-  txt(ctx,"오늘의 보스 수익",50,105,60,"#fdf8ee","900");
-  txt(ctx,date.replaceAll("-",".")+"  /  "+DAYS[S.day]+"요일",1025,105,29,"#b8c6d5","800","right");
-  drawOwnerHalf(ctx,OWNERS[0],155,date);
-  drawOwnerHalf(ctx,OWNERS[1],963,date);
-  const todayGain=dayIncome(date,"all"),todaySpend=dayExpense(date,"all");
-  rounded(ctx,50,1773,980,94,21,"#1d2939","#4b596e");
-  txt(ctx,"오늘 합산 순수익",79,1831,31,"#ccd5e0","800");
-  const net=compact(todayGain-todaySpend);
-  txt(ctx,net,1003,1832,fitting(ctx,net,580,49,28),todayGain-todaySpend<0?"#ffa7b9":"#f0d78b","900","right");
-  txt(ctx,"검은 마법사: 잡은 날의 수익에 포함 · 주간 수익에서는 제외",50,1900,23,"#9bacbc","700");
+  const date=dayKey();
+  ctx.clearRect(0,0,1080,1920);
+  ctx.fillStyle="#ffffff";ctx.fillRect(0,0,1080,1920);
+  ctx.fillStyle="#efbc32";ctx.fillRect(47,40,57,7);
+  ctx.fillStyle="#fb5b9d";ctx.fillRect(104,40,57,7);
+  txt(ctx,"오늘의 보스 수익",46,109,59,"#242430","900");
+  txt(ctx,date.replaceAll("-",".")+"  ·  "+DAYS[S.day]+"요일",1031,107,28,"#74717b","750","right");
+  drawOwnerHalf(ctx,OWNERS[0],148,date);
+  drawOwnerHalf(ctx,OWNERS[1],968,date);
 }
 function download(){
   const canvas=$("shortCanvas"),a=document.createElement("a");
@@ -416,6 +453,106 @@ function download(){
    No PIN or administrator credential is used or stored here. */
 const BOSS_API="https://ibqpjcedzcllacbamrnu.supabase.co/functions/v1/boss-board-api";
 const BOSS_PUBLIC_KEY="sb_publishable_s-EiUNh66D17Xd3JFGUyvA_aNEDNMKq";
+
+/* Shared expenditure records. The existing per-character spending stays on
+   this device; only new owner-level extra-spending rows sync to the website. */
+const EXPENSE_API="https://ibqpjcedzcllacbamrnu.supabase.co/functions/v1/boss-shorts-expenses";
+const SPEND_SYNC={outbox:new Map(),timers:new Map(),writing:new Set(),dirty:new Set(),fetching:false,lastLoad:0,error:false};
+function spendKey(owner,date){return owner+"|"+date}
+function spendState(label){
+  const el=$("spendSyncState");if(el)el.textContent=label;
+}
+async function expenseApi(action,body){
+  const res=await fetch(EXPENSE_API,{
+    method:"POST",mode:"cors",cache:"no-store",
+    headers:{"Content-Type":"application/json","apikey":BOSS_PUBLIC_KEY},
+    body:JSON.stringify(Object.assign({action},body||{}))
+  });
+  const raw=await res.text();let data;
+  try{data=JSON.parse(raw)}catch{data={}};
+  if(!res.ok||data.ok===false)throw new Error(data.error||"서버 저장 실패");
+  return data;
+}
+function queueSpendSave(owner,date,week,rows,delay=900){
+  const key=spendKey(owner,date);
+  SPEND_SYNC.outbox.set(key,{owner,date,week,items:JSON.parse(JSON.stringify(rows))});
+  SPEND_SYNC.dirty.add(key);
+  if(SPEND_SYNC.timers.has(key))clearTimeout(SPEND_SYNC.timers.get(key));
+  SPEND_SYNC.timers.set(key,setTimeout(()=>sendSpend(key),delay));
+  spendState("기기에 저장됨 · 홈페이지 저장 중…");
+}
+async function sendSpend(key){
+  if(SPEND_SYNC.writing.has(key)||!SPEND_SYNC.outbox.has(key))return;
+  const job=SPEND_SYNC.outbox.get(key);
+  SPEND_SYNC.outbox.delete(key);
+  SPEND_SYNC.writing.add(key);
+  try{
+    await expenseApi("save",{owner:job.owner,day:job.date,items:job.items});
+    SPEND_SYNC.error=false;
+    if(!SPEND_SYNC.outbox.has(key))SPEND_SYNC.dirty.delete(key);
+    spendState(SPEND_SYNC.dirty.size?"홈페이지 저장 중…":"✓ 홈페이지 저장됨");
+  }catch(e){
+    SPEND_SYNC.error=true;
+    // Never discard local data or a later edit after a network error.
+    if(!SPEND_SYNC.outbox.has(key))SPEND_SYNC.outbox.set(key,job);
+    SPEND_SYNC.dirty.add(key);
+    spendState("연결 오류 · 기기에 저장됨. 다시 시도해요.");
+  }finally{
+    SPEND_SYNC.writing.delete(key);
+    if(SPEND_SYNC.outbox.has(key)&&!SPEND_SYNC.error){
+      if(SPEND_SYNC.timers.has(key))clearTimeout(SPEND_SYNC.timers.get(key));
+      SPEND_SYNC.timers.set(key,setTimeout(()=>sendSpend(key),400));
+    }
+  }
+}
+function retrySpend(){
+  if(SPEND_SYNC.fetching)return;
+  SPEND_SYNC.error=false;
+  for(const key of SPEND_SYNC.outbox.keys())sendSpend(key);
+}
+async function pullSpend(week,showError=false){
+  if(SPEND_SYNC.fetching)return;
+  SPEND_SYNC.fetching=true;
+  try{
+    const data=await expenseApi("load",{week});
+    SPEND_SYNC.lastLoad=Date.now();
+    const remote=new Map((data.rows||[]).map(row=>[spendKey(row.owner,row.day),row]));
+    if(week!==weekKey())return;
+    let changed=false,backup=false;
+    const missed=[];
+    for(let i=0;i<7;i++){
+      const date=iso(S.week+i*DAY);
+      for(const owner of OWNERS){
+        const key=spendKey(owner,date);
+        if(SPEND_SYNC.dirty.has(key))continue;
+        if(remote.has(key)){
+          const items=remote.get(key).items||[];
+          if(JSON.stringify(ownerSpendRows(owner,date))!==JSON.stringify(items)){
+            if(!backup){try{const k=PREFIX+"expense-archive-"+week;if(localStorage.getItem(k)===null)localStorage.setItem(k,JSON.stringify(S.weeks.ownerExpenses||{}))}catch{}backup=true}
+            if(!S.weeks.ownerExpenses[owner])S.weeks.ownerExpenses[owner]={};
+            S.weeks.ownerExpenses[owner][date]=items;changed=true;
+          }
+        }else{
+          const local=ownerSpendRows(owner,date);
+          if(local.length)missed.push({owner,date,items:local});
+        }
+      }
+    }
+    if(changed){
+      saveWeek();renderStats();drawShort();
+      const active=document.activeElement;
+      if(!(active&&$("ownerExpenseGrid").contains(active)))renderOwnerExpenses();
+      else OWNERS.forEach(owner=>{const el=$("ownerTotal-"+owner);if(el)el.textContent=format(dayExpense(dayKey(),owner))});
+    }
+    // Move saved entries from older local-only versions to the server.
+    missed.forEach(job=>queueSpendSave(job.owner,job.date,week,job.items,200));
+    if(!SPEND_SYNC.dirty.size)spendState("✓ 홈페이지에 저장돼요");
+    retrySpend();
+  }catch(e){
+    if(showError)spendState("연결 오류 · 기기에만 저장 중");
+  }finally{SPEND_SYNC.fetching=false}
+}
+
 const REMOTE_OWNER_NAMES={"옥수수목금":"오똑","콩국수목금":"츠죠"};
 const REMOTE_NAMES={"가디언 엔젤 슬라임":"가엔슬","진 힐라":"진힐라","선택받은 세렌":"세렌","감시자 칼로스":"칼로스","최초의 대적자":"대적자","찬란한 흉성":"흉성"};
 const LOCAL_NAMES=Object.fromEntries(BOSSES.concat([BLACK]).map(b=>[REMOTE_NAMES[b[0]]||b[0],b[0]]));
@@ -691,7 +828,8 @@ function register(){
   $("monthlyCard").addEventListener("click",e=>{if(e.target.id==="moveBlack")changeBlack("move")});
   $("expenseInput").addEventListener("input",editExpense);
   $("expenseNote").addEventListener("input",editExpense);
-  $("ownerExpenseGrid").addEventListener("input",editOwnerExpense);
+  $("ownerExpenseGrid").addEventListener("input",spendChanged);
+  $("ownerExpenseGrid").addEventListener("click",spendClick);
   $("download").addEventListener("click",download);
   $("syncNow").addEventListener("click",()=>refreshBossSync(true));
   $("linkBossChar").addEventListener("click",connectBossChar);
@@ -701,10 +839,11 @@ function register(){
 function boot(){
   loadProfiles();S.prefs=load(KEY_PREFS,{})||{};S.theme=load(KEY_THEME,"dark")==="light"?"light":"dark";
   S.week=currentWeek();S.day=Math.min(6,Math.max(0,Math.floor((todayKST()-S.week)/DAY)));
-  loadWeek();loadMonth();register();render();refreshBossSync(true);
+  loadWeek();loadMonth();register();render();refreshBossSync(true);pullSpend(weekKey(),true);
   setInterval(()=>{const w=currentWeek();if(S.follow&&S.week!==w){navigateWeek(w);notify("새 주간으로 넘어왔어요. 지난 기록은 지난주에서 볼 수 있어요.")}if(!document.hidden&&Date.now()-SYNC.lastCheck>9000)refreshBossSync(false)},4000);
-  if(document.addEventListener)document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshBossSync(false)});
-  if(typeof window!=="undefined"&&window.addEventListener)window.addEventListener("focus",()=>refreshBossSync(false));
+  if(document.addEventListener)document.addEventListener("visibilitychange",()=>{if(!document.hidden){refreshBossSync(false);pullSpend(weekKey());retrySpend()}});
+  if(typeof window!=="undefined"&&window.addEventListener)window.addEventListener("focus",()=>{refreshBossSync(false);pullSpend(weekKey());retrySpend()});
+  setInterval(()=>{if(!document.hidden&&Date.now()-SPEND_SYNC.lastLoad>30000)pullSpend(weekKey())},15000);
 }
 boot();
 })();
