@@ -10,7 +10,7 @@
 <meta property="og:description" content="캐릭터별 주간 보스 수익을 기록하고 쇼츠 이미지로 저장">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://noonoo-prog.github.io/0429/shorts/">
-<link rel="stylesheet" href="./style-v2.css?v=20260928-sync1">
+<link rel="stylesheet" href="./style-v2.css?v=20260928-char-remove2">
 </head>
 <body>
 <main class="shell">
@@ -35,6 +35,7 @@
    <section class="panel">
     <div class="panel-heading"><h2 id="activeCharTitle">캐릭터</h2><span class="muted" id="characterHint"></span></div>
     <div id="characterList" class="character-list" aria-label="등록한 캐릭터"></div>
+    <p class="muted character-remove-help">이름 옆 × 버튼으로 쇼츠 목록에서만 삭제해요. 같은 이름으로 다시 추가하면 기록이 복원돼요.</p>
     <div class="char-editor">
       <label for="newCharInput">캐릭터 추가 · 개수 제한 없음</label>
       <input id="newCharInput" type="text" maxlength="30" autocomplete="off" placeholder="새 캐릭터 이름">
@@ -128,6 +129,6 @@
   </aside>
  </div>
 </main>
-<script src="./app-v2.js?v=20260928-sync1" defer></script>
+<script src="./app-v2.js?v=20260928-char-remove2" defer></script>
 </body>
 </html>
