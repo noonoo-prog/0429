@@ -665,21 +665,21 @@ function drawOwnerHalf(ctx,owner,y,date){
     items.slice(0,4).forEach((it,i)=>{
       const ry=listY+47+i*76;
       rounded(ctx,cx,ry,colWidth,68,12,"#f9f9f9","#eae7e9");
-      rounded(ctx,cx+9,ry+11,5,45,2,col===0?"#48a77d":color);
+      rounded(ctx,cx+9,ry+11,5,45,2,col===1?"#48a77d":color);
       const name=String(it.note||it.name||"기록");
       ctx.font='800 21px "Apple SD Gothic Neo",Pretendard,sans-serif';
       txt(ctx,crop(ctx,name,colWidth-38),cx+23,ry+25,21,"#373742","800");
-      const sub=it.c?it.c.name+" · "+it.diff:(col===0?"판매 수익":"사용 메소");
+      const sub=it.c?it.c.name+" · "+it.diff:(col===1?"판매 수익":"사용 메소");
       ctx.font='650 15px "Apple SD Gothic Neo",Pretendard,sans-serif';
       txt(ctx,crop(ctx,sub,124),cx+23,ry+53,15,"#85818a","650");
       const value=compact(it.amount);
-      txt(ctx,value,cx+colWidth-10,ry+54,fitting(ctx,value,148,20,12),col===0?"#238758":(isCorn?"#9b7214":"#be4d82"),"900","right");
+      txt(ctx,value,cx+colWidth-10,ry+54,fitting(ctx,value,148,20,12),col===1?"#238758":(isCorn?"#9b7214":"#be4d82"),"900","right");
     });
     if(items.length>4)txt(ctx,"외 "+(items.length-4)+"건 · 합계에 포함",cx+4,listY+373,17,"#777580","700");
   }
-  listPanel("추가 수익",gains,0);
-  listPanel("사용 내역",expenses,1);
-  listPanel("잡은 보스",bosses,2);
+  listPanel("잡은 보스",bosses,0);
+  listPanel("추가 수익",gains,1);
+  listPanel("사용 내역",expenses,2);
 }
 function drawShort(){
   const canvas=$("shortCanvas"),ctx=canvas.getContext("2d");if(!ctx)return;
