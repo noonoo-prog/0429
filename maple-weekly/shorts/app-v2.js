@@ -468,21 +468,10 @@ function renderBosses(){
     </article>`;
   }).join("");
 }
-function renderMonthly(){
-  const r=S.month.byId[S.charId],p=configuration(selectedChar(),BLACK)||r||pref(BLACK),other=r&&(r.day||r.date)!==dayKey();
-  $("monthlyCard").innerHTML=`<article class="boss-card ${r?"done":""}">
-    <label class="boss-top"><input type="checkbox" id="blackCheck" ${r?"checked":""}><span class="boss-name">검은 마법사 · 월 1회</span>${r?`<span class="done-badge">${esc((r.day||r.date).slice(5).replace("-","/"))} 완료</span>`:""}</label>
-    <div class="boss-controls"><select id="blackDiff" ${configuration(selectedChar(),BLACK)?"disabled":""}>${optionsFor(BLACK,p.diff)}</select><select id="blackParty" ${configuration(selectedChar(),BLACK)?"disabled":""}>${partyOptions(p.party)}</select></div>
-    <div class="price-line"><span>월간 별도 수익</span><strong>${compact(r?savedAmount(BLACK,r):earned(BLACK,p.diff,p.party))}</strong></div>
-    ${other?'<button type="button" class="move-button" id="moveBlack">선택 날짜로 이동 →</button>':""}
-  </article>`;
-  $("monthLabel").textContent=monthKey().replace("-","년 ")+"월 · "+selectedChar().name;
-  $("monthAmount").textContent=format(monthIncome("char:"+S.charId));
-}
 function render(){
   document.documentElement.dataset.theme=S.theme;document.documentElement.dataset.owner=S.owner;
   $("themeToggle").textContent=S.theme==="dark"?"☀ 라이트 모드":"☾ 다크 모드";
-  renderOwners();renderCharacters();renderWeekNav();renderStats();renderOwnerExpenses();renderIncome();renderBosses();renderMonthly();renderSyncStatus();drawShort();renderSpendStatus();renderIncomeStatus();
+  renderOwners();renderCharacters();renderWeekNav();renderStats();renderOwnerExpenses();renderIncome();renderBosses();renderSyncStatus();drawShort();renderSpendStatus();renderIncomeStatus();
 }
 function addCharacter(){
   const owner=S.owner;const value=$("newCharInput").value.trim();
@@ -538,17 +527,6 @@ function changeBoss(t){
     setPref(b,diff,party);if(r){r.diff=diff;r.party=party}
   }
   saveWeek();const changed=active().bosses[b[0]]||null;const list=$("bossList"),y=list.scrollTop;renderBosses();list.scrollTop=y;renderStats();drawShort();if(k==="check"||k==="move"||(changed&&(k==="diff"||k==="party")))maybeSyncCurrentBoss(b,changed,weekKey(),dayKey());
-}
-function changeBlack(kind,value){
-  const r=S.month.byId[S.charId],p=r||pref(BLACK);
-  if(kind==="check"){
-    S.month.byId[S.charId]=r?null:{day:dayKey(),diff:p.diff,party:p.party}
-  }else if(kind==="move"&&r)r.day=dayKey();
-  else if(kind==="diff"||kind==="party"){
-    const diff=kind==="diff"?value:p.diff,party=kind==="party"?Number(value):p.party;
-    setPref(BLACK,diff,party);if(r){r.diff=diff;r.party=party}
-  }
-  saveMonth();renderMonthly();renderStats();drawShort();if(kind==="check"||kind==="move"||(S.month.byId[S.charId]&&(kind==="diff"||kind==="party")))maybeSyncCurrentBoss(BLACK,S.month.byId[S.charId],weekKey(),dayKey());
 }
 function spendChanged(e){
   if(SPEND_MANUAL.saving||e.isComposing)return;
@@ -1057,7 +1035,7 @@ function pushBossCheck(c,b,week,day,rec){
     if(b[0]===BLACK[0])saveMonth();else saveWeek();
   }
   keys.forEach(k=>SYNC.pending.add(k));
-  renderBosses();renderMonthly();renderStats();drawShort();
+  renderBosses();renderStats();drawShort();
   // Match /boss/'s existing party behavior: checking a configured party
   // propagates to its participating characters under these two owners.
   const groups={};
@@ -1101,8 +1079,6 @@ function register(){
   $("thisWeek").addEventListener("click",()=>navigateWeek(currentWeek()));
   $("nextWeek").addEventListener("click",()=>navigateWeek(S.week+WEEK));
   $("dayTabs").addEventListener("click",e=>{const b=e.target.closest("[data-day]");if(b)setDay(Number(b.dataset.day))});
-  $("monthlyCard").addEventListener("change",e=>{if(e.target.id==="blackCheck")changeBlack("check");if(e.target.id==="blackDiff")changeBlack("diff",e.target.value);if(e.target.id==="blackParty")changeBlack("party",e.target.value)});
-  $("monthlyCard").addEventListener("click",e=>{if(e.target.id==="moveBlack")changeBlack("move")});
   $("ownerExpenseGrid").addEventListener("input",spendChanged);
   $("ownerExpenseGrid").addEventListener("focusout",formatAmountOnBlur);
   $("ownerExpenseGrid").addEventListener("click",spendClick);
