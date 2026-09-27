@@ -120,7 +120,7 @@ function renderOwners(){
   $("ownerTabs").innerHTML=OWNERS.map(owner=>`<button type="button" class="owner-tab ${S.owner===owner?"active":""}" data-owner="${owner}"><span class="owner-dot"></span><span>${owner}</span><small>${ownerChars(owner).length}캐릭터</small></button>`).join("");
 }
 function renderCharacters(){
-  $("characterList").innerHTML=ownerChars(S.owner).map(c=>`<button type="button" class="character-chip ${c.id===S.charId?"active":""}" data-char-id="${esc(c.id)}">${esc(c.name)}</button>`).join("");
+  $("characterList").innerHTML=ownerChars(S.owner).map(c=>`<span class="character-entry"><button type="button" class="character-chip ${c.id===S.charId?"active":""}" data-char-id="${esc(c.id)}">${esc(c.name)}</button><button type="button" class="character-remove" data-archive-id="${esc(c.id)}" title="쇼츠 목록에서 제거" aria-label="${esc(c.name)} 캐릭터 삭제" ${ownerChars(c.owner).length<=1?"disabled":""}>×</button></span>`).join("");
   const c=selectedChar();$("activeCharTitle").textContent=c.name;
   $("renameCharInput").value=c.name;
   $("characterHint").textContent=S.owner+" · "+ownerChars(S.owner).length+"개 캐릭터 등록됨";
