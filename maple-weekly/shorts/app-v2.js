@@ -320,6 +320,7 @@ function changeBlack(kind,value){
   saveMonth();renderMonthly();renderStats();drawShort();if(kind==="check"||kind==="move"||(S.month.byId[S.charId]&&(kind==="diff"||kind==="party")))maybeSyncCurrentBoss(BLACK,S.month.byId[S.charId],weekKey(),dayKey());
 }
 function spendChanged(e){
+  if(SPEND_MANUAL.saving)return;
   const input=e.target,owner=input.dataset.spendAmount||input.dataset.spendNote;
   if(!OWNERS.includes(owner))return;
   const date=dayKey(),id=input.dataset.spendId;
@@ -341,6 +342,7 @@ function spendChanged(e){
   
 }
 function spendClick(e){
+  if(SPEND_MANUAL.saving){notify("저장이 끝나면 수정할 수 있어요.");return}
   const add=e.target.closest("[data-spend-add]");
   if(add){
     const owner=add.dataset.spendAdd,date=dayKey();
@@ -501,6 +503,8 @@ async function expenseApi(action,body){
 }
 async function saveSpendManual(){
   if(SPEND_MANUAL.saving)return;
+  const invalid=$("ownerExpenseGrid").querySelector('[aria-invalid="true"]');
+  if(invalid){notify("사용 메소 금액을 확인해 주세요.");invalid.focus();return}
   const date=dayKey(),toSave=OWNERS.filter(owner=>{
     const key=spendKey(owner,date);
     return SPEND_MANUAL.drafts.has(key)||SPEND_MANUAL.localOnly.has(key);
