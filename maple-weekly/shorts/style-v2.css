@@ -211,3 +211,14 @@ button{cursor:pointer}button:disabled{opacity:.44;cursor:default}
 .spend-sync-state{margin:10px 0 0;color:var(--muted);font-size:11px;min-height:16px;line-height:1.5}
 .canvas-frame,#shortCanvas{background:#ffffff}
 @media(max-width:500px){.owner-expense-grid{grid-template-columns:1fr}.spend-row{grid-template-columns:minmax(0,1.3fr) minmax(82px,.8fr) 28px}}
+
+/* Manual spend v5 */
+.spend-save-button{
+  display:block;width:100%;height:46px;margin-top:14px;border:0;border-radius:12px;
+  background:linear-gradient(95deg,var(--yellow),var(--pink));
+  color:#241a1e;font-size:14px;font-weight:900;letter-spacing:-.01em
+}
+.spend-save-button:disabled{background:var(--field);color:var(--muted);border:1px solid var(--border);opacity:.7}
+.spend-sync-state{margin-top:8px;text-align:center}
+.shared-expense-panel{border-top:2px solid var(--yellow)}
+.summary .stat strong{font-variant-numeric:tabular-nums}
