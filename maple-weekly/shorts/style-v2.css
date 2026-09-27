@@ -222,3 +222,13 @@ button{cursor:pointer}button:disabled{opacity:.44;cursor:default}
 .spend-sync-state{margin-top:8px;text-align:center}
 .shared-expense-panel{border-top:2px solid var(--yellow)}
 .summary .stat strong{font-variant-numeric:tabular-nums}
+
+/* Meso display v6 */
+.spend-row{grid-template-rows:37px auto;row-gap:2px}
+.spend-row .spend-note{grid-column:1;grid-row:1}
+.spend-row .spend-amount{grid-column:2;grid-row:1}
+.spend-row .spend-delete{grid-column:3;grid-row:1}
+.spend-korean{grid-column:2;grid-row:2;text-align:right;padding-right:4px;
+  color:var(--muted);font-size:10px;line-height:16px;min-height:16px;
+  font-variant-numeric:tabular-nums}
+.spend-row .spend-amount:focus+.spend-delete+.spend-korean{color:var(--text)}
