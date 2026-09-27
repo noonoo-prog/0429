@@ -200,10 +200,6 @@ function renderMonthly(){
   $("monthLabel").textContent=monthKey().replace("-","년 ")+"월 · "+selectedChar().name;
   $("monthAmount").textContent=format(monthIncome("char:"+S.charId));
 }
-function renderPreviewTabs(){
-  const opts=[["all","전체"],[OWNERS[0],"옥수수"],[OWNERS[1],"콩국수"],["char:"+S.charId,"이 캐릭터"]];
-  $("previewTabs").innerHTML=opts.map(x=>`<button type="button" data-scope="${esc(x[0])}" class="${S.view===x[0]?"active":""}">${x[1]}</button>`).join("");
-}
 function render(){
   document.documentElement.dataset.theme=S.theme;document.documentElement.dataset.owner=S.owner;
   $("themeToggle").textContent=S.theme==="dark"?"☀ 라이트 모드":"☾ 다크 모드";
