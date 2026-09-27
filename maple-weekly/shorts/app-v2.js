@@ -155,10 +155,10 @@ function renderBosses(){
   const rec=active().bosses;const date=dayKey();
   $("bossCount").textContent=counted()+" / 12";
   $("bossList").innerHTML=BOSSES.map((b,i)=>{
-    const r=rec[b[0]],p=configuration(selectedChar(),b)||r||pref(b),other=r&&(r.day||r.date)!==date;const pending=SYNC.pending.has(syncKey(selectedChar(),remoteBossName(b[0]),weekKey()));
+    const r=rec[b[0]],cfg=configuration(selectedChar(),b),p=cfg||r||pref(b),other=r&&(r.day||r.date)!==date;const pending=SYNC.pending.has(syncKey(selectedChar(),remoteBossName(b[0]),weekKey()));
     return `<article class="boss-card ${r?"done":""} ${other?"other-day":""}">
-      <label class="boss-top"><input type="checkbox" data-kind="check" data-index="${i}" ${r?"checked":""} ${pending?"disabled":""}><span class="boss-name">${b[0]}</span>${r?`<span class="done-badge">${other?esc((r.day||r.date).slice(5).replace("-","/"))+" 완료":"오늘 완료"}</span>`:""}</label>
-      <div class="boss-controls"><select aria-label="${b[0]} 난이도" data-kind="diff" data-index="${i}" ${configuration(selectedChar(),b)?"disabled title=\"보스판에서 난이도 변경\"":""}>${optionsFor(b,p.diff)}</select><select aria-label="${b[0]} 파티 인원" data-kind="party" data-index="${i}" ${configuration(selectedChar(),b)?"disabled title=\"보스판에서 인원 변경\"":""}>${partyOptions(p.party)}</select></div>
+      <label class="boss-top"><input type="checkbox" data-kind="check" data-index="${i}" ${r?"checked":""} ${pending?"disabled":""}><span class="boss-name">${b[0]}</span>${linked(selectedChar())?`<span class="sync-tag ${cfg?"is-linked":"is-local"}">${cfg?"연동":"로컬"}</span>`:""}${r?`<span class="done-badge">${other?esc((r.day||r.date).slice(5).replace("-","/"))+" 완료":"오늘 완료"}</span>`:""}</label>
+      <div class="boss-controls"><select aria-label="${b[0]} 난이도" data-kind="diff" data-index="${i}" ${cfg?"disabled title=\"보스판에서 난이도 변경\"":""}>${optionsFor(b,p.diff)}</select><select aria-label="${b[0]} 파티 인원" data-kind="party" data-index="${i}" ${cfg?"disabled title=\"보스판에서 인원 변경\"":""}>${partyOptions(p.party)}</select></div>
       <div class="price-line"><span>내 결정석 수익</span><strong>${compact(r?savedAmount(b,r):earned(b,p.diff,p.party))}</strong></div>
       ${other?`<button type="button" class="move-button" data-kind="move" data-index="${i}">선택 날짜로 이동 →</button>`:""}
     </article>`;
@@ -317,6 +317,26 @@ const REMOTE_OWNER_NAMES={"옥수수목금":"오똑","콩국수목금":"츠죠"}
 const REMOTE_NAMES={"가디언 엔젤 슬라임":"가엔슬","진 힐라":"진힐라","선택받은 세렌":"세렌","감시자 칼로스":"칼로스","최초의 대적자":"대적자","찬란한 흉성":"흉성"};
 const LOCAL_NAMES=Object.fromEntries(BOSSES.concat([BLACK]).map(b=>[REMOTE_NAMES[b[0]]||b[0],b[0]]));
 const SOLO_BOSSES=new Set(["데미안","루시드","윌","더스크","진힐라","듄켈"]);
+const BOARD_CRYSTAL_PRICES={
+  "스우":{"노말":8350000,"하드":48900000,"익스트림":545000000},
+  "데미안":{"노말":8750000,"하드":46400000},
+  "가엔슬":{"노말":12700000,"카오스":71300000},
+  "루시드":{"이지":14900000,"노말":17800000,"하드":59700000},
+  "윌":{"이지":16100000,"노말":20500000,"하드":73200000},
+  "더스크":{"노말":22000000,"카오스":66300000},
+  "듄켈":{"노말":23700000,"하드":89600000},
+  "진힐라":{"노말":67600000,"하드":100000000},
+  "세렌":{"노말":167000000,"하드":302000000,"익스트림":1840000000},
+  "칼로스":{"이지":238000000,"노말":479000000,"카오스":1230000000,"익스트림":4140000000},
+  "대적자":{"이지":261000000,"노말":532000000,"하드":1390000000,"익스트림":4712000000},
+  "카링":{"이지":320000000,"노말":593000000,"하드":1560000000,"익스트림":5387000000},
+  "흉성":{"노말":576000000,"하드":2678000000},
+  "벨로나":{"이지":396000000,"노말":824000000,"하드":2950000000},
+  "림보":{"노말":995000000,"하드":2385000000},
+  "발드릭스":{"노말":1320000000,"하드":3078000000},
+  "유피테르":{"노말":1560000000,"하드":4845000000},
+  "검은 마법사":{"하드":465000000,"익스트림":5680000000}
+};
 const SYNC={owners:[],rows:[],busy:false,pending:new Set(),ready:false,lastCheck:0,lastOwners:0,error:""};
 function remoteOwner(owner){return SYNC.owners.find(o=>o.name===REMOTE_OWNER_NAMES[owner])||null}
 function remoteBossName(name){return REMOTE_NAMES[name]||name}
@@ -331,7 +351,8 @@ function configuration(c,b){
   if(!cell||!cell.difficulty||cell.difficulty==="x")return null;
   const diff=cell.difficulty,party=SOLO_BOSSES.has(name)?1:Math.max(1,Number(cell.count)||1);
   if(!b[1].some(x=>x[0]===diff))return null;
-  return{diff,party,amount:earned(b,diff,party)};
+  const base=Number((BOARD_CRYSTAL_PRICES[name]||{})[diff]||0);
+  return{diff,party,amount:base?Math.round(base/party):earned(b,diff,party),cell};
 }
 function savedAmount(b,r){return r&&r.fromBoss===true&&Number.isFinite(Number(r.mesoEarned))?Math.max(0,Number(r.mesoEarned)):earned(b,r.diff,r.party)}
 async function bossApi(action,payload){
@@ -478,6 +499,33 @@ function updateRemoteRow(item){
   const idx=SYNC.rows.findIndex(r=>r.owner_id===item.owner_id&&r.week_start===item.week_start&&r.character_name===item.character_name&&r.boss_name===item.boss_name);
   if(idx>=0)SYNC.rows[idx]=item;else SYNC.rows.push(item);
 }
+
+function bossPartyTargets(c,b){
+  const cfg=configuration(c,b),o=remoteOwner(c.owner);
+  if(!cfg||!o)return[];
+  const n=remoteBossName(b[0]),names=[c.remoteCharacter];
+  if(cfg.cell&&Number(cfg.cell.count)>=2){
+    (Array.isArray(cfg.cell.names)?cfg.cell.names:[]).slice(0,Math.max(0,Number(cfg.cell.count)-1)).forEach(name=>{
+      const nick=String(name||"").trim();
+      if(nick&&nick!=="미정"&&!names.includes(nick))names.push(nick);
+    });
+  }
+  const out=[],seen=new Set();
+  names.forEach(nick=>{
+    // The user explicitly linked these two owners only.
+    const targetOwner=nick===c.remoteCharacter?o:[...SYNC.owners].sort((a,b)=>(a.name==="츠죠"?0:1)-(b.name==="츠죠"?0:1)).find(x=>x.board?.players?.includes(nick));
+    if(!targetOwner||!targetOwner.board)return;
+    const index=targetOwner.board.players.indexOf(nick),cell=targetOwner.board.cells?.[n]?.[index];
+    if(!cell||!cell.difficulty||cell.difficulty==="x")return;
+    const diff=cell.difficulty,party=SOLO_BOSSES.has(n)?1:Math.max(1,Number(cell.count)||1);
+    const base=Number((BOARD_CRYSTAL_PRICES[n]||{})[diff]||0);
+    const key=targetOwner.id+"|"+nick;
+    if(seen.has(key))return;
+    seen.add(key);
+    out.push({ownerId:targetOwner.id,characterName:nick,payout:base?Math.round(base/party):0});
+  });
+  return out;
+}
 function pushBossCheck(c,b,week,day,rec){
   if(!SYNC.ready||!linked(c))return;
   const bossName=remoteBossName(b[0]),cfg=configuration(c,b);
@@ -485,29 +533,45 @@ function pushBossCheck(c,b,week,day,rec){
     if(rec)notify(b[0]+"은(는) 보스 현황판에 설정되지 않아 쇼츠에만 저장했어요.");
     return;
   }
-  const key=syncKey(c,bossName,week);
-  if(SYNC.pending.has(key))return;
-  const remoteRec=rec?{...rec,diff:cfg.diff,party:cfg.party}:null;
-  // Use the original board's configured difficulty/party payout, matching /boss/.
-  const mesoEarned=remoteRec?cfg.amount:0;
+  const targets=bossPartyTargets(c,b);
+  if(!targets.length)return;
+  const keys=targets.map(t=>t.ownerId+"|"+week+"|"+t.characterName+"|"+bossName);
+  if(keys.some(k=>SYNC.pending.has(k)))return;
   if(rec){
-    rec.diff=cfg.diff;rec.party=cfg.party;rec.mesoEarned=mesoEarned;rec.fromBoss=true;
+    rec.diff=cfg.diff;rec.party=cfg.party;rec.mesoEarned=cfg.amount;rec.fromBoss=true;
     if(b[0]===BLACK[0])saveMonth();else saveWeek();
   }
-  SYNC.pending.add(key);
+  keys.forEach(k=>SYNC.pending.add(k));
   renderBosses();renderMonthly();renderStats();drawShort();
-  bossApi("save_boss_run_check",{
-    ownerId:remoteOwner(c.owner).id,weekStart:week,runDate:day,
-    characterName:c.remoteCharacter,bossName,completed:!!rec,mesoEarned
-  }).then(data=>{
-    if(data.item)updateRemoteRow(data.item);
-    SYNC.pending.delete(key);mergeRemoteRecords();
-    render();notify(b[0]+" 체크가 보스판에도 저장됐어요.");
+  // Match /boss/'s existing party behavior: checking a configured party
+  // propagates to its participating characters under these two owners.
+  const groups={};
+  targets.forEach(t=>{
+    if(!groups[t.ownerId])groups[t.ownerId]=[];
+    groups[t.ownerId].push({characterName:t.characterName,bossName,completed:!!rec,mesoEarned:rec?t.payout:0});
+  });
+  const send=targets.length===1
+    ?bossApi("save_boss_run_check",{
+      ownerId:targets[0].ownerId,weekStart:week,runDate:day,
+      characterName:targets[0].characterName,bossName,
+      completed:!!rec,mesoEarned:rec?targets[0].payout:0
+    }).then(data=>[data.item].filter(Boolean))
+    :Promise.all(Object.entries(groups).map(([ownerId,items])=>
+      bossApi("save_boss_run_bulk",{ownerId,weekStart:week,runDate:day,items})
+    )).then(data=>data.flatMap(x=>x.items||[]));
+  send.then(items=>{
+    items.forEach(updateRemoteRow);
+    keys.forEach(k=>SYNC.pending.delete(k));
+    mergeRemoteRecords();render();
+    notify(b[0]+" · "+targets.length+"명 보스판 체크가 함께 저장됐어요.");
   }).catch(err=>{
-    SYNC.pending.delete(key);render();
-    notify("보스판 저장 실패: "+(err?.message||"연결 오류")+" · 쇼츠 기록만 남았어요.");
+    keys.forEach(k=>SYNC.pending.delete(k));
+    render();
+    notify("보스판 저장 실패: "+(err?.message||"연결 오류")+" · 서버와 다시 확인해 주세요.");
+    refreshBossSync(false);
   });
 }
+
 function maybeSyncCurrentBoss(b,rec,week,day){pushBossCheck(selectedChar(),b,week,day,rec)}
 
 function register(){
