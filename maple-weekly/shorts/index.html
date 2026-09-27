@@ -10,7 +10,7 @@
 <meta property="og:description" content="캐릭터별 주간 보스 수익을 기록하고 쇼츠 이미지로 저장">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://noonoo-prog.github.io/0429/shorts/">
-<link rel="stylesheet" href="./style-v2.css?v=20260928b">
+<link rel="stylesheet" href="./style-v2.css?v=20260928-sync1">
 </head>
 <body>
 <main class="shell">
@@ -45,6 +45,25 @@
       <input id="renameCharInput" type="text" maxlength="30" autocomplete="off" placeholder="수정할 이름">
       <button id="renameChar" type="button">이름 저장</button>
       <span class="muted">이름을 바꿔도 기존 보스 기록은 사라지지 않아요.</span>
+    </div>
+    <div class="boss-sync-area">
+      <div class="boss-sync-heading">
+        <div><span class="sync-icon">↔</span> 보스 현황판 연동</div>
+        <a href="../boss/" target="_blank" rel="noopener">보스판 열기 ↗</a>
+      </div>
+      <p id="syncState" class="sync-state" role="status" aria-live="polite">보스판 연결 중…</p>
+      <p class="muted sync-help">오똑 ↔ 옥수수목금 / 츠죠 ↔ 콩국수목금. 기존 보스판 캐릭터를 자동으로 불러오고, 같은 닉네임을 연결해요.</p>
+      <div class="sync-line">
+        <select id="remoteNameSelect" aria-label="연동할 보스판 캐릭터" disabled>
+          <option value="">연결할 보스판 캐릭터 선택</option>
+        </select>
+        <button id="linkBossChar" class="sync-connect" type="button" disabled>연결</button>
+      </div>
+      <div class="sync-actions">
+        <button id="syncNow" type="button">보스판 동기화</button>
+        <button id="unlinkBossChar" type="button">연결 해제</button>
+      </div>
+      <p class="sync-foot">연결된 캐릭터의 체크·해제는 양쪽 사이트에 반영돼요. 주간 사용 메소는 쇼츠 기록판에만 저장됩니다.</p>
     </div>
    </section>
    <section class="panel">
@@ -86,6 +105,7 @@
    <section class="panel">
     <div class="panel-heading"><h2>주간 보스 체크</h2><span id="bossCount" class="boss-count">0 / 12</span></div>
     <p class="section-intro muted">지금 선택한 캐릭터의 보스만 체크해요. 날짜·난이도·파티 인원도 각각 따로 저장돼요.</p>
+    <p id="bossSyncNote" class="sync-boss-note">보스판 연결을 확인하고 있어요.</p>
     <div id="bossList" class="boss-list"></div>
     <p class="note">결정석은 1인 가격을 기준으로 파티 인원수만큼 나눠 계산해요. 검은 마법사는 아래 월간 구역에 분리했어요.</p>
    </section>
@@ -108,6 +128,6 @@
   </aside>
  </div>
 </main>
-<script src="./app-v2.js?v=20260928b" defer></script>
+<script src="./app-v2.js?v=20260928-sync1" defer></script>
 </body>
 </html>
