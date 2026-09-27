@@ -594,7 +594,7 @@ function maybeSyncCurrentBoss(b,rec,week,day){pushBossCheck(selectedChar(),b,wee
 
 function register(){
   $("ownerTabs").addEventListener("click",e=>{const b=e.target.closest("[data-owner]");if(!b)return;S.owner=b.dataset.owner;const c=ownerChars(S.owner)[0];selectChar(c.id)});
-  $("characterList").addEventListener("click",e=>{const b=e.target.closest("[data-char-id]");if(b)selectChar(b.dataset.charId)});
+  $("characterList").addEventListener("click",e=>{const remove=e.target.closest("[data-archive-id]");if(remove){archiveCharacter(remove.dataset.archiveId);return}const b=e.target.closest("[data-char-id]");if(b)selectChar(b.dataset.charId)});
   $("addChar").addEventListener("click",addCharacter);
   $("newCharInput").addEventListener("keydown",e=>{if(e.key==="Enter")addCharacter()});
   $("renameChar").addEventListener("click",renameCharacter);
