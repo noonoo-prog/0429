@@ -244,3 +244,34 @@ button{cursor:pointer}button:disabled{opacity:.44;cursor:default}
 :root[data-theme="light"] .owner-income-card .owner-expense-result strong{color:#27875b}
 .income-save-button{background:linear-gradient(95deg,#64c897,#a9dfbf);color:#123d2a}
 .income-save-button:disabled{background:var(--field);color:var(--muted);border:1px solid var(--border)}
+
+/* Collapsible character tools v8 */
+.character-collapsible{padding:0;overflow:hidden}
+.character-collapse-trigger{
+  display:flex;align-items:center;gap:12px;min-height:65px;padding:18px 20px;
+  cursor:pointer;list-style:none;outline-offset:-3px
+}
+.character-collapse-trigger::-webkit-details-marker{display:none}
+.character-collapse-trigger::marker{content:""}
+.character-collapse-trigger:hover{background:var(--field)}
+.character-collapse-trigger:focus-visible{outline:2px solid var(--yellow);border-radius:16px}
+.character-collapse-title{font-size:16px;font-weight:900;letter-spacing:-.04em}
+.character-collapse-active{
+  margin-left:auto;max-width:36%;color:var(--muted);
+  font-size:12px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.character-collapse-chevron{
+  flex:none;width:10px;height:10px;margin-left:4px;margin-right:4px;
+  border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:rotate(45deg);transition:transform .18s ease
+}
+.character-collapsible[open] .character-collapse-chevron{transform:rotate(225deg)}
+.character-collapsible[open] .character-collapse-trigger{border-bottom:1px solid var(--border)}
+.character-collapsible-body{padding:18px 19px 19px}
+@media(max-width:420px){
+  .character-collapse-trigger{padding:15px 13px;gap:8px;min-height:57px}
+  .character-collapse-title{font-size:14px}
+  .character-collapse-active{font-size:11px;max-width:32%}
+  .character-collapsible-body{padding:15px 13px}
+}
+@media(prefers-reduced-motion:reduce){.character-collapse-chevron{transition:none}}
