@@ -46,7 +46,7 @@ function startingProfiles(){return{characters:[{id:"corn-1",owner:OWNERS[0],name
 function allChars(){return S.profiles.characters}
 function ownerChars(owner){return allChars().filter(c=>c.owner===owner)}
 function selectedChar(){return allChars().find(c=>c.id===S.charId)||allChars()[0]}
-function selectChar(id){const c=allChars().find(x=>x.id===id);if(!c)return;S.charId=id;S.owner=c.owner;S.profiles.selected=id;save(KEY_PROFILES,S.profiles);render()}
+function selectChar(id){const c=allChars().find(x=>x.id===id);if(!c)return;S.charId=id;S.owner=c.owner;S.profiles.selected=id;if(S.view.startsWith("char:"))S.view="char:"+id;save(KEY_PROFILES,S.profiles);render()}
 function loadProfiles(){
   const p=load(KEY_PROFILES,null);S.profiles=p&&Array.isArray(p.characters)?p:startingProfiles();
   OWNERS.forEach(owner=>{if(!S.profiles.characters.some(c=>c.owner===owner)){const n=owner===OWNERS[0]?0:1;S.profiles.characters.push({id:owner===OWNERS[0]?"corn-1":"bean-1",owner,name:owner==="옥수수목금"?"옥수수 1":"콩국수 1"})}});
@@ -180,7 +180,7 @@ function renderPreviewTabs(){
   $("previewTabs").innerHTML=opts.map(x=>`<button type="button" data-scope="${esc(x[0])}" class="${S.view===x[0]?"active":""}">${x[1]}</button>`).join("");
 }
 function render(){
-  document.documentElement.dataset.theme=S.theme;
+  document.documentElement.dataset.theme=S.theme;document.documentElement.dataset.owner=S.owner;
   $("themeToggle").textContent=S.theme==="dark"?"☀ 라이트 모드":"☾ 다크 모드";
   renderOwners();renderCharacters();renderWeekNav();renderStats();renderExpense();renderBosses();renderMonthly();renderPreviewTabs();drawShort();
 }
@@ -190,7 +190,7 @@ function addCharacter(){
   if(ownerChars(owner).some(x=>x.name===value)){notify("같은 주인에게 동일한 이름이 있어요.");return}
   const id=(owner===OWNERS[0]?"corn":"bean")+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
   S.profiles.characters.push({id,owner,name:value});S.profiles.selected=id;save(KEY_PROFILES,S.profiles);
-  S.charId=id;$("newCharInput").value="";render();notify(value+" 캐릭터가 추가됐어요.");
+  S.charId=id;if(S.view.startsWith("char:"))S.view="char:"+id;$("newCharInput").value="";render();notify(value+" 캐릭터가 추가됐어요.");
 }
 function renameCharacter(){
   const c=selectedChar(),name=$("renameCharInput").value.trim();
@@ -238,7 +238,14 @@ function navigateWeek(ms){
 function todayKST(){const d=new Date(Date.now()+9*3600000);return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())}
 function setDay(day){S.day=day;loadMonth();render()}
 function rounded(ctx,x,y,w,h,r,fill,stroke){
-  ctx.beginPath();ctx.roundRect(x,y,w,h,r);
+  ctx.beginPath();
+  if(ctx.roundRect)ctx.roundRect(x,y,w,h,r);
+  else{
+    ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+    ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+    ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
+    ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
+  }
   if(fill){ctx.fillStyle=fill;ctx.fill()}
   if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke()}
 }
