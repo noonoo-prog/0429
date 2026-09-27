@@ -49,6 +49,7 @@ function selectedChar(){return allChars().find(c=>c.id===S.charId)||allChars()[0
 function selectChar(id){const c=allChars().find(x=>x.id===id);if(!c)return;S.charId=id;S.owner=c.owner;S.profiles.selected=id;if(S.view.startsWith("char:"))S.view="char:"+id;save(KEY_PROFILES,S.profiles);render()}
 function loadProfiles(){
   const p=load(KEY_PROFILES,null);S.profiles=p&&Array.isArray(p.characters)?p:startingProfiles();
+  if(!Array.isArray(S.profiles.deletedCharacters))S.profiles.deletedCharacters=[];
   OWNERS.forEach(owner=>{if(!S.profiles.characters.some(c=>c.owner===owner)){const n=owner===OWNERS[0]?0:1;S.profiles.characters.push({id:owner===OWNERS[0]?"corn-1":"bean-1",owner,name:owner==="옥수수목금"?"옥수수 1":"콩국수 1"})}});
   const c=allChars().find(x=>x.id===S.profiles.selected)||allChars()[0];S.charId=c.id;S.owner=c.owner;
 }
