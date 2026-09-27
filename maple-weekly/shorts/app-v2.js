@@ -193,6 +193,29 @@ function addCharacter(){
   S.profiles.characters.push({id,owner,name:value});S.profiles.selected=id;save(KEY_PROFILES,S.profiles);
   S.charId=id;if(S.view.startsWith("char:"))S.view="char:"+id;$("newCharInput").value="";render();notify(value+" 캐릭터가 추가됐어요.");
 }
+function archiveCharacter(id){
+  const c=allChars().find(x=>x.id===id);
+  if(!c)return;
+  if(ownerChars(c.owner).length<=1){
+    notify("주인마다 최소 한 캐릭터는 남겨야 해요.");
+    return;
+  }
+  if(!confirm("'"+c.name+"'을(를) 쇼츠 목록에서 삭제할까요?\n\n보스 현황판은 그대로 유지되고, 쇼츠 기록은 같은 이름으로 다시 추가하면 복원돼요."))return;
+  const archive=S.profiles.deletedCharacters;
+  S.profiles.deletedCharacters=archive.filter(x=>x.id!==id);
+  S.profiles.deletedCharacters.push({...c});
+  S.profiles.characters=S.profiles.characters.filter(x=>x.id!==id);
+  if(S.charId===id){
+    const next=ownerChars(c.owner)[0]||allChars()[0];
+    S.charId=next.id;
+    S.owner=next.owner;
+    S.profiles.selected=next.id;
+  }
+  if(S.view==="char:"+id)S.view="char:"+S.charId;
+  save(KEY_PROFILES,S.profiles);
+  render();
+  notify("'"+c.name+"' 캐릭터를 목록에서 삭제했어요.");
+}
 function renameCharacter(){
   const c=selectedChar(),name=$("renameCharInput").value.trim();
   if(!name){notify("이름을 입력해 주세요.");return}
