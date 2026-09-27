@@ -351,10 +351,9 @@ function configuration(c,b){
   if(!cell||!cell.difficulty||cell.difficulty==="x")return null;
   const diff=cell.difficulty,party=SOLO_BOSSES.has(name)?1:Math.max(1,Number(cell.count)||1);
   if(!b[1].some(x=>x[0]===diff))return null;
-  const base=Number((BOARD_CRYSTAL_PRICES[name]||{})[diff]||0);
-  return{diff,party,amount:base?Math.round(base/party):earned(b,diff,party),cell};
+  return{diff,party,amount:earned(b,diff,party),cell};
 }
-function savedAmount(b,r){return r&&r.fromBoss===true&&Number.isFinite(Number(r.mesoEarned))?Math.max(0,Number(r.mesoEarned)):earned(b,r.diff,r.party)}
+function savedAmount(b,r){return earned(b,r.diff,r.party)}
 async function bossApi(action,payload){
   const res=await fetch(BOSS_API,{
     method:"POST",mode:"cors",cache:"no-store",
@@ -518,11 +517,11 @@ function bossPartyTargets(c,b){
     const index=targetOwner.board.players.indexOf(nick),cell=targetOwner.board.cells?.[n]?.[index];
     if(!cell||!cell.difficulty||cell.difficulty==="x")return;
     const diff=cell.difficulty,party=SOLO_BOSSES.has(n)?1:Math.max(1,Number(cell.count)||1);
-    const base=Number((BOARD_CRYSTAL_PRICES[n]||{})[diff]||0);
+    if(!b[1].some(x=>x[0]===diff))return;
     const key=targetOwner.id+"|"+nick;
     if(seen.has(key))return;
     seen.add(key);
-    out.push({ownerId:targetOwner.id,characterName:nick,payout:base?Math.round(base/party):0});
+    out.push({ownerId:targetOwner.id,characterName:nick,payout:earned(b,diff,party)});
   });
   return out;
 }
