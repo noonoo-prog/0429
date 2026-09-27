@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#141822">
 <title>옥수수목금 × 콩국수목금 | 쇼츠 보스 수익</title>
-<meta name="description" content="캐릭터별 보스 결정석 수익·주간 사용 메소·순수익을 기록하고 유튜브 쇼츠용 이미지를 저장하세요.">
+<meta name="description" content="옥수수목금과 콩국수목금의 보스 수익, 사용 메소, 순수익을 위아래 한 장에 담은 쇼츠 이미지. 기존 보스판 체크와 연결됩니다.">
 <meta property="og:title" content="옥수수목금 × 콩국수목금 · 보스 수익">
-<meta property="og:description" content="캐릭터별 주간 보스 수익을 기록하고 쇼츠 이미지로 저장">
+<meta property="og:description" content="옥수수목금 위 · 콩국수목금 아래, 보스 수익과 사용 메소를 한 장에 정리">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://noonoo-prog.github.io/0429/shorts/">
-<link rel="stylesheet" href="./style-v2.css?v=20260928-char-remove2">
+<link rel="stylesheet" href="./style-v2.css?v=20260928-split-v3">
 </head>
 <body>
 <main class="shell">
  <header class="top">
   <div class="top-center">
    <p class="top-label">BOSS INCOME · DAILY SHORTS</p>
-   <h1>오늘 보스, 얼마 벌었지?</h1>
-   <p>옥수수목금 <span style="color:var(--yellow)">●</span> 콩국수목금 <span style="color:var(--pink)">●</span> 캐릭터별 수익 기록과 쇼츠 이미지</p>
+   <h1>오늘의 보스 수익</h1>
+   <p>옥수수목금 <span style="color:var(--yellow)">●</span> 콩국수목금 <span style="color:var(--pink)">●</span> 체크한 보스부터 사용 메소까지 · 매일 한 장의 쇼츠 이미지로 정리</p>
   </div>
   <div class="top-right">
    <span class="color-key corn"><i></i>옥수수목금</span>
@@ -84,6 +84,12 @@
       <div class="stat wide"><span>선택한 주인 · 모든 캐릭터의 주간 순수익 합계</span><strong id="statBoth">0 메소</strong></div>
     </div>
    </section>
+   <section class="panel shared-expense-panel">
+    <div class="panel-heading"><h2>쇼츠 추가 사용 메소</h2><span class="muted">두 주인 · 날짜별 자동 저장</span></div>
+    <p id="ownerExpenseDate" class="expense-date"></p>
+    <p class="muted expense-explain">캐릭터별 사용 메소에 <strong>이미 적은 금액은 중복 입력하지 마세요.</strong> 여기는 각 주인의 추가 지출만 적으면 돼요.</p>
+    <div id="ownerExpenseGrid" class="owner-expense-grid"></div>
+   </section>
    <section class="panel">
     <div class="panel-heading"><h2>사용 메소 기록</h2><span class="muted">일별 입력 → 주간 자동 합산</span></div>
     <div id="expenseDate" class="expense-date"></div>
@@ -121,14 +127,14 @@
   <aside class="preview-section">
    <div class="preview-panel">
     <div class="preview-header"><h2>유튜브 쇼츠 미리보기</h2><span>9:16 · 1080 × 1920</span></div>
-    <div id="previewTabs" class="preview-tabs"></div>
+    <div class="preview-order"><span><i class="preview-dot corn"></i>위 · 옥수수목금</span><span><i class="preview-dot bean"></i>아래 · 콩국수목금</span></div>
     <div class="canvas-frame"><canvas id="shortCanvas" width="1080" height="1920" aria-label="오늘의 보스 수익 쇼츠 이미지" role="img"></canvas></div>
-    <button id="download" class="download" type="button">쇼츠 이미지 PNG 저장 ↓</button>
-    <p class="preview-hint">전체·주인별·선택 캐릭터별로 쇼츠 이미지를 저장할 수 있어요. 기록은 현재 기기의 브라우저에 저장됩니다.</p>
+    <button id="download" class="download" type="button">쇼츠 비교 이미지 PNG 저장 ↓</button>
+    <p class="preview-hint">옥수수목금과 콩국수목금의 오늘 수익·사용 메소·순수익을 위아래로 보여줘요. 이미지 비율은 9:16이며, 기존 보스판과 체크를 연동해요. 추가 사용 메소는 이 브라우저에 저장됩니다.</p>
    </div>
   </aside>
  </div>
 </main>
-<script src="./app-v2.js?v=20260928-char-remove2" defer></script>
+<script src="./app-v2.js?v=20260928-split-v3" defer></script>
 </body>
 </html>
