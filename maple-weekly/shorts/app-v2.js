@@ -606,7 +606,7 @@ function spendClick(e){
 function navigateWeek(ms){
   if(ms<BASE||ms===S.week||!leaveSpendDate())return;
   S.week=ms;S.day=ms===currentWeek()?Math.min(6,Math.max(0,Math.floor((todayKST()-ms)/DAY))):0;
-  S.follow=ms===currentWeek();loadWeek();loadMonth();mergeRemoteRecords();render();pullSpend(weekKey());
+  S.follow=ms===currentWeek();loadWeek();loadMonth();mergeRemoteRecords();render();pullSpend(weekKey());pullIncome(weekKey());
 }
 function todayKST(){const d=new Date(Date.now()+9*3600000);return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())}
 function setDay(day){if(day===S.day||!leaveSpendDate())return;S.day=day;loadMonth();mergeRemoteRecords();render()}
@@ -768,11 +768,14 @@ async function saveSpendManual(){
   }
 }
 function leaveSpendDate(){
-  if(SPEND_MANUAL.saving){notify("저장이 끝나면 이동할 수 있어요.");return false}
-  if(!hasDraftSpendDate())return true;
-  if(!confirm("저장하지 않은 사용 메소가 있어요. 입력 내용을 버리고 이동할까요?"))return false;
-  for(const owner of OWNERS)SPEND_MANUAL.drafts.delete(spendKey(owner,dayKey()));
-  renderSpendStatus();
+  if(SPEND_MANUAL.saving||INCOME_MANUAL.saving){notify("저장이 끝나면 이동할 수 있어요.");return false}
+  if(!hasDraftSpendDate()&&!incomeHasDraft())return true;
+  if(!confirm("저장하지 않은 사용 메소 또는 추가 수익이 있어요. 입력 내용을 버리고 이동할까요?"))return false;
+  for(const owner of OWNERS){
+    SPEND_MANUAL.drafts.delete(spendKey(owner,dayKey()));
+    INCOME_MANUAL.drafts.delete(incomeKey(owner,dayKey()));
+  }
+  renderSpendStatus();renderIncomeStatus();
   return true;
 }
 async function pullSpend(week,showError=false){
@@ -1099,6 +1102,10 @@ function register(){
   $("ownerExpenseGrid").addEventListener("focusout",formatAmountOnBlur);
   $("ownerExpenseGrid").addEventListener("click",spendClick);
   $("saveSpend").addEventListener("click",saveSpendManual);
+  $("ownerIncomeGrid").addEventListener("input",incomeChanged);
+  $("ownerIncomeGrid").addEventListener("focusout",incomeBlur);
+  $("ownerIncomeGrid").addEventListener("click",incomeClick);
+  $("saveIncome").addEventListener("click",saveIncomeManual);
   $("download").addEventListener("click",download);
   $("syncNow").addEventListener("click",()=>refreshBossSync(true));
   $("linkBossChar").addEventListener("click",connectBossChar);
@@ -1108,14 +1115,14 @@ function register(){
 function boot(){
   loadProfiles();S.prefs=load(KEY_PREFS,{})||{};S.theme=load(KEY_THEME,"dark")==="light"?"light":"dark";
   S.week=currentWeek();S.day=Math.min(6,Math.max(0,Math.floor((todayKST()-S.week)/DAY)));
-  loadWeek();loadMonth();register();render();refreshBossSync(true);pullSpend(weekKey(),true);
-  setInterval(()=>{const w=currentWeek();if(S.follow&&S.week!==w&&!hasDraftSpendDate()&&!SPEND_MANUAL.saving){navigateWeek(w);notify("새 주간으로 넘어왔어요. 지난 기록은 지난주에서 볼 수 있어요.")}if(!document.hidden&&Date.now()-SYNC.lastCheck>9000)refreshBossSync(false)},4000);
-  if(document.addEventListener)document.addEventListener("visibilitychange",()=>{if(!document.hidden){refreshBossSync(false);pullSpend(weekKey())}});
+  loadWeek();loadMonth();register();render();refreshBossSync(true);pullSpend(weekKey(),true);pullIncome(weekKey(),true);
+  setInterval(()=>{const w=currentWeek();if(S.follow&&S.week!==w&&!hasDraftSpendDate()&&!SPEND_MANUAL.saving&&!incomeHasDraft()&&!INCOME_MANUAL.saving){navigateWeek(w);notify("새 주간으로 넘어왔어요. 지난 기록은 지난주에서 볼 수 있어요.")}if(!document.hidden&&Date.now()-SYNC.lastCheck>9000)refreshBossSync(false)},4000);
+  if(document.addEventListener)document.addEventListener("visibilitychange",()=>{if(!document.hidden){refreshBossSync(false);pullSpend(weekKey());pullIncome(weekKey())}});
   if(typeof window!=="undefined"&&window.addEventListener){
-    window.addEventListener("focus",()=>{refreshBossSync(false);pullSpend(weekKey())});
-    window.addEventListener("beforeunload",e=>{if(hasDraftSpendDate()){e.preventDefault();e.returnValue=""}});
+    window.addEventListener("focus",()=>{refreshBossSync(false);pullSpend(weekKey());pullIncome(weekKey())});
+    window.addEventListener("beforeunload",e=>{if(hasDraftSpendDate()||incomeHasDraft()){e.preventDefault();e.returnValue=""}});
   }
-  setInterval(()=>{if(!document.hidden&&Date.now()-SPEND_MANUAL.lastLoad>30000)pullSpend(weekKey())},15000);
+  setInterval(()=>{if(!document.hidden&&Date.now()-SPEND_MANUAL.lastLoad>30000)pullSpend(weekKey());if(!document.hidden&&Date.now()-INCOME_MANUAL.lastLoad>30000)pullIncome(weekKey())},15000);
 }
 boot();
 })();
