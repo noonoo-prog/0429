@@ -68,6 +68,35 @@ function loadWeek(){
     save(keyWeek(),s);
   }
   S.weeks=normalWeek(s);
+  migrateOldCharacterExpenses();
+}
+function migrateOldCharacterExpenses(){
+  // Keep amounts from the former "사용 메소 기록" panel editable in the
+  // surviving multi-entry list, without counting them twice.
+  if(S.weeks.legacyCharacterExpensesMigrated)return;
+  let changed=false;
+  const roster=allChars().concat(S.profiles.deletedCharacters||[]);
+  roster.forEach(c=>{
+    if(!OWNERS.includes(c.owner))return;
+    const entries=S.weeks.byId[c.id]?.expenses||{};
+    Object.entries(entries).forEach(([date,e])=>{
+      const amount=Math.floor(Math.max(0,Number(e?.amount)||0));
+      const note=String(e?.note||"").trim();
+      if(!amount&&!note)return;
+      if(!S.weeks.ownerExpenses[c.owner])S.weeks.ownerExpenses[c.owner]={};
+      const old=S.weeks.ownerExpenses[c.owner][date];
+      const rows=Array.isArray(old)?old.slice():
+        old&&(Number(old.amount)>0||old.note)?[{id:"legacy",amount:Number(old.amount)||0,note:String(old.note||"")}]:[];
+      let hash=2166136261;
+      for(const ch of c.id+"|"+date){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619)}
+      const id="old-"+(hash>>>0).toString(36);
+      if(rows.some(r=>r.id===id))return;
+      rows.push({id,amount,note:(note?c.name+" · "+note:c.name+" 사용").slice(0,80)});
+      S.weeks.ownerExpenses[c.owner][date]=rows;changed=true;
+    });
+  });
+  S.weeks.legacyCharacterExpensesMigrated=true;
+  if(changed)saveWeek();
 }
 function loadMonth(){
   let s=load(keyMonth(monthKey()),null);
@@ -113,40 +142,37 @@ function dayItems(date,scope){
 }
 function dayIncome(date,scope){return dayItems(date,scope).reduce((a,x)=>a+x.amount,0)}
 function weekIncome(scope){let v=0;allChars().forEach(c=>{if(!isInScope(c,scope))return;BOSSES.forEach(b=>{const r=records(c.id).bosses[b[0]];if(r)v+=savedAmount(b,r)})});return v}
-function ownerSpendRows(owner,date){
+function savedSpendRows(owner,date){
   const value=S.weeks.ownerExpenses?.[owner]?.[date];
   if(Array.isArray(value))return value.map((r,i)=>({
     id:String(r.id||"entry-"+i),amount:Math.max(0,Number(r.amount)||0),note:String(r.note||"")
   }));
-  // Older versions stored one amount and one note for each owner and day.
   if(value&&typeof value==="object"&&(Number(value.amount)>0||value.note))
     return[{id:"legacy",amount:Math.max(0,Number(value.amount)||0),note:String(value.note||"")}];
   return[];
 }
+function ownerSpendRows(owner,date){
+  const key=spendKey(owner,date);
+  const draft=SPEND_MANUAL.drafts.get(key);
+  return draft?draft.map(r=>({...r})):savedSpendRows(owner,date);
+}
 function setOwnerSpendRows(owner,date,rows){
-  if(!S.weeks.ownerExpenses)S.weeks.ownerExpenses={};
-  if(!S.weeks.ownerExpenses[owner])S.weeks.ownerExpenses[owner]={};
-  S.weeks.ownerExpenses[owner][date]=rows;
-  saveWeek();
+  const key=spendKey(owner,date),newRows=rows.map(r=>({...r}));
+  if(JSON.stringify(newRows)===JSON.stringify(savedSpendRows(owner,date)))
+    SPEND_MANUAL.drafts.delete(key);
+  else SPEND_MANUAL.drafts.set(key,newRows);
+  renderSpendStatus();
 }
 function ownerExtraExpense(owner,date){
   return ownerSpendRows(owner,date).reduce((sum,r)=>sum+r.amount,0);
 }
 function spendingDetails(owner,date){
-  const entries=ownerSpendRows(owner,date).filter(x=>x.amount>0||x.note)
-    .map(r=>({note:r.note||"추가 사용",amount:r.amount}));
-  ownerChars(owner).forEach(c=>{
-    const e=records(c.id).expenses[date];
-    if(e&&(Number(e.amount)>0||e.note))
-      entries.push({note:e.note||c.name+" 사용",amount:Number(e.amount)||0});
-  });
-  return entries;
+  return ownerSpendRows(owner,date).filter(r=>r.amount>0||r.note)
+    .map(r=>({note:r.note||"사용",amount:r.amount}));
 }
 function dayExpense(date,scope){
-  let v=0;
-  allChars().forEach(c=>{if(isInScope(c,scope))v+=Number(records(c.id).expenses[date]?.amount||0)});
-  OWNERS.forEach(owner=>{if(scope==="all"||scope===owner)v+=ownerExtraExpense(owner,date)});
-  return v;
+  return OWNERS.reduce((sum,owner)=>
+    sum+(scope==="all"||scope===owner?ownerExtraExpense(owner,date):0),0);
 }
 function weekExpense(scope){let v=0;for(let i=0;i<7;i++)v+=dayExpense(iso(S.week+i*DAY),scope);return v}
 function monthIncome(scope){let v=0;allChars().forEach(c=>{if(isInScope(c,scope)){const r=S.month.byId[c.id];if(r)v+=savedAmount(BLACK,r)}});return v}
@@ -167,15 +193,13 @@ function renderWeekNav(){
   $("dayTabs").innerHTML=DAYS.map((d,i)=>`<button type="button" class="day ${i===S.day?"active":""}" data-day="${i}" data-name="${d}"><span class="day-name">${d}</span><span class="day-date">${iso(S.week+i*DAY).slice(5).replace("-","/")}</span></button>`).join("");
 }
 function renderStats(){
-  const scope="char:"+S.charId,date=dayKey(),earnedToday=dayIncome(date,scope),earnedWeek=weekIncome(scope),spentWeek=weekExpense(scope);
-  $("statDay").textContent=format(earnedToday);
-  $("statWeek").textContent=format(earnedWeek);
-  $("statSpend").textContent=format(spentWeek);
-  $("statNet").textContent=format(earnedWeek-spentWeek);
-  $("statBoth").textContent=format(weekIncome(S.owner)-weekExpense(S.owner));
-  $("expenseTotal").textContent=format(spentWeek);
-  $("expenseNet").textContent=format(earnedWeek-spentWeek);
-  $("expenseDayTotal").textContent=format(dayExpense(date,scope));
+  const date=dayKey(),scope="char:"+S.charId;
+  $("statDay").textContent=format(dayIncome(date,scope));
+  $("statWeek").textContent=format(weekIncome(scope));
+  $("statSpendLabel").textContent=S.owner+" · 오늘 사용";
+  $("statNetLabel").textContent=S.owner+" · 오늘 순수익";
+  $("statSpend").textContent=format(dayExpense(date,S.owner));
+  $("statNet").textContent=format(dayIncome(date,S.owner)-dayExpense(date,S.owner));
 }
 function renderOwnerExpenses(){
   const date=dayKey();
@@ -196,16 +220,11 @@ function renderOwnerExpenses(){
     '</div>';
   }).join("");
 }
-function renderExpense(){
-  const e=active().expenses[dayKey()]||{amount:0,note:""};
-  $("expenseDate").textContent=dayKey().replaceAll("-",".")+" · "+selectedChar().name;
-  $("expenseInput").value=e.amount?String(e.amount):"";
-  $("expenseNote").value=e.note||"";
-  renderStats();
-}
+
 function optionsFor(b,selected){return b[1].map(x=>`<option value="${x[0]}" ${x[0]===selected?"selected":""}>${x[0]}</option>`).join("")}
 function partyOptions(p){let s="";for(let n=1;n<=12;n++)s+=`<option value="${n}" ${Number(p)===n?"selected":""}>${n}인</option>`;return s}
 function renderBosses(){
+  if(!$("bossList"))return;
   const rec=active().bosses;const date=dayKey();
   $("bossCount").textContent=counted()+" / 12";
   $("bossList").innerHTML=BOSSES.map((b,i)=>{
@@ -232,7 +251,7 @@ function renderMonthly(){
 function render(){
   document.documentElement.dataset.theme=S.theme;document.documentElement.dataset.owner=S.owner;
   $("themeToggle").textContent=S.theme==="dark"?"☀ 라이트 모드":"☾ 다크 모드";
-  renderOwners();renderCharacters();renderWeekNav();renderStats();renderExpense();renderOwnerExpenses();renderBosses();renderMonthly();renderSyncStatus();renderSyncNotes();drawShort();
+  renderOwners();renderCharacters();renderWeekNav();renderStats();renderOwnerExpenses();renderBosses();renderMonthly();renderSyncStatus();drawShort();renderSpendStatus();
 }
 function addCharacter(){
   const owner=S.owner;const value=$("newCharInput").value.trim();
@@ -349,14 +368,7 @@ function spendClick(e){
     renderOwnerExpenses();renderStats();drawShort();
   }
 }
-function editExpense(){
-  const text=$("expenseInput").value;
-  const amount=amountFromInput(text);
-  if(amount===null||amount>999999999999999){$("expenseInput").setAttribute("aria-invalid","true");$("expenseInvalid").textContent="숫자 또는 '1억 2000만' 형식으로 입력해 주세요.";return}
-  $("expenseInput").removeAttribute("aria-invalid");$("expenseInvalid").textContent="";
-  active().expenses[dayKey()]={amount,note:$("expenseNote").value};
-  saveWeek();renderStats();drawShort();
-}
+
 function navigateWeek(ms){
   if(ms<BASE)return;S.week=ms;S.day=ms===currentWeek()?Math.min(6,Math.max(0,Math.floor((todayKST()-ms)/DAY))):0;
   S.follow=ms===currentWeek();loadWeek();loadMonth();mergeRemoteRecords();render();pullSpend(weekKey());
@@ -696,11 +708,7 @@ function renderSyncStatus(){
   $("linkBossChar").disabled=!SYNC.ready;
   $("unlinkBossChar").disabled=!c.remoteCharacter;
 }
-function renderSyncNotes(){
-  const c=selectedChar(),linkedNow=!!linked(c),board=remoteOwner(c.owner)?.board;
-  const pi=linkedNow?board.players.indexOf(c.remoteCharacter):-1;
-  $("bossSyncNote").textContent=!linkedNow?"보스판 닉네임과 연결하면 체크 상태가 양쪽에 반영돼요.":("보스판에 설정된 보스만 양쪽에서 체크됩니다. 설정되지 않은 보스와 파풀라투스는 쇼츠에서만 기록돼요.");
-}
+
 function connectBossChar(){
   const name=$("remoteNameSelect").value,c=selectedChar();
   if(!name){notify("연결할 보스판 캐릭터를 선택해 주세요.");return}
@@ -822,14 +830,11 @@ function register(){
   $("thisWeek").addEventListener("click",()=>navigateWeek(currentWeek()));
   $("nextWeek").addEventListener("click",()=>navigateWeek(S.week+WEEK));
   $("dayTabs").addEventListener("click",e=>{const b=e.target.closest("[data-day]");if(b)setDay(Number(b.dataset.day))});
-  $("bossList").addEventListener("change",e=>{if(e.target.dataset.kind)changeBoss(e.target)});
-  $("bossList").addEventListener("click",e=>{const b=e.target.closest('[data-kind="move"]');if(b)changeBoss(b)});
   $("monthlyCard").addEventListener("change",e=>{if(e.target.id==="blackCheck")changeBlack("check");if(e.target.id==="blackDiff")changeBlack("diff",e.target.value);if(e.target.id==="blackParty")changeBlack("party",e.target.value)});
   $("monthlyCard").addEventListener("click",e=>{if(e.target.id==="moveBlack")changeBlack("move")});
-  $("expenseInput").addEventListener("input",editExpense);
-  $("expenseNote").addEventListener("input",editExpense);
   $("ownerExpenseGrid").addEventListener("input",spendChanged);
   $("ownerExpenseGrid").addEventListener("click",spendClick);
+  $("saveSpend").addEventListener("click",saveSpendManual);
   $("download").addEventListener("click",download);
   $("syncNow").addEventListener("click",()=>refreshBossSync(true));
   $("linkBossChar").addEventListener("click",connectBossChar);
