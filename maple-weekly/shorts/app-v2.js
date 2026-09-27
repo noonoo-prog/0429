@@ -696,7 +696,6 @@ function register(){
   $("expenseInput").addEventListener("input",editExpense);
   $("expenseNote").addEventListener("input",editExpense);
   $("ownerExpenseGrid").addEventListener("input",editOwnerExpense);
-  $("previewTabs").addEventListener("click",e=>{const b=e.target.closest("[data-scope]");if(!b)return;S.view=b.dataset.scope;renderPreviewTabs();drawShort()});
   $("download").addEventListener("click",download);
   $("syncNow").addEventListener("click",()=>refreshBossSync(true));
   $("linkBossChar").addEventListener("click",connectBossChar);
