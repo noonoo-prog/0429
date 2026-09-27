@@ -1,0 +1,131 @@
+
+:root{
+  font-family:"Apple SD Gothic Neo",Pretendard,"Malgun Gothic",system-ui,sans-serif;
+  font-synthesis:none;color-scheme:dark;
+  --bg:#0d1018;--panel:#191e2b;--panel2:#1e2635;--field:#131b29;--text:#edf1f7;--muted:#aab6c8;--border:#354051;--line:#405064;--shadow:0 14px 35px rgba(0,0,0,.2);
+  --yellow:#efbc32;--yellow-soft:#ffefbc;--pink:#fb5b9d;--pink-soft:#ffd2e4;
+}
+:root[data-theme="light"]{
+ color-scheme:light;--bg:#f5f5f3;--panel:#fff;--panel2:#f8f9fc;--field:#f1f3f6;--text:#252b39;--muted:#616b7c;--border:#d5dbe3;--line:#bfc8d5;--shadow:0 14px 35px rgba(31,43,58,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse 900px 620px at 4% -100px,#452738 0,transparent 75%),radial-gradient(ellipse 730px 520px at 103% 1%,#454026 0,transparent 75%),var(--bg);color:var(--text);min-height:100vh}
+:root[data-theme="light"] body{background:radial-gradient(ellipse 800px 620px at 3% -100px,#ffe0e9 0,transparent 75%),radial-gradient(ellipse 730px 520px at 103% -120px,#fff3d0 0,transparent 80%),var(--bg)}
+input,select,button{font:inherit}
+button{cursor:pointer}button:disabled{opacity:.44;cursor:default}
+.shell{width:min(1380px,calc(100% - 36px));margin:0 auto;padding:27px 0 70px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px}
+.top-label{font-size:11px;font-weight:900;letter-spacing:.24em;color:var(--yellow);margin:0 0 8px}
+.top h1{font-size:clamp(25px,3vw,41px);letter-spacing:-.06em;line-height:1.12;margin:0 0 8px;font-weight:900}
+.top p{margin:0;color:var(--muted);font-size:13px;line-height:1.6}
+.top-center{min-width:0}
+.top-right{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+.color-key{padding:9px 12px;border:1px solid var(--border);border-radius:100px;background:var(--panel);display:flex;align-items:center;gap:7px;font-size:11px;font-weight:850;white-space:nowrap}
+.color-key i{width:9px;height:9px;display:inline-block;border-radius:100%;background:var(--pink)}
+.color-key.corn i{background:var(--yellow)}
+.theme-toggle{min-height:37px;border-radius:100px;padding:0 14px;border:1px solid var(--border);color:var(--text);background:var(--panel);font-size:12px;font-weight:800}
+.theme-toggle:hover,.mini-btn:hover{filter:brightness(1.08)}
+.layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(310px,.8fr);gap:19px;align-items:start}
+.controls,.preview-section{min-width:0}
+.panel,.preview-panel{background:var(--panel);border:1px solid var(--border);border-radius:19px;padding:19px;margin-bottom:14px;box-shadow:var(--shadow)}
+.panel-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.panel-heading h2,.preview-header h2{font-size:16px;letter-spacing:-.04em;margin:0;font-weight:900}
+.muted{font-size:12px;color:var(--muted);line-height:1.65}
+.owner-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.owner-tab{--owner:var(--yellow);display:flex;align-items:center;gap:10px;border-radius:13px;border:1px solid var(--border);padding:13px;background:var(--field);color:var(--text);font-weight:900;text-align:left;min-height:63px;min-width:0}
+.owner-tab[data-owner="콩국수목금"]{--owner:var(--pink)}
+.owner-tab span:not(.owner-dot){font-size:14px}
+.owner-dot{flex:none;background:var(--owner);width:13px;height:13px;border-radius:50%;box-shadow:0 0 0 5px color-mix(in srgb,var(--owner),transparent 82%)}
+.owner-tab small{margin-left:auto;color:var(--muted);white-space:nowrap;font-size:11px}
+.owner-tab.active{border-color:var(--owner);background:color-mix(in srgb,var(--owner),var(--panel) 89%);box-shadow:inset 0 0 0 1px var(--owner)}
+.owner-tab.active small{color:var(--text)}
+.owner-mark{width:18px;height:18px;line-height:18px;flex:none;text-align:center;font-weight:900;color:#1c2028;border-radius:5px;font-size:12px;background:var(--yellow)}
+.owner-mark.bean{background:var(--pink);color:white}
+.character-list{display:flex;align-items:center;flex-wrap:wrap;gap:7px}
+.character-chip{border-radius:100px;border:1px solid var(--border);background:var(--field);color:var(--text);padding:8px 13px;font-size:12px;min-height:35px;max-width:100%;overflow-wrap:anywhere;font-weight:750}
+.character-chip.active{border-color:var(--yellow);background:color-mix(in srgb,var(--yellow),var(--panel) 85%)}
+:root[data-owner="콩국수목금"] .character-chip.active{border-color:var(--pink);background:color-mix(in srgb,var(--pink),var(--panel) 85%)}
+.char-editor{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;margin-top:13px}
+.char-editor input,.expense-input,.expense-note{min-width:0;width:100%;min-height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;color:var(--text);background:var(--field);outline:0}
+.char-editor input:focus,.expense-input:focus,.expense-note:focus{border-color:var(--yellow);box-shadow:0 0 0 2px color-mix(in srgb,var(--yellow),transparent 75%)}
+.char-editor label{grid-column:1/-1;font-weight:850;font-size:12px;color:var(--muted)}
+.char-editor button{min-height:40px;border-radius:9px;background:var(--yellow);color:#231d0c;font-weight:900;padding:0 15px;white-space:nowrap}
+.char-editor.renamer button{background:var(--pink);color:#fff}
+.char-editor .muted{grid-column:1/-1}
+.section-intro{margin:0 0 9px}
+.week-actions,.preview-tabs{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.week-actions button,.preview-tabs button{min-height:36px;border:1px solid var(--border);background:var(--field);color:var(--text);border-radius:9px;padding:0 12px;font-weight:800;font-size:12px}
+.week-actions button.active{background:linear-gradient(95deg,var(--pink),var(--yellow));color:#27201e;border:0}
+.week-range{font-size:12px;color:var(--muted);font-weight:800;margin:12px 0}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.day{min-width:0;min-height:62px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;padding:5px 2px;border:1px solid var(--border);border-radius:11px;background:var(--field);color:var(--text)}
+.day-name{font-weight:900;font-size:14px}.day-date{font-size:10px;color:var(--muted)}
+.day[data-name="토"] .day-name{color:#70a6ff}
+.day[data-name="일"] .day-name{color:#f287a5}
+.day.active{border-color:var(--yellow);background:color-mix(in srgb,var(--yellow),var(--panel) 86%);box-shadow:inset 0 0 0 1px var(--yellow)}
+.summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:14px}
+.stat{min-width:0;border:1px solid var(--border);border-radius:12px;background:var(--field);padding:13px}
+.stat span{display:block;font-size:11px;color:var(--muted);margin-bottom:8px}
+.stat strong{display:block;color:var(--text);font-size:clamp(14px,1.6vw,19px);line-height:1.3;letter-spacing:-.035em;overflow-wrap:anywhere}
+.stat.wide{grid-column:1/-1;background:linear-gradient(100deg,color-mix(in srgb,var(--pink),var(--field) 89%),color-mix(in srgb,var(--yellow),var(--field) 89%))}
+.stat.wide strong{color:var(--yellow)}
+:root[data-theme="light"] .stat.wide strong{color:#86600e}
+.stat.net{border-color:color-mix(in srgb,var(--yellow),var(--border) 35%);}
+.stat.net strong{color:var(--yellow)}
+:root[data-theme="light"] .stat.net strong{color:#956b0d}
+.stat.expense strong{color:#fa9ab9}
+:root[data-theme="light"] .stat.expense strong{color:#bd426f}
+.note{font-size:11px;color:var(--muted);line-height:1.65;margin:10px 0 0}
+.expense-date{font-size:12px;color:var(--muted);margin-bottom:12px}
+.expense-label{display:block;margin:0 0 6px;color:var(--text);font-size:12px;font-weight:800}
+.expense-input{font-size:16px;font-weight:850}
+.expense-note{margin-top:8px}
+.expense-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(170px,.8fr);gap:11px}
+.expense-recap{border:1px solid var(--border);border-radius:13px;background:var(--field);padding:13px;display:flex;flex-direction:column;gap:11px;justify-content:center}
+.expense-recap div{display:flex;justify-content:space-between;gap:8px;align-items:start;font-size:11px;color:var(--muted)}
+.expense-recap strong{font-size:12px;color:var(--text);text-align:right;overflow-wrap:anywhere}
+.expense-recap .net strong{color:var(--yellow)}
+:root[data-theme="light"] .expense-recap .net strong{color:#8b6417}
+#expenseInvalid{display:block;min-height:0;color:#f398a7;font-size:11px;margin-top:5px}
+.expense-input[aria-invalid="true"]{border-color:#d76075}
+.boss-count{padding:6px 11px;border:1px solid color-mix(in srgb,var(--yellow),var(--border) 50%);border-radius:100px;color:var(--yellow);background:var(--field);white-space:nowrap;font-size:12px;font-weight:900}
+:root[data-theme="light"] .boss-count{color:#987019}
+.boss-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-height:670px;overflow-y:auto;padding-right:3px;scrollbar-color:var(--line) transparent}
+.boss-card{background:var(--field);border:1px solid var(--border);border-radius:13px;padding:12px;min-width:0}
+.boss-card.done{border-color:#4d8468;background:color-mix(in srgb,#4d8468,var(--field) 88%)}
+.boss-card.other-day{border-color:#8c7852}
+.boss-top{display:flex;align-items:center;gap:8px;min-width:0;cursor:pointer}
+.boss-top input{width:18px;height:18px;flex:none;accent-color:var(--yellow);cursor:pointer}
+.boss-name{font-size:12px;font-weight:850;line-height:1.35;overflow-wrap:anywhere}
+.done-badge{color:#a1e0b8;font-size:10px;padding:4px 6px;border:1px solid #47846b;border-radius:99px;white-space:nowrap;margin-left:auto;flex:none}
+:root[data-theme="light"] .done-badge{color:#366f4e}
+.boss-controls{display:grid;grid-template-columns:minmax(0,1fr) 80px;gap:7px;margin-top:11px}
+.boss-controls select{width:100%;min-width:0;min-height:34px;border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:8px;padding:0 7px;font-size:12px}
+.price-line{display:flex;align-items:center;justify-content:space-between;gap:7px;margin-top:11px;color:var(--muted);font-size:11px}
+.price-line strong{color:var(--yellow);white-space:nowrap;font-size:12px}
+:root[data-theme="light"] .price-line strong{color:#956b12}
+.move-button{width:100%;min-height:31px;margin-top:9px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);color:var(--text);font-size:11px}
+.monthly-stats{display:flex;gap:10px;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px;margin-top:12px}
+.monthly-stats strong{color:var(--yellow);text-align:right}
+:root[data-theme="light"] .monthly-stats strong{color:#916a12}
+.preview-section{position:sticky;top:12px}
+.preview-panel{padding:16px}
+.preview-header{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:12px}
+.preview-header span{font-size:11px;color:var(--muted)}
+.preview-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-bottom:13px}
+.preview-tabs button{padding:0 4px;font-size:11px;white-space:nowrap}
+.preview-tabs button.active[data-scope="all"]{background:linear-gradient(90deg,var(--pink),var(--yellow));color:#221b1f;border-color:transparent}
+.preview-tabs button.active[data-scope="옥수수목금"]{background:var(--yellow);color:#2b2111;border-color:transparent}
+.preview-tabs button.active[data-scope="콩국수목금"]{background:var(--pink);color:#fff;border-color:transparent}
+.preview-tabs button.active[data-scope^="char:"]{background:var(--yellow);color:#211a0b;border-color:transparent}
+:root[data-owner="콩국수목금"] .preview-tabs button.active[data-scope^="char:"]{background:var(--pink);color:#fff}
+.canvas-frame{max-width:390px;margin:auto;overflow:hidden;border-radius:15px;border:1px solid var(--border);box-shadow:0 14px 30px rgba(0,0,0,.15)}
+#shortCanvas{display:block;aspect-ratio:9/16;width:100%;height:auto}
+.download{display:block;width:100%;margin-top:12px;min-height:45px;border-radius:11px;background:linear-gradient(90deg,var(--pink),var(--yellow));color:#251c17;font-size:14px;font-weight:900;border:0}
+.download:hover{filter:brightness(1.07)}
+.preview-hint{font-size:11px;line-height:1.65;color:var(--muted);margin:10px 0 0}
+.status{margin:5px 0;min-height:15px;color:var(--yellow);font-size:12px}
+:root[data-theme="light"] .status{color:#9a6715}
+@media(max-width:1050px){.layout{grid-template-columns:minmax(0,1.2fr) minmax(300px,.9fr);gap:12px}.shell{width:calc(100% - 24px)}.panel{padding:15px}.boss-list{grid-template-columns:1fr}.top{align-items:start}}
+@media(max-width:730px){.shell{width:calc(100% - 22px);padding:15px 0 35px}.layout{display:flex;flex-direction:column}.controls,.preview-section{width:100%}.preview-section{order:-1;position:static}.canvas-frame{max-width:300px}.panel,.preview-panel{padding:15px;margin-bottom:12px}.top{flex-direction:column;gap:11px}.top-right{width:100%;justify-content:flex-start}.top h1{font-size:29px}.top p{font-size:12px}.owner-tab{padding:10px;gap:9px}.owner-tab small{font-size:10px}.boss-list{grid-template-columns:1fr;max-height:none}.summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:380px){.owner-tab small{display:none}.days{gap:3px}.day{min-height:53px}.day-name{font-size:12px}.day-date{font-size:9px}.expense-grid{grid-template-columns:1fr}.week-actions button{padding:0 8px}.top h1{font-size:27px}.preview-tabs button{font-size:10px;padding:0 2px}}
