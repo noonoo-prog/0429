@@ -157,3 +157,12 @@ button{cursor:pointer}button:disabled{opacity:.44;cursor:default}
 .sync-tag.is-linked{background:color-mix(in srgb,var(--yellow),transparent 80%);color:var(--yellow);border:1px solid color-mix(in srgb,var(--yellow),transparent 55%)}
 .sync-tag.is-local{background:var(--panel2);color:var(--muted);border:1px solid var(--border)}
 :root[data-theme="light"] .sync-tag.is-linked{color:#886216}
+
+.character-entry{display:inline-flex;align-items:center;max-width:100%;border:1px solid var(--border);border-radius:999px;background:var(--field);overflow:hidden}
+.character-entry:has(.character-chip.active){border-color:var(--yellow)}
+:root[data-owner="콩국수목금"] .character-entry:has(.character-chip.active){border-color:var(--pink)}
+.character-entry .character-chip{border:0;border-radius:0;background:transparent;min-height:35px;padding-right:6px}
+.character-entry .character-chip.active{background:transparent;border:0}
+.character-remove{flex:none;width:30px;height:35px;border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1;font-weight:700}
+.character-remove:hover:not(:disabled){color:#fff;background:#bd465c}
+.character-remove:disabled{opacity:.27;cursor:default}
