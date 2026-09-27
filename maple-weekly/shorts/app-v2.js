@@ -189,9 +189,13 @@ function addCharacter(){
   const owner=S.owner;const value=$("newCharInput").value.trim();
   if(!value){notify("추가할 캐릭터 이름을 입력해 주세요.");$("newCharInput").focus();return}
   if(ownerChars(owner).some(x=>x.name===value)){notify("같은 주인에게 동일한 이름이 있어요.");return}
-  const id=(owner===OWNERS[0]?"corn":"bean")+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
-  S.profiles.characters.push({id,owner,name:value});S.profiles.selected=id;save(KEY_PROFILES,S.profiles);
-  S.charId=id;if(S.view.startsWith("char:"))S.view="char:"+id;$("newCharInput").value="";render();notify(value+" 캐릭터가 추가됐어요.");
+  const archived=S.profiles.deletedCharacters||[];
+  const index=archived.findIndex(c=>c.owner===owner&&c.name===value);
+  const restored=index>=0?archived.splice(index,1)[0]:null;
+  const id=restored?.id||(owner===OWNERS[0]?"corn":"bean")+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
+  S.profiles.characters.push(restored||{id,owner,name:value});S.profiles.selected=id;save(KEY_PROFILES,S.profiles);
+  S.charId=id;if(S.view.startsWith("char:"))S.view="char:"+id;$("newCharInput").value="";render();
+  notify(value+(restored?" 캐릭터의 이전 기록을 복원했어요.":" 캐릭터가 추가됐어요."));
 }
 function archiveCharacter(id){
   const c=allChars().find(x=>x.id===id);
