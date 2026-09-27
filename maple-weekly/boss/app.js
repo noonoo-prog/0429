@@ -48,7 +48,7 @@ const BOSS_CRYSTAL_PRICES={
 const MONTHLY=new Set(["검은 마법사"]);
 const SOLO=new Set(["데미안","루시드","윌","더스크","진힐라","듄켈"]);
 const LIMIT=12,DIFFS=["","x","이지","노말","하드","카오스","익스트림"];
-const ACTIVE_KEY="boss-board-active-owner-v6",PIN_PREFIX="boss-board-pin-",CHAR_PREFIX="boss-board-active-char-",MOBILE_VIEW_KEY="boss-board-mobile-view-v1";
+const ACTIVE_KEY="boss-board-active-owner-v6",PIN_PREFIX="boss-board-pin-",CHAR_PREFIX="boss-board-active-char-";
 const THEME_KEY="boss-board-theme-v1",PARTY_FILTER_KEY="boss-board-party-filter-v2";
 const FIXED_OWNER_ORDER=["오똑","츠죠","피콕","꿈품은","달하늘의별을","띵스"];
 
@@ -60,7 +60,6 @@ let saveTimer=null,dirty=false,saving=false,pollTimer=null;
 let EDIT_VERSION=0,SELECT_ACTIVE=false,PENDING_RENDER=false;
 let ADMIN_UNLOCKED=false,ADMIN_CODE="";
 let PICKER=null;
-let MOBILE_VIEW=localStorage.getItem(MOBILE_VIEW_KEY)==="all"?"all":"active";
 let PARTY_FILTER=(function(){
   var saved=localStorage.getItem(PARTY_FILTER_KEY);
   if(saved==="all"||saved==="solo"||saved==="multi")return saved;
@@ -76,9 +75,7 @@ let CHECKLIST_MONTH=(function(){
   if(y<2026||(y===2026&&m<9))return "2026-09";
   return y+"-"+String(m).padStart(2,"0");
 })();
-let CHECKLISTS={};
 let BOSS_RUN_CHECKS={};
-let SELECTED_RUN_DATES={};
 let CHECKLIST_SELECTED_DATE="";
 let CHECKLIST_LOADED=false;
 let CHECKLIST_LOADING=false;
@@ -195,18 +192,6 @@ function dateKeyUTC(d){return d.getUTCFullYear()+"-"+pad2(d.getUTCMonth()+1)+"-"
 function parseDateUTC(s){var p=String(s).split("-").map(Number);return new Date(Date.UTC(p[0],p[1]-1,p[2]))}
 function addDaysUTC(d,n){var x=new Date(d.getTime());x.setUTCDate(x.getUTCDate()+n);return x}
 function formatShortDate(d){return (d.getUTCMonth()+1)+"."+pad2(d.getUTCDate())}
-function monthWeeks(monthKey){
-  var p=monthKey.split("-").map(Number),y=p[0],m=p[1]-1;
-  var first=new Date(Date.UTC(y,m,1));
-  var offset=(4-first.getUTCDay()+7)%7;
-  var d=addDaysUTC(first,offset),out=[];
-  while(d.getUTCMonth()===m){
-    var key=dateKeyUTC(d);
-    if(key>=CHECKLIST_START)out.push({start:key,end:dateKeyUTC(addDaysUTC(d,6))});
-    d=addDaysUTC(d,7);
-  }
-  return out;
-}
 function changeChecklistMonth(delta){
   var p=CHECKLIST_MONTH.split("-").map(Number);
   var d=new Date(Date.UTC(p[0],p[1]-1+delta,1));
@@ -296,16 +281,6 @@ function setBossRunItem(ownerId,weekStart,characterName,bossName,item){
   if(!BOSS_RUN_CHECKS[ownerId][weekStart][characterName])BOSS_RUN_CHECKS[ownerId][weekStart][characterName]={};
   BOSS_RUN_CHECKS[ownerId][weekStart][characterName][bossName]=item;
 }
-function selectedRunDate(weekStart){
-  var d=SELECTED_RUN_DATES[weekStart]||weekStart;
-  var end=dateKeyUTC(addDaysUTC(parseDateUTC(weekStart),6));
-  if(d<weekStart||d>end)d=weekStart;
-  return d;
-}
-function setSelectedRunDate(weekStart,runDate){
-  SELECTED_RUN_DATES[weekStart]=runDate;
-  renderChecklist();
-}
 function sumBossRunMeso(ownerId,weekStart,characterName){
   var week=BOSS_RUN_CHECKS[ownerId]&&BOSS_RUN_CHECKS[ownerId][weekStart];
   if(!week)return 0;
@@ -344,15 +319,7 @@ function loadChecklist(show){
   CHECKLIST_LOADING=true;
   if(show!==false)renderChecklist();
   return callApi("checklist_bootstrap").then(function(data){
-    CHECKLISTS={};
     BOSS_RUN_CHECKS={};
-    (data.checklists||[]).forEach(function(x){
-      if(!CHECKLISTS[x.owner_id])CHECKLISTS[x.owner_id]={};
-      CHECKLISTS[x.owner_id][x.week_start]={
-        completed:!!x.completed,
-        meso:Math.max(0,Number(x.meso_earned)||0)
-      };
-    });
     (data.bossRunChecklists||[]).forEach(function(x){
       setBossRunItem(
         x.owner_id,
@@ -721,9 +688,6 @@ function collectPartyRouteRuns(focusOwner,includeAll){
   });
   return runs;
 }
-function routeSelectionKey(){
-  return ROUTE_SELECTION_PREFIX+"simple-v5";
-}
 function routeQuickStateKey(){
   return ROUTE_SELECTION_PREFIX+"simple-state-v5";
 }
@@ -786,12 +750,6 @@ function routeSelectedFromState(runs,state){
 function selectedRouteIds(focusOwner,runs){
   return routeSelectedFromState(runs,routeQuickState());
 }
-function saveRouteSelection(focusOwner,ids){
-  var state=routeQuickState();
-  var keep=new Set(ids||[]);
-  state.excludedRuns=(state.excludedRuns||[]).filter(function(id){return !keep.has(id)});
-  saveRouteQuickState(state);
-}
 function groupPartyRouteRuns(runs){
   var map={},order=[];
   runs.forEach(function(run){
@@ -810,91 +768,6 @@ function groupPartyRouteRuns(runs){
     });
     return g;
   });
-}
-function routeGroupScore(group,lastByOwner,focusOwnerName){
-  var changes=0,same=0;
-  group.participants.forEach(function(p){
-    if(!p.owner||p.owner===focusOwnerName)return;
-    if(lastByOwner[p.owner]){
-      if(lastByOwner[p.owner]===p.character)same++;
-      else changes++;
-    }
-  });
-  return changes*100-same*10-group.bosses.length;
-}
-function orderRouteGroups(groups,lastByOwner,focusOwnerName){
-  var left=groups.slice(),out=[];
-  while(left.length){
-    left.sort(function(a,b){
-      var d=routeGroupScore(a,lastByOwner,focusOwnerName)-routeGroupScore(b,lastByOwner,focusOwnerName);
-      if(d)return d;
-      d=b.bosses.length-a.bosses.length;
-      if(d)return d;
-      return a.signature.localeCompare(b.signature,"ko");
-    });
-    var g=left.shift();
-    out.push(g);
-    g.participants.forEach(function(p){if(p.owner)lastByOwner[p.owner]=p.character});
-  }
-  return out;
-}
-function simulateCharacterRoute(runs,lastByOwner,focusOwnerName){
-  var before=Object.assign({},lastByOwner);
-  var next=Object.assign({},lastByOwner);
-  var groups=orderRouteGroups(groupPartyRouteRuns(runs),next,focusOwnerName);
-  var scan=Object.assign({},before),changes=0,same=0;
-  groups.forEach(function(group){
-    group.participants.forEach(function(p){
-      if(!p.owner||p.owner===focusOwnerName)return;
-      if(scan[p.owner]){
-        if(scan[p.owner]===p.character)same++;
-        else changes++;
-      }
-      scan[p.owner]=p.character;
-    });
-  });
-  return{groups:groups,nextLast:next,score:changes*100-same*8-runs.length};
-}
-function buildPartyRoute(focusOwner,runs){
-  runs=runs||[];
-  var byCharacter={};
-  runs.forEach(function(run){
-    if(!byCharacter[run.focusCharacter])byCharacter[run.focusCharacter]=[];
-    byCharacter[run.focusCharacter].push(run);
-  });
-
-  var remaining=Object.keys(byCharacter),lastByOwner={},blocks=[];
-  while(remaining.length){
-    var best=null;
-    remaining.forEach(function(character){
-      var sim=simulateCharacterRoute(byCharacter[character],lastByOwner,focusOwner.name);
-      var candidate={
-        character:character,
-        groups:sim.groups,
-        nextLast:sim.nextLast,
-        score:sim.score,
-        count:byCharacter[character].length,
-        boardIndex:(focusOwner.board&&focusOwner.board.players||[]).indexOf(character)
-      };
-      if(candidate.boardIndex<0)candidate.boardIndex=999;
-      if(!best||
-        candidate.score<best.score||
-        (candidate.score===best.score&&candidate.count>best.count)||
-        (candidate.score===best.score&&candidate.count===best.count&&candidate.boardIndex<best.boardIndex)
-      )best=candidate;
-    });
-    blocks.push({character:best.character,groups:best.groups});
-    lastByOwner=best.nextLast;
-    remaining=remaining.filter(function(name){return name!==best.character});
-  }
-
-  return{
-    runs:runs,
-    blocks:blocks,
-    bossCount:runs.length,
-    characterSessions:blocks.length,
-    focusSwitches:Math.max(0,blocks.length-1)
-  };
 }
 function overallGroupMetrics(group,lastByOwner,seenByOwner){
   var changed=[],same=[],revisited=[];
@@ -1683,14 +1556,6 @@ function characterOwner(charName){
   }
   return null;
 }
-function memberPickButton(c,bi,pi,mi,editable){
-  var name=(c.names&&c.names[mi])||"";
-  var owned=name?characterOwner(name):null;
-  var theme=owned?ownerTheme(owned.name):"default";
-  return '<button class="member-pick party-picker-trigger '+(name?"":"empty")+' owner-themed" data-theme="'+theme+'" data-b="'+bi+'" data-p="'+pi+'" data-m="'+mi+'" '+(editable?"":"disabled")+'>'+
-    '<span class="member-pick-name">'+esc(name||"파티원 선택")+'</span>'+
-    '<span class="member-slot-label">#'+(mi+1)+'</span></button>';
-}
 function openPartyPicker(bi,pi,mi){
   var st=state();if(!st)return;
   PICKER={bi:bi,pi:pi,mi:mi};
@@ -1762,19 +1627,6 @@ function renderPartyPicker(query){
       render();
     };
   });
-}
-function diffOptions(c,editable,bi,pi,mobile){
-  var boss=BOSSES[bi];
-  var allowed=["","x"].concat(BOSS_DIFFICULTIES[boss]||["이지","노말","하드","카오스","익스트림"]);
-  return'<select class="difficulty '+(mobile?"m-diff":"")+'" data-b="'+bi+'" data-p="'+pi+'" data-v="'+esc(c.difficulty)+'" '+(editable?"":"disabled")+'>'+
-    allowed.map(function(x){return'<option value="'+esc(x)+'" '+(x===c.difficulty?"selected":"")+'>'+(x||"—")+'</option>'}).join("")+'</select>';
-}
-function desktopMembers(c,bi,pi,editable){
-  if(!c.count)return'<div class="solo">인원수 선택</div>';
-  if(c.count===1)return'<div class="solo">본인 단독</div>';
-  var h='<div class="member-list">';
-  for(var i=0;i<c.count-1;i++)h+=memberPickButton(c,bi,pi,i,editable);
-  return h+"</div>";
 }
 function compactDifficultySelect(c,editable,bi,pi){
   var boss=BOSSES[bi];
@@ -2125,12 +1977,6 @@ function renderDesktop(){
   root.innerHTML=h;
   bindCommon(root);
   bindCharacterReorder(root,unlocked&&filterMode==="all");
-}
-function mobileMemberInputs(c,bi,pi,editable){
-  if(!c.count)return'<div class="solo">인원수를 선택해 주세요</div>';
-  if(c.count===1)return'<div class="solo">본인 단독</div>';
-  var h="";for(var i=0;i<c.count-1;i++)h+=memberPickButton(c,bi,pi,i,editable);
-  return h;
 }
 function renderMobile(){
   var box=document.getElementById("mobileBoard"),st=state(),o=owner();
