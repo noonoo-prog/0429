@@ -98,7 +98,7 @@ function loadProfiles(){
 }
 function keyWeek(){return PREFIX+"week-"+weekKey()}
 function keyMonth(k){return PREFIX+"month-"+k}
-function normalWeek(obj){if(!obj||typeof obj!=="object")obj={};if(!obj.byId||typeof obj.byId!=="object")obj.byId={};if(!obj.ownerExpenses||typeof obj.ownerExpenses!=="object")obj.ownerExpenses={};return obj}
+function normalWeek(obj){if(!obj||typeof obj!=="object")obj={};if(!obj.byId||typeof obj.byId!=="object")obj.byId={};if(!obj.ownerExpenses||typeof obj.ownerExpenses!=="object")obj.ownerExpenses={};if(!obj.ownerIncome||typeof obj.ownerIncome!=="object")obj.ownerIncome={};return obj}
 function records(charId){if(!S.weeks.byId[charId])S.weeks.byId[charId]=emptyRecords();const r=S.weeks.byId[charId];if(!r.bosses)r.bosses={};if(!r.expenses)r.expenses={};return r}
 function loadWeek(){
   let s=load(keyWeek(),null);
@@ -213,6 +213,191 @@ function spendingDetails(owner,date){
   return ownerSpendRows(owner,date).filter(r=>r.amount>0||r.note)
     .map(r=>({note:r.note||"사용",amount:r.amount}));
 }
+
+function incomeKey(owner,date){return owner+"|"+date}
+const INCOME_MANUAL={drafts:new Map(),saving:false,fetching:false,lastLoad:0,loadError:false};
+function savedIncomeRows(owner,date){
+  const value=S.weeks.ownerIncome?.[owner]?.[date];
+  return Array.isArray(value)?value.map((r,i)=>({
+    id:String(r.id||"income-"+i),amount:Math.max(0,Number(r.amount)||0),note:String(r.note||"")
+  })):[];
+}
+function incomeRows(owner,date){
+  const draft=INCOME_MANUAL.drafts.get(incomeKey(owner,date));
+  return draft?draft.map(x=>({...x})):savedIncomeRows(owner,date);
+}
+function setIncomeRows(owner,date,rows){
+  const key=incomeKey(owner,date),items=rows.map(r=>({...r}));
+  if(JSON.stringify(items)===JSON.stringify(savedIncomeRows(owner,date)))INCOME_MANUAL.drafts.delete(key);
+  else INCOME_MANUAL.drafts.set(key,items);
+  renderIncomeStatus();
+}
+function extraIncome(owner,date){
+  return incomeRows(owner,date).reduce((n,r)=>n+Math.max(0,Number(r.amount)||0),0);
+}
+function incomeDetails(owner,date){
+  return incomeRows(owner,date).filter(r=>r.amount>0||r.note)
+    .map(r=>({note:r.note||"추가 수익",amount:r.amount}));
+}
+function dayExtraIncome(date,scope){
+  return OWNERS.reduce((sum,owner)=>
+    sum+(scope==="all"||scope===owner?extraIncome(owner,date):0),0);
+}
+function incomeHasDraft(date=dayKey()){
+  return OWNERS.some(owner=>INCOME_MANUAL.drafts.has(incomeKey(owner,date)));
+}
+function renderIncomeStatus(){
+  const button=$("saveIncome");
+  if(button)button.disabled=INCOME_MANUAL.saving||!incomeHasDraft();
+  const target=$("incomeSyncState");
+  if(!target)return;
+  if(INCOME_MANUAL.saving)target.textContent="수익 저장 중…";
+  else if(incomeHasDraft())target.textContent="저장 전 · 버튼을 눌러 주세요.";
+  else if(INCOME_MANUAL.loadError)target.textContent="연결 오류 · 다시 시도해 주세요.";
+  else target.textContent="✓ 저장된 수익 내역";
+}
+function renderIncome(){
+  const date=dayKey();
+  $("ownerIncomeDate").textContent=date.replaceAll("-",".")+" · 날짜별 추가 수익";
+  $("ownerIncomeGrid").innerHTML=OWNERS.map(owner=>{
+    const rows=incomeRows(owner,date),color=OWNER_META[owner].color;
+    return '<div class="owner-expense-card owner-income-card" data-owner-income="'+owner+'">'+
+      '<div class="owner-expense-head"><span class="owner-expense-dot" style="background:'+color+'"></span><strong>'+owner+'</strong>'+
+      '<button class="spend-add" type="button" data-income-add="'+owner+'" '+(rows.length>=40?'disabled':'')+'>＋ 내역</button></div>'+
+      '<div class="spend-rows">'+(rows.length?rows.map(row=>
+        '<div class="spend-row">'+
+          '<input class="spend-note" aria-label="수익 내역" data-income-note="'+owner+'" data-income-id="'+esc(row.id)+'" maxlength="80" type="text" autocomplete="off" placeholder="예: 보스 부산물" value="'+esc(row.note)+'">'+
+          '<input class="spend-amount" aria-label="추가 수익 메소" data-income-amount="'+owner+'" data-income-id="'+esc(row.id)+'" inputmode="decimal" type="text" autocomplete="off" placeholder="금액" value="'+(row.amount?commaAmount(row.amount):"")+'">'+
+          '<button class="spend-delete" aria-label="수익 내역 삭제" type="button" data-income-delete="'+owner+'" data-income-id="'+esc(row.id)+'">×</button>'+
+          '<span class="spend-korean" aria-label="억 환산 금액">'+eokAmount(row.amount)+'</span></div>'
+      ).join(""):'<p class="spend-empty">추가 수익 내역이 없어요.</p>')+'</div>'+
+      '<div class="owner-expense-result"><span>오늘 추가 수익</span><strong id="incomeTotal-'+owner+'">'+format(extraIncome(owner,date))+'</strong></div>'+
+    '</div>';
+  }).join("");
+}
+function incomeChanged(e){
+  if(INCOME_MANUAL.saving||e.isComposing)return;
+  const input=e.target,owner=input.dataset.incomeAmount||input.dataset.incomeNote;
+  if(!OWNERS.includes(owner))return;
+  const date=dayKey(),rows=incomeRows(owner,date),record=rows.find(r=>r.id===input.dataset.incomeId);
+  if(!record)return;
+  if(input.dataset.incomeAmount){
+    const value=amountFromInput(input.value);
+    if(value===null||value>999999999999999){
+      input.setAttribute("aria-invalid","true");
+      $("incomeSyncState").textContent="금액을 확인해 주세요.";
+      return;
+    }
+    input.removeAttribute("aria-invalid");
+    record.amount=value;
+    formatPlainAmountDuringTyping(input);
+    const hint=input.closest(".spend-row")?.querySelector(".spend-korean");
+    if(hint)hint.textContent=eokAmount(value);
+  }else record.note=input.value.slice(0,80);
+  setIncomeRows(owner,date,rows);
+  $("incomeTotal-"+owner).textContent=format(extraIncome(owner,date));
+  renderStats();drawShort();
+}
+function incomeBlur(e){
+  if(!e.target.dataset.incomeAmount)return;
+  const input=e.target,value=amountFromInput(input.value);
+  if(value===null||value>999999999999999)return;
+  input.value=input.value.trim()?commaAmount(value):"";
+  const badge=input.closest(".spend-row")?.querySelector(".spend-korean");
+  if(badge)badge.textContent=eokAmount(value);
+}
+function incomeClick(e){
+  if(INCOME_MANUAL.saving){notify("추가 수익 저장이 끝나면 수정할 수 있어요.");return}
+  const add=e.target.closest("[data-income-add]");
+  if(add){
+    const owner=add.dataset.incomeAdd,date=dayKey(),rows=incomeRows(owner,date);
+    if(rows.length>=40){notify("하루 최대 40건까지 적을 수 있어요.");return}
+    const id="i"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
+    rows.push({id,amount:0,note:""});
+    setIncomeRows(owner,date,rows);
+    renderIncome();drawShort();
+    const field=$("ownerIncomeGrid").querySelector('[data-income-note="'+owner+'"][data-income-id="'+id+'"]');
+    if(field)field.focus();
+    return;
+  }
+  const del=e.target.closest("[data-income-delete]");
+  if(del){
+    const owner=del.dataset.incomeDelete,date=dayKey(),rows=incomeRows(owner,date);
+    const item=rows.find(r=>r.id===del.dataset.incomeId);if(!item)return;
+    if((item.amount>0||item.note)&&!confirm("'"+(item.note||"추가 수익")+"'을(를) 삭제할까요?"))return;
+    setIncomeRows(owner,date,rows.filter(r=>r.id!==item.id));
+    renderIncome();renderStats();drawShort();
+  }
+}
+async function saveIncomeManual(){
+  if(INCOME_MANUAL.saving)return;
+  const invalid=$("ownerIncomeGrid").querySelector('[aria-invalid="true"]');
+  if(invalid){notify("추가 수익 금액을 확인해 주세요.");invalid.focus();return}
+  const date=dayKey(),owners=OWNERS.filter(owner=>INCOME_MANUAL.drafts.has(incomeKey(owner,date)));
+  if(!owners.length){renderIncomeStatus();return}
+  INCOME_MANUAL.saving=true;renderIncomeStatus();
+  try{
+    for(const owner of owners){
+      const rows=incomeRows(owner,date);
+      await expenseApi("save_income",{owner,day:date,items:rows});
+      if(!S.weeks.ownerIncome[owner])S.weeks.ownerIncome[owner]={};
+      S.weeks.ownerIncome[owner][date]=rows;
+      INCOME_MANUAL.drafts.delete(incomeKey(owner,date));
+      saveWeek();
+    }
+    INCOME_MANUAL.loadError=false;
+    notify("추가 수익 저장 완료!");
+  }catch(e){
+    INCOME_MANUAL.loadError=true;
+    notify("추가 수익 저장 실패: "+String(e?.message||e));
+  }finally{
+    INCOME_MANUAL.saving=false;
+    renderIncome();renderStats();drawShort();
+    if(INCOME_MANUAL.loadError){
+      $("saveIncome").disabled=!incomeHasDraft();
+      $("incomeSyncState").textContent="저장 실패 · 다시 저장 버튼을 눌러 주세요.";
+    }else renderIncomeStatus();
+  }
+}
+async function pullIncome(week,showError=false){
+  if(INCOME_MANUAL.fetching)return;
+  INCOME_MANUAL.fetching=true;
+  try{
+    const data=await expenseApi("load_income",{week});
+    INCOME_MANUAL.lastLoad=Date.now();INCOME_MANUAL.loadError=false;
+    if(week!==weekKey())return;
+    const remote=new Map((data.rows||[]).map(row=>[incomeKey(row.owner,row.day),row]));
+    let changed=false;
+    for(let i=0;i<7;i++){
+      const date=iso(S.week+i*DAY);
+      for(const owner of OWNERS){
+        const key=incomeKey(owner,date);
+        if(INCOME_MANUAL.saving||INCOME_MANUAL.drafts.has(key)||!remote.has(key))continue;
+        const items=(remote.get(key).items||[]).map(r=>({
+          id:String(r.id),amount:Number(r.amount)||0,note:String(r.note||"")
+        }));
+        if(JSON.stringify(savedIncomeRows(owner,date))!==JSON.stringify(items)){
+          if(!S.weeks.ownerIncome[owner])S.weeks.ownerIncome[owner]={};
+          S.weeks.ownerIncome[owner][date]=items;changed=true;
+        }
+      }
+    }
+    if(changed){
+      saveWeek();renderStats();drawShort();
+      const grid=$("ownerIncomeGrid"),active=document.activeElement;
+      if(!active||!grid.contains(active))renderIncome();
+      else OWNERS.forEach(owner=>{
+        const target=$("incomeTotal-"+owner);
+        if(target)target.textContent=format(extraIncome(owner,dayKey()));
+      });
+    }
+    renderIncomeStatus();
+  }catch(e){
+    INCOME_MANUAL.loadError=true;
+    if(showError)$("incomeSyncState").textContent="추가 수익 연결 오류 · 다시 시도해 주세요.";
+  }finally{INCOME_MANUAL.fetching=false}
+}
+
 function dayExpense(date,scope){
   return OWNERS.reduce((sum,owner)=>
     sum+(scope==="all"||scope===owner?ownerExtraExpense(owner,date):0),0);
@@ -242,7 +427,7 @@ function renderStats(){
   $("statSpendLabel").textContent=S.owner+" · 오늘 사용";
   $("statNetLabel").textContent=S.owner+" · 오늘 순수익";
   $("statSpend").textContent=format(dayExpense(date,S.owner));
-  $("statNet").textContent=format(dayIncome(date,S.owner)-dayExpense(date,S.owner));
+  $("statNet").textContent=format(dayIncome(date,S.owner)+extraIncome(S.owner,date)-dayExpense(date,S.owner));
 }
 function renderOwnerExpenses(){
   const date=dayKey();
@@ -295,7 +480,7 @@ function renderMonthly(){
 function render(){
   document.documentElement.dataset.theme=S.theme;document.documentElement.dataset.owner=S.owner;
   $("themeToggle").textContent=S.theme==="dark"?"☀ 라이트 모드":"☾ 다크 모드";
-  renderOwners();renderCharacters();renderWeekNav();renderStats();renderOwnerExpenses();renderBosses();renderMonthly();renderSyncStatus();drawShort();renderSpendStatus();
+  renderOwners();renderCharacters();renderWeekNav();renderStats();renderOwnerExpenses();renderIncome();renderBosses();renderMonthly();renderSyncStatus();drawShort();renderSpendStatus();renderIncomeStatus();
 }
 function addCharacter(){
   const owner=S.owner;const value=$("newCharInput").value.trim();
