@@ -388,6 +388,8 @@ function importBossCharacters(){
     board.players.forEach(name=>{
       const nick=String(name||"").trim();
       if(!nick)return;
+      // Respect characters deliberately archived from the Shorts list.
+      if((S.profiles.deletedCharacters||[]).some(c=>c.owner===owner&&c.remoteCharacter===nick))return;
       let c=ownerChars(owner).find(x=>x.remoteCharacter===nick)||ownerChars(owner).find(x=>x.name===nick);
       if(c){
         if(!c.remoteCharacter){c.remoteCharacter=nick;changed=true}
