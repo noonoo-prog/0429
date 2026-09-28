@@ -288,8 +288,7 @@ body.picker-open{overflow:hidden}
 }
 @media(min-width:761px){.mobile-board{display:none!important}}
 
-@media(max-width:760px){
-}
+
 
 
 /* readability + full-week visibility */
@@ -491,11 +490,12 @@ body.picker-open{overflow:hidden}
   .mobile-remove-character{
     min-height:32px;padding:5px 9px;font-size:9.5px
   }
-}
+
 
 
 /* dense mobile readability pass */
-@media(max-width:760px){
+
+
   .app-shell{
     padding-left:5px;
     padding-right:5px;
@@ -982,11 +982,12 @@ html,body{overflow-x:hidden}
     text-overflow:ellipsis;
     white-space:nowrap;
   }
-}
+
 
 
 /* FINAL mobile row containment — keep every column inside the card */
-@media(max-width:760px){
+
+
   body,
   .app-shell,
   .content,
@@ -1122,11 +1123,12 @@ html,body{overflow-x:hidden}
     text-overflow:ellipsis;
     white-space:nowrap;
   }
-}
+
 
 
 /* all-owner mobile fixed columns — supports 10+ eok crystal values */
-@media(max-width:760px){
+
+
   .app-shell,
   .content,
   #mobileBoard,
@@ -1602,12 +1604,7 @@ html,body{overflow-x:hidden}
     align-items:start;
   }
 
-  .character-column{
-    width:256px;
-    min-width:256px;
-    max-width:256px;
-  }
-
+  .character-column,
   .add-character-column{
     width:256px;
     min-width:256px;
@@ -1672,8 +1669,7 @@ html,body{
   }
 }
 
-@media(max-width:760px){
-}
+
 
 
 /* administrator all-edit mode */
@@ -2130,10 +2126,8 @@ html,body{
 .calendar-day.sunday small{
   color:#ef6b9a!important;
 }
-@media(min-width:761px){
-}
-@media(max-width:760px){
-}
+
+
 
 
 /* FINAL one-month calendar layout */
@@ -2262,9 +2256,7 @@ html,body{
   .checklist-panel{
     max-width:none;
   }
-  .month-weekdays{
-    margin:0 4px;
-  }
+  .month-weekdays,
   .month-calendar-grid{
     margin:0 4px;
   }
@@ -2956,9 +2948,7 @@ html[data-theme="dark"] .character-toggle-all.all-checked{
 html[data-theme="dark"] .compact-member:not(:last-child):after{
   color:#707b87;
 }
-html[data-theme="dark"] .boss-section-label{
-  border-color:#3b434d;
-}
+html[data-theme="dark"] .boss-section-label,
 html[data-theme="dark"] .month-day-total,
 html[data-theme="dark"] .calendar-day-total{
   border-color:#3b434d;
@@ -3103,11 +3093,12 @@ html[data-theme="dark"] .party-filter-btn.active{
    .boss-run-name small{font-size:10.5px}
    .boss-run-meso small{font-size:10px}
    .boss-run-meso b{font-size:13px}
-}
+
 
 
 /* PC centered layout + mainstream web typography scale */
-@media(min-width:761px){
+
+
   /* centered desktop canvas with visible side gutters */
   .app-shell{
     max-width:1440px;
