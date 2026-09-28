@@ -4,6 +4,10 @@ on:
     workflows: ["Deploy Maple Weekly Planner"]
     types: [completed]
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/inspection-smoke.yml'
 
 permissions:
   contents: read
