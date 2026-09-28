@@ -1944,7 +1944,6 @@ function renderDesktop(){
           '<span class="drag-dots '+(unlocked&&filterMode==="all"?"order-enabled":"")+'" '+(unlocked&&filterMode==="all"?'draggable="true" data-drag-character="'+pi+'" title="드래그해서 캐릭터 순서 변경"':'aria-hidden="true"')+'>⠿</span>'+
           '<input class="column-player-name player-input" data-player="'+pi+'" value="'+esc(p)+'" '+(unlocked?"":"disabled")+'>'+
           (pi===0?'<span class="representative-badge">대표</span>':'')+
-          (w>=LIMIT?'<span class="complete-badge">완료</span>':'')+
           '<strong class="column-count '+(w>=LIMIT?"full":"")+'">'+w+'/'+LIMIT+'</strong>'+
           '<button class="remove-player column-remove" data-remove="'+pi+'" '+(unlocked?"":"disabled")+' aria-label="캐릭터 삭제">×</button>'+
         '</div>'+
@@ -1987,12 +1986,12 @@ function renderMobile(){
   var strip='<div class="character-strip">'+st.players.map(function(p,i){
     var wi=weekly(i);
     return '<button class="char-tab owner-themed '+(i===pi?"active":"")+'" data-theme="'+theme+'" data-char="'+i+'">'+
-      esc(p)+(wi>=LIMIT?'<span class="tab-complete">완료</span>':'')+'<span class="mini-count">'+wi+'/'+LIMIT+'</span></button>';
+      esc(p)+'<span class="mini-count">'+wi+'/'+LIMIT+'</span></button>';
   }).join("")+(unlocked?'<button class="char-tab add-char-tab" data-add-character="1">＋ 캐릭터</button>':'')+'</div>';
 
   var charIncome=characterWeeklyIncome(pi),ownerIncome=ownerWeeklyIncome(),missingPrices=characterMissingPriceCount(pi),ownerMissing=ownerMissingPriceCount();
   var summary='<div class="mobile-character-head owner-themed" data-theme="'+theme+'">'+
-    '<div><div class="mobile-character-name-line"><strong>'+esc(st.players[pi])+'</strong>'+(pi===0?'<span class="representative-badge">대표</span>':'')+(w>=LIMIT?'<span class="complete-badge">완료</span>':'')+(unlocked?'<button type="button" class="mobile-rename-character" data-rename-character="'+pi+'">수정</button>':'')+'</div>'+
+    '<div><div class="mobile-character-name-line"><strong>'+esc(st.players[pi])+'</strong>'+(pi===0?'<span class="representative-badge">대표</span>':'')+(unlocked?'<button type="button" class="mobile-rename-character" data-rename-character="'+pi+'">수정</button>':'')+'</div>'+
       remainingBossesHtml(pi)+
       '<span>주간 수익 <b class="mobile-income">'+formatEok(charIncome)+'</b>'+(missingPrices?' · 가격 미등록 '+missingPrices+'건':'')+(w>=LIMIT?' · 미설정 숨김':'')+'</span>'+
     '</div>'+
