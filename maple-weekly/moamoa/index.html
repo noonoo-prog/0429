@@ -73,7 +73,7 @@
 <div class="steps"><div class="result"><div class="result-title"><strong style="color:#fff">답안</strong><span id="scoreText">블록을 선택해 주세요</span></div><div id="resultList" class="empty-result">맵의 채워진 칸을 입력하고 블록을 선택한 뒤 <strong>추천 배치 찾기</strong>를 눌러 주세요.</div></div></div>
 </section>
 </div>
-<div class="help"><strong>50만점 전략</strong> · 큰 빈 공간을 보존하고 2~5줄 동시 삭제를 노리면서 막힘을 최소화해요. 블록 최대 3개 선택 → 추천 배치 찾기 → 실제 게임에 그대로 놓았다면 <strong>추천 전체 적용</strong>. 선택한 블록이 한 번에 누적돼요. ↶/↷ 또는 Ctrl+Z로 되돌릴 수 있어요. 능력 칸에는 지금 사용 추천/아껴두기가 표시돼요. 점 찍기는 비상용으로 보수적으로 추천하고, 각 능력은 실제로 한 번 사용하면 1개가 사라져요. 점 찍기는 7회 능력 생성 카운트에 포함하지 않고, 중간에 수동 사용해도 남은 블록을 바로 다시 계산해요.</div>
+<div class="help"><strong>50만점 전략</strong> · 큰 빈 공간을 보존하고 2~5줄 동시 삭제를 노리며, 19종 다음 손패의 배치 가능성까지 비교해 막힘을 최소화해요. 블록 최대 3개 선택 → 추천 배치 찾기 → 실제 게임에 그대로 놓았다면 <strong>추천 전체 적용</strong>. 선택한 블록이 한 번에 누적돼요. ↶/↷ 또는 Ctrl+Z로 되돌릴 수 있어요. 능력 칸에는 지금 사용 추천/아껴두기가 표시돼요. 점 찍기는 비상용으로 보수적으로 추천하고, 각 능력은 실제로 한 번 사용하면 1개가 사라져요. 점 찍기는 7회 능력 생성 카운트에 포함하지 않고, 중간에 수동 사용해도 남은 블록을 바로 다시 계산해요.</div>
 <a class="home-link" href="../">← 메인으로</a>
 </main>
 <script>
@@ -128,7 +128,7 @@ function linePoints(n){return n>0?300*n*n:0}
 function stageForLines(lines){return lines<=30?1:lines<=60?2:lines<=100?3:lines<=150?4:5}
 function renderBoard(){const placements=solution&&solution.placements?solution.placements:[],rec=new Map();placements.forEach((p,i)=>p.cells.forEach(c=>rec.set(c,i+1)));$("board").innerHTML="";for(let y=0;y<H;y++)for(let x=0;x<W;x++){const k=key(x,y),div=document.createElement("button");div.type="button";div.className="cell"+(filled.has(k)?" filled":"")+(rec.has(k)?" reco"+rec.get(k):"")+(dotArmed?" dot-mode":"")+(dotArmed&&dotRecommendCell===k?" dot-recommend":"");div.dataset.cell=k;if(rec.has(k))div.innerHTML='<span class="num">'+rec.get(k)+"</span>";$("board").append(div)}$("scoreStat").textContent="점수 "+gameScore.toLocaleString()+" / 500,000";$("scoreProgress").style.width=Math.min(100,gameScore/5000)+"%";$("placedStat").textContent="놓은 조각 "+placedCount;$("lineStat").textContent="지운 줄 "+clearedCount;$("stageStat").textContent=stageForLines(clearedCount)+"단계";$("iconStat").textContent="능력 아이콘 "+pendingIcons+" / 3"}
 function renderAbilities(){const total=abilities.dot+abilities.swap,mod=placedCount%7,next=mod===0?7:7-mod;const timing=abilityTiming();$("useDot").textContent="◎ 점 찍기 ×"+abilities.dot;$("useSwap").textContent="⇄ 바꿔 뽑기 ×"+abilities.swap;$("dotMode").textContent="● 점 찍기 ×"+abilities.dot;$("useDot").disabled=abilities.dot<1;$("dotMode").disabled=abilities.dot<1;$("useSwap").disabled=abilities.swap<1||selected.length<1;$("gainDot").disabled=total>=7;$("gainSwap").disabled=total>=7;$("useDot").classList.toggle("active",dotArmed);$("dotMode").classList.toggle("active",dotArmed);$("useSwap").classList.toggle("swap-active",!!swapDraft);$("abilityProgress").textContent="보유 "+total+"/7 · 다음 생성까지 "+next+"조각";paintTiming("dot",timing.dot);paintTiming("swap",timing.swap);const advice=$("abilityAdvice");if(dotArmed&&dotRecommendCell!==null){const x=dotRecommendCell%W,y=Math.floor(dotRecommendCell/W);advice.textContent="점 찍기 추천 · 왼쪽 "+(x+1)+"칸 / 위 "+(y+1)+"칸. 다른 빈 칸을 직접 눌러도 돼요."}else if(swapDraft&&swapDraft.stage==="old"){advice.textContent="바꿔 뽑기 추천 · "+(swapDraft.recommended+1)+"번 블록 교체. 다른 선택 블록을 눌러도 돼요."}else if(swapDraft&&swapDraft.stage==="new"){advice.textContent="게임에서 새로 나온 블록을 눌러 주세요. 선택 즉시 다시 추천해요."}else advice.textContent="능력을 누르면 현재 맵 기준 추천 위치·교체 블록을 표시해요.";$("undo").disabled=!past.length;$("redo").disabled=!future.length;$("apply").disabled=!(solution&&solution.placements&&solution.placements.length===selected.length)}
-function renderAnswer(){if(!(solution&&solution.placements&&solution.placements.length)){$("scoreText").textContent=selected.length?"추천 배치 찾기를 눌러 주세요":"블록을 선택해 주세요";$("resultList").className="empty-result";$("resultList").textContent="현재 맵을 입력하고 블록을 선택해 주세요.";return}const p=solution.placements;$("scoreText").textContent=p.length+"개 배치 · "+solution.clears+"줄 제거 · +"+solution.points.toLocaleString()+"점";$("resultList").className="step-list";$("resultList").innerHTML=p.map((x,i)=>{const wh=size(TRANS[x.pieceIndex][x.transform]);return '<div class="step"><span class="step-badge">'+(i+1)+'</span><div><strong>'+(x.pieceIndex+1)+'번 블록 · '+PIECES[x.pieceIndex].s.length+'칸</strong><br><small>왼쪽 '+(x.x+1)+'칸 · 위 '+(x.y+1)+'칸'+(x.cleared?" · "+x.cleared+"줄 제거":"")+'</small></div><small>'+wh[0]+'×'+wh[1]+"</small></div>"}).join("")}
+function renderAnswer(){if(!(solution&&solution.placements&&solution.placements.length)){$("scoreText").textContent=selected.length?"추천 배치 찾기를 눌러 주세요":"블록을 선택해 주세요";$("resultList").className="empty-result";$("resultList").textContent="현재 맵을 입력하고 블록을 선택해 주세요.";return}const p=solution.placements;$("scoreText").textContent=p.length+"개 배치 · "+solution.clears+"줄 제거 · +"+solution.points.toLocaleString()+"점"+(solution.future?" · 미래 막힘 "+solution.future.blocked+"종":"");$("resultList").className="step-list";$("resultList").innerHTML=p.map((x,i)=>{const wh=size(TRANS[x.pieceIndex][x.transform]);return '<div class="step"><span class="step-badge">'+(i+1)+'</span><div><strong>'+(x.pieceIndex+1)+'번 블록 · '+PIECES[x.pieceIndex].s.length+'칸</strong><br><small>왼쪽 '+(x.x+1)+'칸 · 위 '+(x.y+1)+'칸'+(x.cleared?" · "+x.cleared+"줄 제거":"")+'</small></div><small>'+wh[0]+'×'+wh[1]+"</small></div>"}).join("")}
 function renderAll(){renderPieces();renderBoard();renderAbilities();renderAnswer()}
 function clearLines(board){const full=[];for(let y=0;y<H;y++){let ok=true;for(let x=0;x<W;x++)if(!board.has(key(x,y))){ok=false;break}if(ok)full.push(y)}if(!full.length)return{board,cleared:0};const next=new Set(board);for(const y of full)for(let x=0;x<W;x++)next.delete(key(x,y));return{board:next,cleared:full.length}}
 function rowFillCounts(board){const rows=Array(H).fill(0);for(const k of board)rows[Math.floor(k/W)]++;return rows}
@@ -196,6 +196,30 @@ function keepTop(list,item,limit){
   if(list.length<limit){list.push(item);return}
   let worst=0;for(let i=1;i<list.length;i++)if(list[i].score<list[worst].score)worst=i;
   if(item.score>list[worst].score)list[worst]=item;
+}
+
+function legalPlacementCount(board,piece,cap=24){
+  let count=0;
+  for(const shape of TRANS[piece]){
+    const wh=size(shape),sw=wh[0],sh=wh[1];
+    for(let y=0;y<=H-sh;y++)for(let x=0;x<=W-sw;x++){
+      let ok=true;
+      for(const p of shape)if(board.has(key(x+p[0],y+p[1]))){ok=false;break}
+      if(ok&&++count>=cap)return count;
+    }
+  }
+  return count;
+}
+function futureMobility(board){
+  const stage=stageForLines(clearedCount);let total=0,blocked=0,min=999;
+  for(let piece=0;piece<PIECES.length;piece++){
+    const count=legalPlacementCount(board,piece,24),sz=PIECES[piece].s.length;
+    const weight=1+(sz-1)*.22+(stage-1)*(sz-1)*.04;
+    min=Math.min(min,count);
+    if(!count){blocked++;total-=2500*weight}
+    else total+=Math.log1p(count)*130*weight;
+  }
+  return{score:total,blocked,min};
 }
 function candidates(board,pieceIndex){const list=[];for(let t=0;t<TRANS[pieceIndex].length;t++){const shape=TRANS[pieceIndex][t],wh=size(shape),sw=wh[0],sh=wh[1];for(let y=0;y<=H-sh;y++)for(let x=0;x<=W-sw;x++){const cells=shape.map(p=>key(x+p[0],y+p[1]));if(cells.some(k=>board.has(k)))continue;const next=new Set(board);cells.forEach(k=>next.add(k));const result=clearLines(next);list.push({board:result.board,cells,transform:t,x,y,cleared:result.cleared})}}return list}
 
@@ -322,10 +346,10 @@ function solve(){
     if(!beam.length){solution=null;setStatus("현재 맵에서는 선택한 블록을 놓을 자리를 찾지 못했어요.");renderAll();return}
     const complete=beam.filter(x=>x.placements.length===selected.length);
     if(!complete.length){solution=beam[0]||null;setStatus("3개를 모두 안전하게 놓는 경로를 찾지 못했어요. 능력 사용을 먼저 확인해 주세요.");renderAll();return}
-    for(const st of complete)st.finalScore=boardQuality(st.board)+st.points*6+linePoints(st.clears);
+    for(const st of complete){const future=futureMobility(st.board);st.future=future;st.finalScore=boardQuality(st.board)+future.score+st.points*6+linePoints(st.clears)}
     complete.sort((a,b)=>b.finalScore-a.finalScore);
     solution=complete[0];
-    setStatus("장기 생존·다중 줄 삭제·큰 빈 공간 보존을 우선한 추천이에요.");renderAll();
+    setStatus("장기 생존·다중 줄 삭제·다음 손패 배치 가능성까지 비교한 추천이에요.");renderAll();
   },0)
 }
 function removeSelectedOnce(piece){const i=selected.indexOf(piece);if(i>=0)selected.splice(i,1)}
