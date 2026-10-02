@@ -23,6 +23,13 @@
 .ability-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.ability-row{display:grid;grid-template-columns:minmax(0,1fr) 34px;gap:5px}
 .ability-use,.ability-add{min-height:42px;border:0;border-radius:9px;color:#fff;font-weight:900}.ability-use{background:#3c4b61}.ability-use.active{box-shadow:inset 0 0 0 2px #56d9ff;background:#324d67}.ability-use.swap-active{box-shadow:inset 0 0 0 2px #e778ff;background:#4c365d}.ability-add{background:#2e7d64;font-size:20px}
 .ability-rule{margin-top:8px;color:#8392a8;font-size:10px;line-height:1.5}
+.icon-controls{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:center;margin-top:8px}
+.icon-mark-button{min-height:36px;border:1px solid #4a607e;border-radius:9px;background:#263956;color:#d8e8ff;font-size:10px;font-weight:900}
+.icon-mark-button.active{border-color:#ffd35a;background:#493f20;color:#ffe997;box-shadow:0 0 0 2px rgba(255,211,90,.16)}
+.icon-controls span{font-size:9px;color:#9fb0c5;white-space:nowrap}
+.cell.has-icon .ability-icon-mark{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;color:#ffe56d;font-size:17px;font-weight:950;text-shadow:0 0 5px #ffaf00,0 0 9px #ffdc6b;pointer-events:none}
+.cell.icon-mark-mode{box-shadow:inset 0 0 0 1px rgba(255,224,89,.2)}
+
 .ability-advice{margin-top:8px;padding:8px 9px;border-radius:8px;background:#182942;border:1px solid #334e70;color:#c8d8ed;font-size:10px;line-height:1.55}
 .ability-timing{display:grid;gap:6px;margin-top:8px}
 .timing-row{display:grid;grid-template-columns:auto auto;gap:2px 8px;align-items:center;padding:8px 9px;border:1px solid #30435d;border-radius:9px;background:#101c2e}
@@ -61,6 +68,10 @@
 <div class="ability-row"><button id="useDot" class="ability-use" type="button">◎ 점 찍기 ×0</button><button id="gainDot" class="ability-add" type="button">＋</button></div>
 <div class="ability-row"><button id="useSwap" class="ability-use" type="button">⇄ 바꿔 뽑기 ×0</button><button id="gainSwap" class="ability-add" type="button">＋</button></div>
 </div>
+<div class="icon-controls">
+  <button id="markIcon" class="icon-mark-button" type="button" disabled>✦ 아이콘 위치 등록 ×0</button>
+  <span id="claimStat">획득 대기 0</span>
+</div>
 <div class="ability-timing">
   <div class="timing-row"><span>◎ 점 찍기</span><strong id="dotTiming">보유 없음</strong><small id="dotTimingReason">능력을 등록하면 사용 타이밍을 알려줘요.</small></div>
   <div class="timing-row"><span>⇄ 바꿔 뽑기</span><strong id="swapTiming">보유 없음</strong><small id="swapTimingReason">능력을 등록하면 교체 타이밍을 알려줘요.</small></div>
@@ -73,7 +84,7 @@
 <div class="steps"><div class="result"><div class="result-title"><strong style="color:#fff">답안</strong><span id="scoreText">블록을 선택해 주세요</span></div><div id="resultList" class="empty-result">맵의 채워진 칸을 입력하고 블록을 선택한 뒤 <strong>추천 배치 찾기</strong>를 눌러 주세요.</div></div></div>
 </section>
 </div>
-<div class="help"><strong>50만점 전략</strong> · 큰 빈 공간을 보존하고 2~5줄 동시 삭제를 노리며, 19종 다음 손패의 배치 가능성까지 비교해 막힘을 최소화해요. 블록 최대 3개 선택 → 추천 배치 찾기 → 실제 게임에 그대로 놓았다면 <strong>추천 전체 적용</strong>. 선택한 블록이 한 번에 누적돼요. ↶/↷ 또는 Ctrl+Z로 되돌릴 수 있어요. 능력 칸에는 지금 사용 추천/아껴두기가 표시돼요. 점 찍기는 비상용으로 보수적으로 추천하고, 각 능력은 실제로 한 번 사용하면 1개가 사라져요. 점 찍기는 7회 능력 생성 카운트에 포함하지 않고, 중간에 수동 사용해도 남은 블록을 바로 다시 계산해요.</div>
+<div class="help"><strong>50만점 전략</strong> · 큰 빈 공간을 보존하고 2~5줄 동시 삭제를 노리며, 19종 다음 손패의 배치 가능성까지 비교해 막힘을 최소화해요. 블록 최대 3개 선택 → 추천 배치 찾기 → 실제 게임에 그대로 놓았다면 <strong>추천 전체 적용</strong>. 선택한 블록이 한 번에 누적돼요. ↶/↷ 또는 Ctrl+Z로 되돌릴 수 있어요. 능력 칸에는 지금 사용 추천/아껴두기가 표시돼요. 점 찍기는 비상용으로 보수적으로 추천해요. 7수마다 아이콘이 나오면 실제 위치를 등록하면 그 줄 회수까지 계산하고, 각 능력은 실제로 한 번 사용하면 1개가 사라져요. 점 찍기는 7회 능력 생성 카운트에 포함하지 않고, 중간에 수동 사용해도 남은 블록을 바로 다시 계산해요.</div>
 <a class="home-link" href="../">← 메인으로</a>
 </main>
 <script>
@@ -101,8 +112,8 @@ const PIECES=[
 {n:"18번",c:1,s:[[0,0],[2,0],[0,1],[1,1],[2,1],[0,2],[2,2],[0,3],[1,3],[2,3]]},
 {n:"19번",c:2,s:[[0,0],[2,0],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2],[0,3],[2,3]]}
 ];
-let filled=new Set(),selected=[],placedCount=0,clearedCount=0,gameScore=0,abilities={dot:0,swap:0},pendingIcons=0;
-let solution=null,dotArmed=false,dotRecommendCell=null,swapDraft=null,past=[],future=[],timingCache={key:"",value:null};
+let filled=new Set(),selected=[],placedCount=0,clearedCount=0,gameScore=0,abilities={dot:0,swap:0},iconCells=[],awaitingIconMarks=0,pendingAbilityClaims=0;
+let solution=null,dotArmed=false,dotRecommendCell=null,iconMarkMode=false,swapDraft=null,past=[],future=[],timingCache={key:"",value:null};
 const WMAX=80,STORE="moamoa-solver-v2";
 const $=id=>document.getElementById(id);
 function key(x,y){return y*W+x}
@@ -111,9 +122,9 @@ function sig(shape){return norm(shape).map(p=>p.join(",")).join(";")}
 function transforms(shape){const out=[],seen=new Set();for(let flip=0;flip<2;flip++)for(let r=0;r<4;r++){let cur=shape.map(([x,y])=>[flip?-x:x,y]);for(let i=0;i<r;i++)cur=cur.map(([x,y])=>[-y,x]);cur=norm(cur);const k=sig(cur);if(!seen.has(k)){seen.add(k);out.push(cur)}}return out}
 const TRANS=PIECES.map(p=>transforms(p.s));
 function size(shape){return [Math.max(...shape.map(p=>p[0]))+1,Math.max(...shape.map(p=>p[1]))+1]}
-function snapshot(){return{filled:[...filled],selected:[...selected],placedCount,clearedCount,gameScore,abilities:{dot:abilities.dot,swap:abilities.swap},pendingIcons}}
+function snapshot(){return{filled:[...filled],selected:[...selected],placedCount,clearedCount,gameScore,abilities:{dot:abilities.dot,swap:abilities.swap},iconCells:[...iconCells],awaitingIconMarks,pendingAbilityClaims}}
 function validSnap(v){return v&&Array.isArray(v.filled)&&Array.isArray(v.selected)&&Number.isFinite(v.placedCount)&&Number.isFinite(v.clearedCount)&&v.abilities}
-function restore(v){if(!validSnap(v))return;filled=new Set(v.filled.filter(n=>Number.isInteger(n)&&n>=0&&n<W*H));selected=v.selected.filter(n=>Number.isInteger(n)&&n>=0&&n<PIECES.length).slice(0,3);placedCount=Math.max(0,Math.floor(v.placedCount));clearedCount=Math.max(0,Math.floor(v.clearedCount));gameScore=Math.max(0,Math.min(500000,Math.floor(Number.isFinite(v.gameScore)?v.gameScore:0)));abilities={dot:Math.max(0,Math.min(7,Math.floor(v.abilities.dot||0))),swap:Math.max(0,Math.min(7,Math.floor(v.abilities.swap||0)))};pendingIcons=Math.max(0,Math.min(3,Math.floor(v.pendingIcons||0)));solution=null;dotArmed=false;dotRecommendCell=null;swapDraft=null;timingCache={key:"",value:null}}
+function restore(v){if(!validSnap(v))return;filled=new Set(v.filled.filter(n=>Number.isInteger(n)&&n>=0&&n<W*H));selected=v.selected.filter(n=>Number.isInteger(n)&&n>=0&&n<PIECES.length).slice(0,3);placedCount=Math.max(0,Math.floor(v.placedCount));clearedCount=Math.max(0,Math.floor(v.clearedCount));gameScore=Math.max(0,Math.min(500000,Math.floor(Number.isFinite(v.gameScore)?v.gameScore:0)));abilities={dot:Math.max(0,Math.min(7,Math.floor(v.abilities.dot||0))),swap:Math.max(0,Math.min(7,Math.floor(v.abilities.swap||0)))};iconCells=Array.isArray(v.iconCells)?v.iconCells.filter(k=>Number.isInteger(k)&&k>=0&&k<W*H).slice(-3):[];awaitingIconMarks=Math.max(0,Math.min(3,Math.floor(Number.isFinite(v.awaitingIconMarks)?v.awaitingIconMarks:(v.pendingIcons||0))));pendingAbilityClaims=Math.max(0,Math.min(7,Math.floor(v.pendingAbilityClaims||0)));solution=null;dotArmed=false;dotRecommendCell=null;iconMarkMode=false;swapDraft=null;timingCache={key:"",value:null}}
 function persist(){try{localStorage.setItem(STORE,JSON.stringify({state:snapshot(),past:past.slice(-WMAX),future:future.slice(-WMAX)}))}catch{}}
 function load(){try{const v=JSON.parse(localStorage.getItem(STORE)||"null");if(v&&validSnap(v.state)){restore(v.state);past=Array.isArray(v.past)?v.past.filter(validSnap).slice(-WMAX):[];future=Array.isArray(v.future)?v.future.filter(validSnap).slice(-WMAX):[]}}catch{}}
 function beforeChange(){past.push(snapshot());if(past.length>WMAX)past.shift();future=[]}
@@ -126,11 +137,11 @@ function positionsOf(index){const a=[];selected.forEach((v,i)=>{if(v===index)a.p
 function renderPieces(){$("pieces").innerHTML=PIECES.map((p,i)=>{const pos=positionsOf(i),orders=pos.map(n=>"<i>"+n+"</i>").join(""),swapRec=!!(swapDraft&&swapDraft.stage==="old"&&swapDraft.recommended===i);return '<div class="piece-card '+(pos.length?"selected ":"")+(swapRec?"swap-recommend":"")+'"><button class="piece-hit" type="button" data-add-index="'+i+'"><span class="count">'+p.s.length+'칸</span><div class="piece-shape">'+miniShape(p)+'</div><div class="piece-name">'+(i+1)+'번'+(pos.length?" · ×"+pos.length:"")+'</div></button>'+(pos.length?'<span class="order-stack">'+orders+'</span><button class="piece-minus" type="button" data-remove-index="'+i+'">−</button>':"")+'</div>'}).join("");$("pieceCount").textContent="("+selected.length+" / 3)"}
 function linePoints(n){return n>0?300*n*n:0}
 function stageForLines(lines){return lines<=30?1:lines<=60?2:lines<=100?3:lines<=150?4:5}
-function renderBoard(){const placements=solution&&solution.placements?solution.placements:[],rec=new Map();placements.forEach((p,i)=>p.cells.forEach(c=>rec.set(c,i+1)));$("board").innerHTML="";for(let y=0;y<H;y++)for(let x=0;x<W;x++){const k=key(x,y),div=document.createElement("button");div.type="button";div.className="cell"+(filled.has(k)?" filled":"")+(rec.has(k)?" reco"+rec.get(k):"")+(dotArmed?" dot-mode":"")+(dotArmed&&dotRecommendCell===k?" dot-recommend":"");div.dataset.cell=k;if(rec.has(k))div.innerHTML='<span class="num">'+rec.get(k)+"</span>";$("board").append(div)}$("scoreStat").textContent="점수 "+gameScore.toLocaleString()+" / 500,000";$("scoreProgress").style.width=Math.min(100,gameScore/5000)+"%";$("placedStat").textContent="놓은 조각 "+placedCount;$("lineStat").textContent="지운 줄 "+clearedCount;$("stageStat").textContent=stageForLines(clearedCount)+"단계";$("iconStat").textContent="능력 아이콘 "+pendingIcons+" / 3"}
-function renderAbilities(){const total=abilities.dot+abilities.swap,mod=placedCount%7,next=mod===0?7:7-mod;const timing=abilityTiming();$("useDot").textContent="◎ 점 찍기 ×"+abilities.dot;$("useSwap").textContent="⇄ 바꿔 뽑기 ×"+abilities.swap;$("dotMode").textContent="● 점 찍기 ×"+abilities.dot;$("useDot").disabled=abilities.dot<1;$("dotMode").disabled=abilities.dot<1;$("useSwap").disabled=abilities.swap<1||selected.length<1;$("gainDot").disabled=total>=7;$("gainSwap").disabled=total>=7;$("useDot").classList.toggle("active",dotArmed);$("dotMode").classList.toggle("active",dotArmed);$("useSwap").classList.toggle("swap-active",!!swapDraft);$("abilityProgress").textContent="보유 "+total+"/7 · 다음 생성까지 "+next+"조각";paintTiming("dot",timing.dot);paintTiming("swap",timing.swap);const advice=$("abilityAdvice");if(dotArmed&&dotRecommendCell!==null){const x=dotRecommendCell%W,y=Math.floor(dotRecommendCell/W);advice.textContent="점 찍기 추천 · 왼쪽 "+(x+1)+"칸 / 위 "+(y+1)+"칸. 다른 빈 칸을 직접 눌러도 돼요."}else if(swapDraft&&swapDraft.stage==="old"){advice.textContent="바꿔 뽑기 추천 · "+(swapDraft.recommended+1)+"번 블록 교체. 다른 선택 블록을 눌러도 돼요."}else if(swapDraft&&swapDraft.stage==="new"){advice.textContent="게임에서 새로 나온 블록을 눌러 주세요. 선택 즉시 다시 추천해요."}else advice.textContent="능력을 누르면 현재 맵 기준 추천 위치·교체 블록을 표시해요.";$("undo").disabled=!past.length;$("redo").disabled=!future.length;$("apply").disabled=!(solution&&solution.placements&&solution.placements.length===selected.length)}
+function renderBoard(){const placements=solution&&solution.placements?solution.placements:[],rec=new Map(),icons=new Set(iconCells);placements.forEach((p,i)=>p.cells.forEach(c=>rec.set(c,i+1)));$("board").innerHTML="";for(let y=0;y<H;y++)for(let x=0;x<W;x++){const k=key(x,y),div=document.createElement("button");div.type="button";div.className="cell"+(filled.has(k)?" filled":"")+(rec.has(k)?" reco"+rec.get(k):"")+(dotArmed?" dot-mode":"")+(dotArmed&&dotRecommendCell===k?" dot-recommend":"")+(icons.has(k)?" has-icon":"")+(iconMarkMode?" icon-mark-mode":"");div.dataset.cell=k;let inner="";if(rec.has(k))inner+='<span class="num">'+rec.get(k)+"</span>";if(icons.has(k))inner+='<span class="ability-icon-mark">✦</span>';div.innerHTML=inner;$("board").append(div)}$("scoreStat").textContent="점수 "+gameScore.toLocaleString()+" / 500,000";$("scoreProgress").style.width=Math.min(100,gameScore/5000)+"%";$("placedStat").textContent="놓은 조각 "+placedCount;$("lineStat").textContent="지운 줄 "+clearedCount;$("stageStat").textContent=stageForLines(clearedCount)+"단계";$("iconStat").textContent="판 아이콘 "+iconCells.length+(awaitingIconMarks?" · 위치대기 "+awaitingIconMarks:"")}
+function renderAbilities(){const total=abilities.dot+abilities.swap,mod=placedCount%7,next=mod===0?7:7-mod;const timing=abilityTiming();$("useDot").textContent="◎ 점 찍기 ×"+abilities.dot;$("useSwap").textContent="⇄ 바꿔 뽑기 ×"+abilities.swap;$("dotMode").textContent="● 점 찍기 ×"+abilities.dot;$("useDot").disabled=abilities.dot<1;$("dotMode").disabled=abilities.dot<1;$("useSwap").disabled=abilities.swap<1||selected.length<1;$("gainDot").disabled=total>=7;$("gainSwap").disabled=total>=7;$("useDot").classList.toggle("active",dotArmed);$("dotMode").classList.toggle("active",dotArmed);$("useSwap").classList.toggle("swap-active",!!swapDraft);$("abilityProgress").textContent="보유 "+total+"/7 · 다음 생성까지 "+next+"조각";$("markIcon").textContent="✦ 아이콘 위치 등록 ×"+awaitingIconMarks;$("markIcon").disabled=awaitingIconMarks<1;$("markIcon").classList.toggle("active",iconMarkMode);$("claimStat").textContent="획득 대기 "+pendingAbilityClaims;paintTiming("dot",timing.dot);paintTiming("swap",timing.swap);const advice=$("abilityAdvice");if(iconMarkMode){advice.textContent="게임판에 나타난 노란 능력 아이콘의 정확한 칸을 눌러 주세요."}else if(awaitingIconMarks>0){advice.textContent="능력 아이콘이 생성됐어요. 위치를 등록하면 50만점 경로가 더 정확해져요."}else if(pendingAbilityClaims>0){advice.textContent="아이콘 줄을 지워 능력을 얻었어요. 실제로 나온 능력 종류의 ＋를 눌러 등록해 주세요."}else if(dotArmed&&dotRecommendCell!==null){const x=dotRecommendCell%W,y=Math.floor(dotRecommendCell/W);advice.textContent="점 찍기 추천 · 왼쪽 "+(x+1)+"칸 / 위 "+(y+1)+"칸. 다른 빈 칸을 직접 눌러도 돼요."}else if(swapDraft&&swapDraft.stage==="old"){advice.textContent="바꿔 뽑기 추천 · "+(swapDraft.recommended+1)+"번 블록 교체. 다른 선택 블록을 눌러도 돼요."}else if(swapDraft&&swapDraft.stage==="new"){advice.textContent="게임에서 새로 나온 블록을 눌러 주세요. 선택 즉시 다시 추천해요."}else advice.textContent="능력을 누르면 현재 맵 기준 추천 위치·교체 블록을 표시해요.";$("undo").disabled=!past.length;$("redo").disabled=!future.length;$("apply").disabled=!(solution&&solution.placements&&solution.placements.length===selected.length)}
 function renderAnswer(){if(!(solution&&solution.placements&&solution.placements.length)){$("scoreText").textContent=selected.length?"추천 배치 찾기를 눌러 주세요":"블록을 선택해 주세요";$("resultList").className="empty-result";$("resultList").textContent="현재 맵을 입력하고 블록을 선택해 주세요.";return}const p=solution.placements;$("scoreText").textContent=p.length+"개 배치 · "+solution.clears+"줄 제거 · +"+solution.points.toLocaleString()+"점"+(solution.future?" · 미래 막힘 "+solution.future.blocked+"종":"");$("resultList").className="step-list";$("resultList").innerHTML=p.map((x,i)=>{const wh=size(TRANS[x.pieceIndex][x.transform]);return '<div class="step"><span class="step-badge">'+(i+1)+'</span><div><strong>'+(x.pieceIndex+1)+'번 블록 · '+PIECES[x.pieceIndex].s.length+'칸</strong><br><small>왼쪽 '+(x.x+1)+'칸 · 위 '+(x.y+1)+'칸'+(x.cleared?" · "+x.cleared+"줄 제거":"")+'</small></div><small>'+wh[0]+'×'+wh[1]+"</small></div>"}).join("")}
 function renderAll(){renderPieces();renderBoard();renderAbilities();renderAnswer()}
-function clearLines(board){const full=[];for(let y=0;y<H;y++){let ok=true;for(let x=0;x<W;x++)if(!board.has(key(x,y))){ok=false;break}if(ok)full.push(y)}if(!full.length)return{board,cleared:0};const next=new Set(board);for(const y of full)for(let x=0;x<W;x++)next.delete(key(x,y));return{board:next,cleared:full.length}}
+function clearLines(board){const full=[];for(let y=0;y<H;y++){let ok=true;for(let x=0;x<W;x++)if(!board.has(key(x,y))){ok=false;break}if(ok)full.push(y)}if(!full.length)return{board,cleared:0,rows:[]};const next=new Set(board);for(const y of full)for(let x=0;x<W;x++)next.delete(key(x,y));return{board:next,cleared:full.length,rows:full}}
 function rowFillCounts(board){const rows=Array(H).fill(0);for(const k of board)rows[Math.floor(k/W)]++;return rows}
 function largestEmptyRect(board){
   const heights=Array(W).fill(0);let best=0;
@@ -178,8 +189,10 @@ function boardQuality(board){
   const rect=largestEmptyRect(board),open2=openBlocks(board,2),open3=openBlocks(board,3);
   const iso=isolatedEmpty(board),edges=edgeTransitions(board);
   const stageWeight=1+(stage-1)*0.22;
-  const crowdPenalty=Math.max(0,occ-82); 
-  return free*4 + rect*28*stageWeight + open2*3 + open3*12*stageWeight + rowSetup
+  const crowdPenalty=Math.max(0,occ-82);
+  let iconSetup=0;
+  for(const cell of iconCells){const n=rows[Math.floor(cell/W)]||0;if(n>=5)iconSetup+=(n-4)*(n-4)*45}
+  return free*4 + rect*28*stageWeight + open2*3 + open3*12*stageWeight + rowSetup + iconSetup
     - iso*120*stageWeight - edges*5 - crowdPenalty*crowdPenalty*1.7*stageWeight;
 }
 function heuristic(board,turnPoints,placed,totalClears){
@@ -214,15 +227,36 @@ function futureMobility(board){
   const stage=stageForLines(clearedCount);let total=0,blocked=0,min=999;
   for(let piece=0;piece<PIECES.length;piece++){
     const count=legalPlacementCount(board,piece,24),sz=PIECES[piece].s.length;
-    const weight=1+(sz-1)*.22+(stage-1)*(sz-1)*.04;
+    const weight=1+(sz-1)*.24+(stage-1)*(sz-1)*.085;
     min=Math.min(min,count);
     if(!count){blocked++;total-=2500*weight}
     else total+=Math.log1p(count)*130*weight;
   }
   return{score:total,blocked,min};
 }
-function candidates(board,pieceIndex){const list=[];for(let t=0;t<TRANS[pieceIndex].length;t++){const shape=TRANS[pieceIndex][t],wh=size(shape),sw=wh[0],sh=wh[1];for(let y=0;y<=H-sh;y++)for(let x=0;x<=W-sw;x++){const cells=shape.map(p=>key(x+p[0],y+p[1]));if(cells.some(k=>board.has(k)))continue;const next=new Set(board);cells.forEach(k=>next.add(k));const result=clearLines(next);list.push({board:result.board,cells,transform:t,x,y,cleared:result.cleared})}}return list}
+function candidates(board,pieceIndex){const list=[];for(let t=0;t<TRANS[pieceIndex].length;t++){const shape=TRANS[pieceIndex][t],wh=size(shape),sw=wh[0],sh=wh[1];for(let y=0;y<=H-sh;y++)for(let x=0;x<=W-sw;x++){const cells=shape.map(p=>key(x+p[0],y+p[1]));if(cells.some(k=>board.has(k)))continue;const next=new Set(board);cells.forEach(k=>next.add(k));const result=clearLines(next);list.push({board:result.board,cells,transform:t,x,y,cleared:result.cleared,rows:result.rows})}}return list}
 
+function iconsOnRows(icons,rows){if(!rows||!rows.length)return[];const r=new Set(rows);return icons.filter(k=>r.has(Math.floor(k/W)))}
+function resolveIconClear(icons,rows,alreadyGained=0){
+  const hit=iconsOnRows(icons,rows),used=abilities.dot+abilities.swap+pendingAbilityClaims+alreadyGained;
+  const capacity=Math.max(0,7-used),gained=Math.min(capacity,hit.length);
+  if(!gained)return{icons:icons.slice(),gained:0};
+  const claimed=new Set(hit.slice(0,gained));
+  return{icons:icons.filter(k=>!claimed.has(k)),gained};
+}
+function applyIconRows(rows){
+  const r=resolveIconClear(iconCells,rows,0);
+  if(r.gained){iconCells=r.icons;pendingAbilityClaims=Math.min(7,pendingAbilityClaims+r.gained);gameScore=Math.min(500000,gameScore+r.gained*50)}
+  return r.gained;
+}
+function registerSpawnedIcons(spawn){
+  let lost=0;
+  for(let i=0;i<spawn;i++){
+    while(iconCells.length+awaitingIconMarks>=3){if(iconCells.length){iconCells.shift();lost++}else if(awaitingIconMarks>0){awaitingIconMarks--;lost++}else break}
+    awaitingIconMarks++;
+  }
+  return lost;
+}
 function bestDotRecommendation(){
   let best=null;
   for(let k=0;k<W*H;k++){
@@ -236,7 +270,7 @@ function bestDotRecommendation(){
       for(const c of cs)top=Math.max(top,heuristic(c.board,PIECES[piece].s.length+linePoints(c.cleared),1,c.cleared));
       return sum+Math.min(5000,cs.length*8)+top*.002;
     },0);
-    const score=heuristic(result.board,result.cleared,0)+fit+result.cleared*50000;
+    const iconGain=resolveIconClear(iconCells,result.rows,0).gained;const score=heuristic(result.board,linePoints(result.cleared)+iconGain*50,0,result.cleared)+fit+result.cleared*50000+iconGain*14000;
     if(!best||score>best.score)best={cell:k,score,cleared:result.cleared};
   }
   return best;
@@ -272,7 +306,7 @@ function piecePlacementStats(board=filled){
   }).sort((a,b)=>a.legal-b.legal||a.best-b.best);
 }
 function abilityTiming(){
-  const cacheKey=[...filled].sort((a,b)=>a-b).join(",")+"|"+selected.join(".")+"|"+abilities.dot+"|"+abilities.swap;
+  const cacheKey=[...filled].sort((a,b)=>a-b).join(",")+"|"+selected.join(".")+"|"+abilities.dot+"|"+abilities.swap+"|"+iconCells.join(".")+"|"+pendingAbilityClaims;
   if(timingCache.key===cacheKey&&timingCache.value)return timingCache.value;
   const stats=piecePlacementStats(),worst=stats[0]||null;
   let dot={mode:"none",label:"보유 없음",reason:"점 찍기 능력이 없어요."};
@@ -312,9 +346,10 @@ function paintTiming(id,data){
 }
 function solve(){
   if(!selected.length){setStatus("블록을 1개 이상 선택해 주세요.");return}
+  if(awaitingIconMarks>0){setStatus("먼저 새로 생긴 능력 아이콘 위치를 등록해 주세요.");return}
   setStatus("50만점 장기 생존 기준으로 계산하고 있어요…");solution=null;renderBoard();
   setTimeout(()=>{
-    let beam=[{board:new Set(filled),remaining:selected.slice(),placements:[],clears:0,points:0,score:0}];
+    let beam=[{board:new Set(filled),remaining:selected.slice(),placements:[],clears:0,points:0,icons:iconCells.slice(),gainedIcons:0,score:0}];
     for(let depth=0;depth<selected.length;depth++){
       const next=[];
       for(const state of beam){
@@ -324,20 +359,21 @@ function solve(){
           const rest=state.remaining.slice();rest.splice(ri,1);
           const local=[];
           for(const c of candidates(state.board,pieceIndex)){
-            const placements=state.placements.concat([{pieceIndex,cells:c.cells,x:c.x,y:c.y,transform:c.transform,cleared:c.cleared}]);
-            const clears=state.clears+c.cleared;
-            const points=state.points+PIECES[pieceIndex].s.length+linePoints(c.cleared);
-            const item={board:c.board,remaining:rest,placements,clears,points,score:fastQuality(c.board,points,placements.length,clears)};
-            keepTop(local,item,depth===0?28:16);
+            const iconResult=resolveIconClear(state.icons,c.rows,state.gainedIcons);
+            const placements=state.placements.concat([{pieceIndex,cells:c.cells,x:c.x,y:c.y,transform:c.transform,cleared:c.cleared,rows:c.rows,iconGained:iconResult.gained}]);
+            const clears=state.clears+c.cleared,gainedIcons=state.gainedIcons+iconResult.gained;
+            const points=state.points+PIECES[pieceIndex].s.length+linePoints(c.cleared)+iconResult.gained*50;
+            const item={board:c.board,remaining:rest,placements,clears,points,icons:iconResult.icons,gainedIcons,score:fastQuality(c.board,points,placements.length,clears)+iconResult.gained*18000};
+            keepTop(local,item,depth===0?32:18);
           }
           next.push(...local);
         }
       }
       if(!next.length)break;
       next.sort((a,b)=>b.score-a.score);
-      const uniq=new Map(),limit=depth===selected.length-1?180:90;
+      const uniq=new Map(),limit=depth===selected.length-1?220:110;
       for(const st of next){
-        const k=[...st.board].sort((a,b)=>a-b).join(",")+"|"+st.remaining.slice().sort((a,b)=>a-b).join(".");
+        const k=[...st.board].sort((a,b)=>a-b).join(",")+"|"+st.remaining.slice().sort((a,b)=>a-b).join(".")+"|"+st.icons.join(".");
         if(!uniq.has(k))uniq.set(k,st);
         if(uniq.size>=limit)break;
       }
@@ -345,22 +381,22 @@ function solve(){
     }
     if(!beam.length){solution=null;setStatus("현재 맵에서는 선택한 블록을 놓을 자리를 찾지 못했어요.");renderAll();return}
     const complete=beam.filter(x=>x.placements.length===selected.length);
-    if(!complete.length){solution=beam[0]||null;setStatus("3개를 모두 안전하게 놓는 경로를 찾지 못했어요. 능력 사용을 먼저 확인해 주세요.");renderAll();return}
-    for(const st of complete){const future=futureMobility(st.board);st.future=future;st.finalScore=boardQuality(st.board)+future.score+st.points*6+linePoints(st.clears)}
+    if(!complete.length){solution=beam[0]||null;setStatus("3개를 모두 안전하게 놓는 경로가 없어요. 능력 사용을 먼저 확인해 주세요.");renderAll();return}
+    for(const st of complete){const future=futureMobility(st.board);st.future=future;st.finalScore=boardQuality(st.board)+future.score+st.points*6+linePoints(st.clears)+st.gainedIcons*22000}
     complete.sort((a,b)=>b.finalScore-a.finalScore);
     solution=complete[0];
-    setStatus("장기 생존·다중 줄 삭제·다음 손패 배치 가능성까지 비교한 추천이에요.");renderAll();
+    setStatus(solution.gainedIcons?"능력 아이콘 회수까지 포함한 50만점 경로예요.":"장기 생존·다중 줄 삭제·다음 손패 생존성을 우선한 경로예요.");renderAll();
   },0)
 }
 function removeSelectedOnce(piece){const i=selected.indexOf(piece);if(i>=0)selected.splice(i,1)}
-function abilitySpawn(oldCount,newCount){const spawn=Math.floor(newCount/7)-Math.floor(oldCount/7);if(spawn<=0)return"";const before=pendingIcons;pendingIcons=Math.min(3,pendingIcons+spawn);if(before+spawn>3)return"능력 아이콘 "+spawn+"회 생성 · 3개 초과분은 가장 오래된 아이콘이 사라져요.";return"능력 아이콘 "+spawn+"회 생성! 실제 게임에서 획득한 능력을 ＋로 등록해 주세요."}
-function applySolution(){if(!(solution&&solution.placements&&solution.placements.length))return;if(solution.placements.length!==selected.length){setStatus("선택한 블록을 전부 놓을 수 있는 추천이 아니어서 적용하지 않았어요.");return}beforeChange();const old=placedCount,count=solution.placements.length;filled=new Set(solution.board);placedCount+=count;clearedCount+=solution.clears;gameScore=Math.min(500000,gameScore+solution.placements.reduce((sum,p)=>sum+PIECES[p.pieceIndex].s.length+linePoints(p.cleared),0));for(const p of solution.placements)removeSelectedOnce(p.pieceIndex);const msg=abilitySpawn(old,placedCount);solution=null;dotRecommendCell=null;timingCache={key:"",value:null};persist();renderAll();setStatus(msg||"선택한 블록 "+count+"개를 추천 순서대로 모두 적용했어요.")}
+function abilitySpawn(oldCount,newCount){const spawn=Math.floor(newCount/7)-Math.floor(oldCount/7);if(spawn<=0)return"";const lost=registerSpawnedIcons(spawn);return"능력 아이콘 "+spawn+"개 생성! 게임판의 실제 위치를 등록해 주세요."+(lost?" 오래된 아이콘 "+lost+"개는 제거 처리했어요.":"")}
+function applySolution(){if(!(solution&&solution.placements&&solution.placements.length))return;if(solution.placements.length!==selected.length){setStatus("선택한 블록을 전부 놓을 수 있는 추천이 아니어서 적용하지 않았어요.");return}beforeChange();const old=placedCount,count=solution.placements.length;filled=new Set(solution.board);iconCells=solution.icons.slice();pendingAbilityClaims=Math.min(7,pendingAbilityClaims+solution.gainedIcons);placedCount+=count;clearedCount+=solution.clears;gameScore=Math.min(500000,gameScore+solution.points);for(const p of solution.placements)removeSelectedOnce(p.pieceIndex);const msg=abilitySpawn(old,placedCount);solution=null;dotRecommendCell=null;timingCache={key:"",value:null};persist();renderAll();if(gameScore>=500000)setStatus("500,000점 도달! 이 판의 목표를 달성했어요.");else setStatus(msg||(pendingAbilityClaims?"능력을 획득했어요. 실제로 나온 종류의 ＋를 눌러 등록해 주세요.":"선택한 블록 "+count+"개를 모두 적용했어요."))}
 function addPiece(i){if(swapDraft){if(swapDraft.stage==="old"){const at=selected.indexOf(i);if(at<0){setStatus("현재 선택된 블록 중 바꿀 블록을 눌러 주세요.");return}selected.splice(at,1);swapDraft.stage="new";renderAll();setStatus("게임에서 바뀐 결과 블록을 눌러 주세요.");return}selected.push(i);abilities.swap=Math.max(0,abilities.swap-1);past.push(swapDraft.before);if(past.length>WMAX)past.shift();future=[];swapDraft=null;persist();renderAll();if(selected.length){setStatus("바꿔 뽑기 1개를 사용했어요. 결과를 반영하고 다시 추천해요.");setTimeout(solve,0)}else setStatus("바꿔 뽑기 1개를 사용했어요.");return}if(selected.length>=3){setStatus("한 번에 블록은 3개까지 선택할 수 있어요.");return}beforeChange();selected.push(i);afterChange();setStatus("")}
 function removePiece(i){if(swapDraft){restore(swapDraft.before);swapDraft=null;renderAll();setStatus("바꿔 뽑기를 취소했어요.");return}const at=selected.lastIndexOf(i);if(at<0)return;beforeChange();selected.splice(at,1);afterChange()}
-function gainAbility(type){if(abilities.dot+abilities.swap>=7){setStatus("능력은 합계 7개까지만 보유할 수 있어요.");return}beforeChange();abilities[type]++;if(pendingIcons>0){pendingIcons--;gameScore=Math.min(500000,gameScore+50)}afterChange();setStatus(type==="dot"?"점 찍기 능력을 등록했어요.":"바꿔 뽑기 능력을 등록했어요.")}
+function gainAbility(type){if(abilities.dot+abilities.swap>=7){setStatus("능력은 합계 7개까지만 보유할 수 있어요.");return}beforeChange();abilities[type]++;if(pendingAbilityClaims>0)pendingAbilityClaims--;afterChange();setStatus(type==="dot"?"점 찍기 능력을 등록했어요.":"바꿔 뽑기 능력을 등록했어요.")}
 function toggleDot(){if(abilities.dot<1)return;if(dotArmed){dotArmed=false;dotRecommendCell=null;renderAll();setStatus("점 찍기를 취소했어요.");return}if(swapDraft){restore(swapDraft.before);swapDraft=null}solution=null;dotArmed=true;const rec=bestDotRecommendation();dotRecommendCell=rec?rec.cell:null;renderAll();setStatus(dotRecommendCell!==null?"점 찍기 추천 위치를 표시했어요. 원하는 다른 빈 칸을 눌러도 돼요.":"점 찍기 가능한 빈 칸이 없어요.")}
 function toggleSwap(){if(abilities.swap<1||!selected.length)return;if(swapDraft){restore(swapDraft.before);swapDraft=null;renderAll();setStatus("바꿔 뽑기를 취소했어요.");return}dotArmed=false;dotRecommendCell=null;solution=null;const recommended=recommendedSwapPiece();swapDraft={before:snapshot(),stage:"old",recommended};renderAll();setStatus("바꿔 뽑기: "+(recommended+1)+"번 블록을 교체 추천해요. 다른 선택 블록을 눌러도 돼요.")}
-function boardClick(k){if(dotArmed){if(filled.has(k)){setStatus("점 찍기는 빈 칸에만 사용할 수 있어요.");return}beforeChange();filled.add(k);abilities.dot=Math.max(0,abilities.dot-1);dotArmed=false;dotRecommendCell=null;const result=clearLines(filled);filled=result.board;clearedCount+=result.cleared;gameScore=Math.min(500000,gameScore+linePoints(result.cleared));afterChange();if(selected.length){setStatus(result.cleared?"점 찍기 1개를 사용해 줄을 지웠어요. 남은 블록을 다시 추천해요.":"점 찍기 1개를 사용했어요. 남은 블록을 다시 추천해요.");setTimeout(solve,0)}else setStatus(result.cleared?"점 찍기 1개를 사용해 줄을 지웠어요.":"점 찍기 1개를 사용했어요. 조각 배치 횟수에는 포함되지 않아요.");return}beforeChange();if(filled.has(k))filled.delete(k);else filled.add(k);afterChange();setStatus("")}
+function boardClick(k){if(iconMarkMode){if(filled.has(k)){setStatus("능력 아이콘은 게임에서 빈 칸에 생성돼요. 빈 칸을 눌러 주세요.");return}beforeChange();while(iconCells.length>=3)iconCells.shift();iconCells.push(k);awaitingIconMarks=Math.max(0,awaitingIconMarks-1);iconMarkMode=awaitingIconMarks>0;afterChange();setStatus(awaitingIconMarks?"다음 능력 아이콘 위치도 등록해 주세요.":"능력 아이콘 위치를 등록했어요. 이제 추천 계산에 포함돼요.");return}if(dotArmed){if(filled.has(k)){setStatus("점 찍기는 빈 칸에만 사용할 수 있어요.");return}beforeChange();filled.add(k);abilities.dot=Math.max(0,abilities.dot-1);dotArmed=false;dotRecommendCell=null;const result=clearLines(filled);filled=result.board;clearedCount+=result.cleared;const gained=applyIconRows(result.rows);gameScore=Math.min(500000,gameScore+linePoints(result.cleared));afterChange();if(selected.length){setStatus(result.cleared?"점 찍기 1개를 사용해 줄을 지웠어요. 남은 블록을 다시 추천해요.":"점 찍기 1개를 사용했어요. 남은 블록을 다시 추천해요.");setTimeout(solve,0)}else setStatus(result.cleared?"점 찍기 1개를 사용해 줄을 지웠어요.":"점 찍기 1개를 사용했어요. 조각 배치 횟수에는 포함되지 않아요.");return}beforeChange();if(filled.has(k))filled.delete(k);else filled.add(k);afterChange();setStatus("")}
 $("pieces").addEventListener("click",e=>{const minus=e.target.closest("[data-remove-index]");if(minus){removePiece(Number(minus.dataset.removeIndex));return}const hit=e.target.closest("[data-add-index]");if(hit)addPiece(Number(hit.dataset.addIndex))});
 $("board").addEventListener("click",e=>{const c=e.target.closest("[data-cell]");if(c)boardClick(Number(c.dataset.cell))});
 $("clearPieces").addEventListener("click",()=>{if(!selected.length)return;if(swapDraft){restore(swapDraft.before);swapDraft=null;renderAll();return}beforeChange();selected=[];afterChange();setStatus("블록 선택을 비웠어요.")});
@@ -373,7 +409,8 @@ $("dotMode").addEventListener("click",toggleDot);
 $("useSwap").addEventListener("click",toggleSwap);
 $("gainDot").addEventListener("click",()=>gainAbility("dot"));
 $("gainSwap").addEventListener("click",()=>gainAbility("swap"));
-$("resetMap").addEventListener("click",()=>{if(!confirm("맵과 누적 기록, 능력, 되돌리기 기록까지 모두 초기화할까요?"))return;filled=new Set();selected=[];placedCount=0;clearedCount=0;gameScore=0;abilities={dot:0,swap:0};pendingIcons=0;solution=null;dotArmed=false;dotRecommendCell=null;swapDraft=null;past=[];future=[];persist();renderAll();setStatus("맵을 완전히 초기화했어요.")});
+$("markIcon").addEventListener("click",()=>{if(awaitingIconMarks<1)return;iconMarkMode=!iconMarkMode;dotArmed=false;dotRecommendCell=null;renderAll();setStatus(iconMarkMode?"게임판의 실제 능력 아이콘 칸을 눌러 주세요.":"아이콘 위치 등록을 취소했어요.")});
+$("resetMap").addEventListener("click",()=>{if(!confirm("맵과 누적 기록, 능력, 되돌리기 기록까지 모두 초기화할까요?"))return;filled=new Set();selected=[];placedCount=0;clearedCount=0;gameScore=0;abilities={dot:0,swap:0};iconCells=[];awaitingIconMarks=0;pendingAbilityClaims=0;solution=null;dotArmed=false;dotRecommendCell=null;iconMarkMode=false;swapDraft=null;past=[];future=[];persist();renderAll();setStatus("맵을 완전히 초기화했어요.")});
 document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&!e.altKey){const k=e.key.toLowerCase();if(k==="z"){e.preventDefault();if(e.shiftKey)redo();else undo()}else if(k==="y"){e.preventDefault();redo()}}});
 load();renderAll();
 
