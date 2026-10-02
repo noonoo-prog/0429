@@ -185,6 +185,18 @@ function boardQuality(board){
 function heuristic(board,turnPoints,placed,totalClears){
   return boardQuality(board)+turnPoints*5+linePoints(totalClears)*0.8+placed*80;
 }
+function fastQuality(board,turnPoints,placed,totalClears){
+  const rows=Array(H).fill(0);for(const k of board)rows[Math.floor(k/W)]++;
+  let setup=0;
+  for(const n of rows){if(n>=7&&n<=9)setup+=(n-6)*(n-6)*32;else if(n>0&&n<=2)setup-=n*3}
+  const crowd=Math.max(0,board.size-92);
+  return turnPoints*8+linePoints(totalClears)*1.2+setup-board.size*7-crowd*crowd*2+placed*50;
+}
+function keepTop(list,item,limit){
+  if(list.length<limit){list.push(item);return}
+  let worst=0;for(let i=1;i<list.length;i++)if(list[i].score<list[worst].score)worst=i;
+  if(item.score>list[worst].score)list[worst]=item;
+}
 function candidates(board,pieceIndex){const list=[];for(let t=0;t<TRANS[pieceIndex].length;t++){const shape=TRANS[pieceIndex][t],wh=size(shape),sw=wh[0],sh=wh[1];for(let y=0;y<=H-sh;y++)for(let x=0;x<=W-sw;x++){const cells=shape.map(p=>key(x+p[0],y+p[1]));if(cells.some(k=>board.has(k)))continue;const next=new Set(board);cells.forEach(k=>next.add(k));const result=clearLines(next);list.push({board:result.board,cells,transform:t,x,y,cleared:result.cleared})}}return list}
 
 function bestDotRecommendation(){
@@ -197,7 +209,7 @@ function bestDotRecommendation(){
       const cs=candidates(result.board,piece);
       if(!cs.length)return sum-50000;
       let top=-Infinity;
-      for(const c of cs)top=Math.max(top,heuristic(c.board,c.cleared,1));
+      for(const c of cs)top=Math.max(top,heuristic(c.board,PIECES[piece].s.length+linePoints(c.cleared),1,c.cleared));
       return sum+Math.min(5000,cs.length*8)+top*.002;
     },0);
     const score=heuristic(result.board,result.cleared,0)+fit+result.cleared*50000;
@@ -211,7 +223,7 @@ function recommendedSwapPiece(){
     const cs=candidates(filled,piece);
     if(!cs.length)return{piece,legal:0,best:-Infinity};
     let best=-Infinity;
-    for(const c of cs)best=Math.max(best,heuristic(c.board,c.cleared,1));
+    for(const c of cs)best=Math.max(best,heuristic(c.board,PIECES[piece].s.length+linePoints(c.cleared),1,c.cleared));
     return{piece,legal:cs.length,best};
   });
   ranked.sort((a,b)=>a.legal-b.legal||a.best-b.best||PIECES[b.piece].s.length-PIECES[a.piece].s.length);
@@ -231,7 +243,7 @@ function piecePlacementStats(board=filled){
   return [...new Set(selected)].map(piece=>{
     const cs=candidates(board,piece);
     let best=-Infinity;
-    for(const c of cs)best=Math.max(best,heuristic(c.board,c.cleared,1));
+    for(const c of cs)best=Math.max(best,heuristic(c.board,PIECES[piece].s.length+linePoints(c.cleared),1,c.cleared));
     return{piece,legal:cs.length,best};
   }).sort((a,b)=>a.legal-b.legal||a.best-b.best);
 }
@@ -291,15 +303,15 @@ function solve(){
             const placements=state.placements.concat([{pieceIndex,cells:c.cells,x:c.x,y:c.y,transform:c.transform,cleared:c.cleared}]);
             const clears=state.clears+c.cleared;
             const points=state.points+PIECES[pieceIndex].s.length+linePoints(c.cleared);
-            local.push({board:c.board,remaining:rest,placements,clears,points,score:heuristic(c.board,points,placements.length,clears)});
+            const item={board:c.board,remaining:rest,placements,clears,points,score:fastQuality(c.board,points,placements.length,clears)};
+            keepTop(local,item,depth===0?28:16);
           }
-          local.sort((a,b)=>b.score-a.score);
-          next.push(...local.slice(0,depth===0?180:80));
+          next.push(...local);
         }
       }
       if(!next.length)break;
       next.sort((a,b)=>b.score-a.score);
-      const uniq=new Map(),limit=depth===selected.length-1?1100:700;
+      const uniq=new Map(),limit=depth===selected.length-1?180:90;
       for(const st of next){
         const k=[...st.board].sort((a,b)=>a-b).join(",")+"|"+st.remaining.slice().sort((a,b)=>a-b).join(".");
         if(!uniq.has(k))uniq.set(k,st);
@@ -308,16 +320,11 @@ function solve(){
       beam=[...uniq.values()];
     }
     if(!beam.length){solution=null;setStatus("현재 맵에서는 선택한 블록을 놓을 자리를 찾지 못했어요.");renderAll();return}
-    beam.sort((a,b)=>{
-      const ac=a.placements.length===selected.length?1:0,bc=b.placements.length===selected.length?1:0;
-      if(ac!==bc)return bc-ac;
-      const aq=boardQuality(a.board)+a.points*5, bq=boardQuality(b.board)+b.points*5;
-      return bq-aq;
-    });
-    solution=beam[0]||null;
-    if(!(solution&&solution.placements.length===selected.length)){
-      setStatus("3개를 모두 안전하게 놓는 경로를 찾지 못했어요. 능력 사용을 먼저 확인해 주세요.");renderAll();return;
-    }
+    const complete=beam.filter(x=>x.placements.length===selected.length);
+    if(!complete.length){solution=beam[0]||null;setStatus("3개를 모두 안전하게 놓는 경로를 찾지 못했어요. 능력 사용을 먼저 확인해 주세요.");renderAll();return}
+    for(const st of complete)st.finalScore=boardQuality(st.board)+st.points*6+linePoints(st.clears);
+    complete.sort((a,b)=>b.finalScore-a.finalScore);
+    solution=complete[0];
     setStatus("장기 생존·다중 줄 삭제·큰 빈 공간 보존을 우선한 추천이에요.");renderAll();
   },0)
 }
