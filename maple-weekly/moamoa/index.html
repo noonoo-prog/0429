@@ -16,6 +16,8 @@
 .history-btn{width:38px;padding:0;font-size:20px}
 .board-meta{padding:11px 15px 0;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .board-stats{display:flex;gap:6px;flex-wrap:wrap}.board-stats span,.icon-stat{padding:5px 7px;border:1px solid #3b4b63;border-radius:8px;background:#152136;color:#d6deec;font-size:10px;font-weight:800}
+.score-progress{height:5px;margin:8px 15px 0;border-radius:999px;background:#0d1727;overflow:hidden}.score-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#1fc98f,#4ba3ff);transition:width .2s ease}
+
 .ability-box{margin:0 15px 11px;border:1px solid #394b63;border-radius:12px;background:#121e31;padding:11px}
 .ability-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:9px}.ability-head strong{font-size:13px}.ability-head span{font-size:10px;color:#a8b7cc}
 .ability-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.ability-row{display:grid;grid-template-columns:minmax(0,1fr) 34px;gap:5px}
@@ -43,14 +45,14 @@
 </head>
 <body>
 <main class="wrap">
-<header class="hero"><h1>한글 모아모아</h1><p>블록 3개 · 능력 · 누적 맵까지 실시간으로 계산해요</p></header>
+<header class="hero"><h1>한글 모아모아</h1><p>50만점 목표 · 장기 생존 · 능력 보존까지 실시간으로 계산해요</p></header>
 <div class="layout">
 <section class="panel">
 <div class="panel-head"><div><h2>블록 선택 <span id="pieceCount">(0 / 3)</span></h2><p>같은 블록도 최대 3개까지 선택 · 회전/반전 자동 계산</p></div><div class="head-actions"><button id="clearPieces" class="mini" type="button">× 선택 취소</button></div></div>
 <div id="pieces" class="pieces" aria-label="19개 블록 선택"></div><div class="select-help">블록을 누르면 추가 · 빨간 − 버튼을 누르면 1개씩 취소돼요.</div>
 </section>
 <section class="panel board-panel">
-<div class="panel-head"><div><h2>맵</h2><p>맵 초기화 전까지 계속 누적돼요</p></div><div class="head-actions"><button id="undo" class="mini history-btn" type="button" aria-label="되돌리기">↶</button><button id="redo" class="mini history-btn" type="button" aria-label="다시 실행">↷</button></div></div><div class="board-meta"><div class="board-stats"><span id="placedStat">놓은 조각 0</span><span id="lineStat">지운 줄 0</span></div><span id="iconStat" class="icon-stat">능력 아이콘 0 / 3</span></div>
+<div class="panel-head"><div><h2>맵</h2><p>맵 초기화 전까지 계속 누적돼요</p></div><div class="head-actions"><button id="undo" class="mini history-btn" type="button" aria-label="되돌리기">↶</button><button id="redo" class="mini history-btn" type="button" aria-label="다시 실행">↷</button></div></div><div class="board-meta"><div class="board-stats"><span id="scoreStat">점수 0 / 500,000</span><span id="placedStat">놓은 조각 0</span><span id="lineStat">지운 줄 0</span></div><div class="board-stats"><span id="stageStat">1단계</span><span id="iconStat" class="icon-stat">능력 아이콘 0 / 3</span></div></div><div class="score-progress"><i id="scoreProgress"></i></div>
 <div class="legend"><span><i style="background:#3f92f5"></i>현재 블록</span><span><i style="background:#1edb79"></i>1번</span><span><i style="background:#39bdff"></i>2번</span><span><i style="background:#ffae21"></i>3번</span></div>
 <div class="board-wrap"><div id="board" class="board" aria-label="10 x 16 맵"></div></div>
 <div class="ability-box">
@@ -71,7 +73,7 @@
 <div class="steps"><div class="result"><div class="result-title"><strong style="color:#fff">답안</strong><span id="scoreText">블록을 선택해 주세요</span></div><div id="resultList" class="empty-result">맵의 채워진 칸을 입력하고 블록을 선택한 뒤 <strong>추천 배치 찾기</strong>를 눌러 주세요.</div></div></div>
 </section>
 </div>
-<div class="help"><strong>사용법</strong> · 블록 최대 3개 선택 → 추천 배치 찾기 → 실제 게임에 그대로 놓았다면 <strong>추천 전체 적용</strong>. 선택한 블록이 한 번에 누적돼요. ↶/↷ 또는 Ctrl+Z로 되돌릴 수 있어요. 능력 칸에는 지금 사용 추천/아껴두기가 표시돼요. 점 찍기는 비상용으로 보수적으로 추천하고, 각 능력은 실제로 한 번 사용하면 1개가 사라져요. 점 찍기는 7회 능력 생성 카운트에 포함하지 않고, 중간에 수동 사용해도 남은 블록을 바로 다시 계산해요.</div>
+<div class="help"><strong>50만점 전략</strong> · 큰 빈 공간을 보존하고 2~5줄 동시 삭제를 노리면서 막힘을 최소화해요. 블록 최대 3개 선택 → 추천 배치 찾기 → 실제 게임에 그대로 놓았다면 <strong>추천 전체 적용</strong>. 선택한 블록이 한 번에 누적돼요. ↶/↷ 또는 Ctrl+Z로 되돌릴 수 있어요. 능력 칸에는 지금 사용 추천/아껴두기가 표시돼요. 점 찍기는 비상용으로 보수적으로 추천하고, 각 능력은 실제로 한 번 사용하면 1개가 사라져요. 점 찍기는 7회 능력 생성 카운트에 포함하지 않고, 중간에 수동 사용해도 남은 블록을 바로 다시 계산해요.</div>
 <a class="home-link" href="../">← 메인으로</a>
 </main>
 <script>
@@ -99,7 +101,7 @@ const PIECES=[
 {n:"18번",c:1,s:[[0,0],[2,0],[0,1],[1,1],[2,1],[0,2],[2,2],[0,3],[1,3],[2,3]]},
 {n:"19번",c:2,s:[[0,0],[2,0],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2],[0,3],[2,3]]}
 ];
-let filled=new Set(),selected=[],placedCount=0,clearedCount=0,abilities={dot:0,swap:0},pendingIcons=0;
+let filled=new Set(),selected=[],placedCount=0,clearedCount=0,gameScore=0,abilities={dot:0,swap:0},pendingIcons=0;
 let solution=null,dotArmed=false,dotRecommendCell=null,swapDraft=null,past=[],future=[],timingCache={key:"",value:null};
 const WMAX=80,STORE="moamoa-solver-v2";
 const $=id=>document.getElementById(id);
@@ -109,9 +111,9 @@ function sig(shape){return norm(shape).map(p=>p.join(",")).join(";")}
 function transforms(shape){const out=[],seen=new Set();for(let flip=0;flip<2;flip++)for(let r=0;r<4;r++){let cur=shape.map(([x,y])=>[flip?-x:x,y]);for(let i=0;i<r;i++)cur=cur.map(([x,y])=>[-y,x]);cur=norm(cur);const k=sig(cur);if(!seen.has(k)){seen.add(k);out.push(cur)}}return out}
 const TRANS=PIECES.map(p=>transforms(p.s));
 function size(shape){return [Math.max(...shape.map(p=>p[0]))+1,Math.max(...shape.map(p=>p[1]))+1]}
-function snapshot(){return{filled:[...filled],selected:[...selected],placedCount,clearedCount,abilities:{dot:abilities.dot,swap:abilities.swap},pendingIcons}}
+function snapshot(){return{filled:[...filled],selected:[...selected],placedCount,clearedCount,gameScore,abilities:{dot:abilities.dot,swap:abilities.swap},pendingIcons}}
 function validSnap(v){return v&&Array.isArray(v.filled)&&Array.isArray(v.selected)&&Number.isFinite(v.placedCount)&&Number.isFinite(v.clearedCount)&&v.abilities}
-function restore(v){if(!validSnap(v))return;filled=new Set(v.filled.filter(n=>Number.isInteger(n)&&n>=0&&n<W*H));selected=v.selected.filter(n=>Number.isInteger(n)&&n>=0&&n<PIECES.length).slice(0,3);placedCount=Math.max(0,Math.floor(v.placedCount));clearedCount=Math.max(0,Math.floor(v.clearedCount));abilities={dot:Math.max(0,Math.min(7,Math.floor(v.abilities.dot||0))),swap:Math.max(0,Math.min(7,Math.floor(v.abilities.swap||0)))};pendingIcons=Math.max(0,Math.min(3,Math.floor(v.pendingIcons||0)));solution=null;dotArmed=false;dotRecommendCell=null;swapDraft=null;timingCache={key:"",value:null}}
+function restore(v){if(!validSnap(v))return;filled=new Set(v.filled.filter(n=>Number.isInteger(n)&&n>=0&&n<W*H));selected=v.selected.filter(n=>Number.isInteger(n)&&n>=0&&n<PIECES.length).slice(0,3);placedCount=Math.max(0,Math.floor(v.placedCount));clearedCount=Math.max(0,Math.floor(v.clearedCount));gameScore=Math.max(0,Math.min(500000,Math.floor(Number.isFinite(v.gameScore)?v.gameScore:0)));abilities={dot:Math.max(0,Math.min(7,Math.floor(v.abilities.dot||0))),swap:Math.max(0,Math.min(7,Math.floor(v.abilities.swap||0)))};pendingIcons=Math.max(0,Math.min(3,Math.floor(v.pendingIcons||0)));solution=null;dotArmed=false;dotRecommendCell=null;swapDraft=null;timingCache={key:"",value:null}}
 function persist(){try{localStorage.setItem(STORE,JSON.stringify({state:snapshot(),past:past.slice(-WMAX),future:future.slice(-WMAX)}))}catch{}}
 function load(){try{const v=JSON.parse(localStorage.getItem(STORE)||"null");if(v&&validSnap(v.state)){restore(v.state);past=Array.isArray(v.past)?v.past.filter(validSnap).slice(-WMAX):[];future=Array.isArray(v.future)?v.future.filter(validSnap).slice(-WMAX):[]}}catch{}}
 function beforeChange(){past.push(snapshot());if(past.length>WMAX)past.shift();future=[]}
@@ -122,14 +124,67 @@ function setStatus(v){$("status").textContent=v}
 function miniShape(piece){const shape=norm(piece.s),wh=size(shape),w=wh[0],hh=wh[1],set=new Set(shape.map(p=>p[0]+","+p[1]));let out='<div class="mini-grid" style="grid-template-columns:repeat('+w+',10px);grid-template-rows:repeat('+hh+',10px)">';for(let y=0;y<hh;y++)for(let x=0;x<w;x++)out+='<i class="mini-cell '+(set.has(x+","+y)?"on c"+piece.c:"")+'"></i>';return out+"</div>"}
 function positionsOf(index){const a=[];selected.forEach((v,i)=>{if(v===index)a.push(i+1)});return a}
 function renderPieces(){$("pieces").innerHTML=PIECES.map((p,i)=>{const pos=positionsOf(i),orders=pos.map(n=>"<i>"+n+"</i>").join(""),swapRec=!!(swapDraft&&swapDraft.stage==="old"&&swapDraft.recommended===i);return '<div class="piece-card '+(pos.length?"selected ":"")+(swapRec?"swap-recommend":"")+'"><button class="piece-hit" type="button" data-add-index="'+i+'"><span class="count">'+p.s.length+'칸</span><div class="piece-shape">'+miniShape(p)+'</div><div class="piece-name">'+(i+1)+'번'+(pos.length?" · ×"+pos.length:"")+'</div></button>'+(pos.length?'<span class="order-stack">'+orders+'</span><button class="piece-minus" type="button" data-remove-index="'+i+'">−</button>':"")+'</div>'}).join("");$("pieceCount").textContent="("+selected.length+" / 3)"}
-function renderBoard(){const placements=solution&&solution.placements?solution.placements:[],rec=new Map();placements.forEach((p,i)=>p.cells.forEach(c=>rec.set(c,i+1)));$("board").innerHTML="";for(let y=0;y<H;y++)for(let x=0;x<W;x++){const k=key(x,y),div=document.createElement("button");div.type="button";div.className="cell"+(filled.has(k)?" filled":"")+(rec.has(k)?" reco"+rec.get(k):"")+(dotArmed?" dot-mode":"")+(dotArmed&&dotRecommendCell===k?" dot-recommend":"");div.dataset.cell=k;if(rec.has(k))div.innerHTML='<span class="num">'+rec.get(k)+"</span>";$("board").append(div)}$("placedStat").textContent="놓은 조각 "+placedCount;$("lineStat").textContent="지운 줄 "+clearedCount;$("iconStat").textContent="능력 아이콘 "+pendingIcons+" / 3"}
+function linePoints(n){return n>0?300*n*n:0}
+function stageForLines(lines){return lines<=30?1:lines<=60?2:lines<=100?3:lines<=150?4:5}
+function renderBoard(){const placements=solution&&solution.placements?solution.placements:[],rec=new Map();placements.forEach((p,i)=>p.cells.forEach(c=>rec.set(c,i+1)));$("board").innerHTML="";for(let y=0;y<H;y++)for(let x=0;x<W;x++){const k=key(x,y),div=document.createElement("button");div.type="button";div.className="cell"+(filled.has(k)?" filled":"")+(rec.has(k)?" reco"+rec.get(k):"")+(dotArmed?" dot-mode":"")+(dotArmed&&dotRecommendCell===k?" dot-recommend":"");div.dataset.cell=k;if(rec.has(k))div.innerHTML='<span class="num">'+rec.get(k)+"</span>";$("board").append(div)}$("scoreStat").textContent="점수 "+gameScore.toLocaleString()+" / 500,000";$("scoreProgress").style.width=Math.min(100,gameScore/5000)+"%";$("placedStat").textContent="놓은 조각 "+placedCount;$("lineStat").textContent="지운 줄 "+clearedCount;$("stageStat").textContent=stageForLines(clearedCount)+"단계";$("iconStat").textContent="능력 아이콘 "+pendingIcons+" / 3"}
 function renderAbilities(){const total=abilities.dot+abilities.swap,mod=placedCount%7,next=mod===0?7:7-mod;const timing=abilityTiming();$("useDot").textContent="◎ 점 찍기 ×"+abilities.dot;$("useSwap").textContent="⇄ 바꿔 뽑기 ×"+abilities.swap;$("dotMode").textContent="● 점 찍기 ×"+abilities.dot;$("useDot").disabled=abilities.dot<1;$("dotMode").disabled=abilities.dot<1;$("useSwap").disabled=abilities.swap<1||selected.length<1;$("gainDot").disabled=total>=7;$("gainSwap").disabled=total>=7;$("useDot").classList.toggle("active",dotArmed);$("dotMode").classList.toggle("active",dotArmed);$("useSwap").classList.toggle("swap-active",!!swapDraft);$("abilityProgress").textContent="보유 "+total+"/7 · 다음 생성까지 "+next+"조각";paintTiming("dot",timing.dot);paintTiming("swap",timing.swap);const advice=$("abilityAdvice");if(dotArmed&&dotRecommendCell!==null){const x=dotRecommendCell%W,y=Math.floor(dotRecommendCell/W);advice.textContent="점 찍기 추천 · 왼쪽 "+(x+1)+"칸 / 위 "+(y+1)+"칸. 다른 빈 칸을 직접 눌러도 돼요."}else if(swapDraft&&swapDraft.stage==="old"){advice.textContent="바꿔 뽑기 추천 · "+(swapDraft.recommended+1)+"번 블록 교체. 다른 선택 블록을 눌러도 돼요."}else if(swapDraft&&swapDraft.stage==="new"){advice.textContent="게임에서 새로 나온 블록을 눌러 주세요. 선택 즉시 다시 추천해요."}else advice.textContent="능력을 누르면 현재 맵 기준 추천 위치·교체 블록을 표시해요.";$("undo").disabled=!past.length;$("redo").disabled=!future.length;$("apply").disabled=!(solution&&solution.placements&&solution.placements.length===selected.length)}
-function renderAnswer(){if(!(solution&&solution.placements&&solution.placements.length)){$("scoreText").textContent=selected.length?"추천 배치 찾기를 눌러 주세요":"블록을 선택해 주세요";$("resultList").className="empty-result";$("resultList").textContent="현재 맵을 입력하고 블록을 선택해 주세요.";return}const p=solution.placements;$("scoreText").textContent=p.length+"개 배치 · "+solution.clears+"줄 제거";$("resultList").className="step-list";$("resultList").innerHTML=p.map((x,i)=>{const wh=size(TRANS[x.pieceIndex][x.transform]);return '<div class="step"><span class="step-badge">'+(i+1)+'</span><div><strong>'+(x.pieceIndex+1)+'번 블록 · '+PIECES[x.pieceIndex].s.length+'칸</strong><br><small>왼쪽 '+(x.x+1)+'칸 · 위 '+(x.y+1)+'칸'+(x.cleared?" · "+x.cleared+"줄 제거":"")+'</small></div><small>'+wh[0]+'×'+wh[1]+"</small></div>"}).join("")}
+function renderAnswer(){if(!(solution&&solution.placements&&solution.placements.length)){$("scoreText").textContent=selected.length?"추천 배치 찾기를 눌러 주세요":"블록을 선택해 주세요";$("resultList").className="empty-result";$("resultList").textContent="현재 맵을 입력하고 블록을 선택해 주세요.";return}const p=solution.placements;$("scoreText").textContent=p.length+"개 배치 · "+solution.clears+"줄 제거 · +"+solution.points.toLocaleString()+"점";$("resultList").className="step-list";$("resultList").innerHTML=p.map((x,i)=>{const wh=size(TRANS[x.pieceIndex][x.transform]);return '<div class="step"><span class="step-badge">'+(i+1)+'</span><div><strong>'+(x.pieceIndex+1)+'번 블록 · '+PIECES[x.pieceIndex].s.length+'칸</strong><br><small>왼쪽 '+(x.x+1)+'칸 · 위 '+(x.y+1)+'칸'+(x.cleared?" · "+x.cleared+"줄 제거":"")+'</small></div><small>'+wh[0]+'×'+wh[1]+"</small></div>"}).join("")}
 function renderAll(){renderPieces();renderBoard();renderAbilities();renderAnswer()}
 function clearLines(board){const full=[];for(let y=0;y<H;y++){let ok=true;for(let x=0;x<W;x++)if(!board.has(key(x,y))){ok=false;break}if(ok)full.push(y)}if(!full.length)return{board,cleared:0};const next=new Set(board);for(const y of full)for(let x=0;x<W;x++)next.delete(key(x,y));return{board:next,cleared:full.length}}
-function holes(board){let n=0;for(let x=0;x<W;x++){let seen=false;for(let y=0;y<H;y++){if(board.has(key(x,y)))seen=true;else if(seen)n++}}return n}
-function heights(board){const a=[];for(let x=0;x<W;x++){let hh=0;for(let y=0;y<H;y++)if(board.has(key(x,y))){hh=H-y;break}a.push(hh)}return a}
-function heuristic(board,clears,placed){const hs=heights(board),max=Math.max(...hs),sum=hs.reduce((a,b)=>a+b,0),bump=hs.slice(1).reduce((n,h,i)=>n+Math.abs(h-hs[i]),0),hole=holes(board);return clears*120000+placed*8000-hole*1800-max*220-sum*45-bump*80}
+function rowFillCounts(board){const rows=Array(H).fill(0);for(const k of board)rows[Math.floor(k/W)]++;return rows}
+function largestEmptyRect(board){
+  const heights=Array(W).fill(0);let best=0;
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++)heights[x]=board.has(key(x,y))?0:heights[x]+1;
+    const stack=[];
+    for(let x=0;x<=W;x++){
+      const cur=x<W?heights[x]:0;let start=x;
+      while(stack.length&&stack[stack.length-1][1]>cur){const [sx,hh]=stack.pop();best=Math.max(best,hh*(x-sx));start=sx}
+      if(!stack.length||stack[stack.length-1][1]<cur)stack.push([start,cur]);
+    }
+  }
+  return best;
+}
+function openBlocks(board,size){
+  let n=0;
+  for(let y=0;y<=H-size;y++)for(let x=0;x<=W-size;x++){
+    let ok=true;
+    for(let dy=0;dy<size&&ok;dy++)for(let dx=0;dx<size;dx++)if(board.has(key(x+dx,y+dy))){ok=false;break}
+    if(ok)n++;
+  }
+  return n;
+}
+function isolatedEmpty(board){
+  let n=0;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const k=key(x,y);if(board.has(k))continue;
+    let open=0;
+    if(x>0&&!board.has(key(x-1,y)))open++;if(x<W-1&&!board.has(key(x+1,y)))open++;
+    if(y>0&&!board.has(key(x,y-1)))open++;if(y<H-1&&!board.has(key(x,y+1)))open++;
+    if(open<=1)n++;
+  }
+  return n;
+}
+function edgeTransitions(board){
+  let n=0;
+  for(let y=0;y<H;y++)for(let x=1;x<W;x++)if(board.has(key(x,y))!==board.has(key(x-1,y)))n++;
+  for(let x=0;x<W;x++)for(let y=1;y<H;y++)if(board.has(key(x,y))!==board.has(key(x,y-1)))n++;
+  return n;
+}
+function boardQuality(board){
+  const stage=stageForLines(clearedCount),rows=rowFillCounts(board),occ=board.size,free=W*H-occ;
+  let rowSetup=0;
+  for(const n of rows){if(n>=6&&n<=9)rowSetup+=(n-5)*(n-5)*18;else if(n>0&&n<=3)rowSetup-=n*4}
+  const rect=largestEmptyRect(board),open2=openBlocks(board,2),open3=openBlocks(board,3);
+  const iso=isolatedEmpty(board),edges=edgeTransitions(board);
+  const stageWeight=1+(stage-1)*0.22;
+  const crowdPenalty=Math.max(0,occ-82); 
+  return free*4 + rect*28*stageWeight + open2*3 + open3*12*stageWeight + rowSetup
+    - iso*120*stageWeight - edges*5 - crowdPenalty*crowdPenalty*1.7*stageWeight;
+}
+function heuristic(board,turnPoints,placed,totalClears){
+  return boardQuality(board)+turnPoints*5+linePoints(totalClears)*0.8+placed*80;
+}
 function candidates(board,pieceIndex){const list=[];for(let t=0;t<TRANS[pieceIndex].length;t++){const shape=TRANS[pieceIndex][t],wh=size(shape),sw=wh[0],sh=wh[1];for(let y=0;y<=H-sh;y++)for(let x=0;x<=W-sw;x++){const cells=shape.map(p=>key(x+p[0],y+p[1]));if(cells.some(k=>board.has(k)))continue;const next=new Set(board);cells.forEach(k=>next.add(k));const result=clearLines(next);list.push({board:result.board,cells,transform:t,x,y,cleared:result.cleared})}}return list}
 
 function bestDotRecommendation(){
@@ -219,16 +274,62 @@ function paintTiming(id,data){
   row.classList.toggle("hold",data.mode==="hold");
   row.classList.toggle("none",data.mode==="none");
 }
-function solve(){if(!selected.length){setStatus("블록을 1개 이상 선택해 주세요.");return}setStatus("추천 배치를 계산하고 있어요…");solution=null;renderBoard();setTimeout(()=>{let beam=[{board:new Set(filled),remaining:selected.slice(),placements:[],clears:0,score:0}];for(let depth=0;depth<selected.length;depth++){const next=[];for(const state of beam){const tried=new Set();for(let ri=0;ri<state.remaining.length;ri++){const pieceIndex=state.remaining[ri];if(tried.has(pieceIndex))continue;tried.add(pieceIndex);const rest=state.remaining.slice();rest.splice(ri,1);for(const c of candidates(state.board,pieceIndex)){const placements=state.placements.concat([{pieceIndex,cells:c.cells,x:c.x,y:c.y,transform:c.transform,cleared:c.cleared}]),clears=state.clears+c.cleared;next.push({board:c.board,remaining:rest,placements,clears,score:heuristic(c.board,clears,placements.length)})}}}if(!next.length)break;next.sort((a,b)=>b.score-a.score);const uniq=new Map();for(const st of next){const k=[...st.board].sort((a,b)=>a-b).join(",")+"|"+st.remaining.slice().sort((a,b)=>a-b).join(".");if(!uniq.has(k))uniq.set(k,st);if(uniq.size>=850)break}beam=[...uniq.values()]}beam.sort((a,b)=>b.placements.length-a.placements.length||b.clears-a.clears||b.score-a.score);solution=beam[0]||null;if(!(solution&&solution.placements.length)){setStatus("현재 맵에서는 선택한 블록을 놓을 자리를 찾지 못했어요.");solution=null;renderAll();return}setStatus("추천을 찾았어요. 실제 게임에 놓은 뒤 추천 적용을 눌러 누적하세요.");renderAll()},0)}
+function solve(){
+  if(!selected.length){setStatus("블록을 1개 이상 선택해 주세요.");return}
+  setStatus("50만점 장기 생존 기준으로 계산하고 있어요…");solution=null;renderBoard();
+  setTimeout(()=>{
+    let beam=[{board:new Set(filled),remaining:selected.slice(),placements:[],clears:0,points:0,score:0}];
+    for(let depth=0;depth<selected.length;depth++){
+      const next=[];
+      for(const state of beam){
+        const tried=new Set();
+        for(let ri=0;ri<state.remaining.length;ri++){
+          const pieceIndex=state.remaining[ri];if(tried.has(pieceIndex))continue;tried.add(pieceIndex);
+          const rest=state.remaining.slice();rest.splice(ri,1);
+          const local=[];
+          for(const c of candidates(state.board,pieceIndex)){
+            const placements=state.placements.concat([{pieceIndex,cells:c.cells,x:c.x,y:c.y,transform:c.transform,cleared:c.cleared}]);
+            const clears=state.clears+c.cleared;
+            const points=state.points+PIECES[pieceIndex].s.length+linePoints(c.cleared);
+            local.push({board:c.board,remaining:rest,placements,clears,points,score:heuristic(c.board,points,placements.length,clears)});
+          }
+          local.sort((a,b)=>b.score-a.score);
+          next.push(...local.slice(0,depth===0?180:80));
+        }
+      }
+      if(!next.length)break;
+      next.sort((a,b)=>b.score-a.score);
+      const uniq=new Map(),limit=depth===selected.length-1?1100:700;
+      for(const st of next){
+        const k=[...st.board].sort((a,b)=>a-b).join(",")+"|"+st.remaining.slice().sort((a,b)=>a-b).join(".");
+        if(!uniq.has(k))uniq.set(k,st);
+        if(uniq.size>=limit)break;
+      }
+      beam=[...uniq.values()];
+    }
+    if(!beam.length){solution=null;setStatus("현재 맵에서는 선택한 블록을 놓을 자리를 찾지 못했어요.");renderAll();return}
+    beam.sort((a,b)=>{
+      const ac=a.placements.length===selected.length?1:0,bc=b.placements.length===selected.length?1:0;
+      if(ac!==bc)return bc-ac;
+      const aq=boardQuality(a.board)+a.points*5, bq=boardQuality(b.board)+b.points*5;
+      return bq-aq;
+    });
+    solution=beam[0]||null;
+    if(!(solution&&solution.placements.length===selected.length)){
+      setStatus("3개를 모두 안전하게 놓는 경로를 찾지 못했어요. 능력 사용을 먼저 확인해 주세요.");renderAll();return;
+    }
+    setStatus("장기 생존·다중 줄 삭제·큰 빈 공간 보존을 우선한 추천이에요.");renderAll();
+  },0)
+}
 function removeSelectedOnce(piece){const i=selected.indexOf(piece);if(i>=0)selected.splice(i,1)}
 function abilitySpawn(oldCount,newCount){const spawn=Math.floor(newCount/7)-Math.floor(oldCount/7);if(spawn<=0)return"";const before=pendingIcons;pendingIcons=Math.min(3,pendingIcons+spawn);if(before+spawn>3)return"능력 아이콘 "+spawn+"회 생성 · 3개 초과분은 가장 오래된 아이콘이 사라져요.";return"능력 아이콘 "+spawn+"회 생성! 실제 게임에서 획득한 능력을 ＋로 등록해 주세요."}
-function applySolution(){if(!(solution&&solution.placements&&solution.placements.length))return;if(solution.placements.length!==selected.length){setStatus("선택한 블록을 전부 놓을 수 있는 추천이 아니어서 적용하지 않았어요.");return}beforeChange();const old=placedCount,count=solution.placements.length;filled=new Set(solution.board);placedCount+=count;clearedCount+=solution.clears;for(const p of solution.placements)removeSelectedOnce(p.pieceIndex);const msg=abilitySpawn(old,placedCount);solution=null;dotRecommendCell=null;persist();renderAll();setStatus(msg||"선택한 블록 "+count+"개를 추천 순서대로 모두 적용했어요.")}
+function applySolution(){if(!(solution&&solution.placements&&solution.placements.length))return;if(solution.placements.length!==selected.length){setStatus("선택한 블록을 전부 놓을 수 있는 추천이 아니어서 적용하지 않았어요.");return}beforeChange();const old=placedCount,count=solution.placements.length;filled=new Set(solution.board);placedCount+=count;clearedCount+=solution.clears;gameScore=Math.min(500000,gameScore+solution.placements.reduce((sum,p)=>sum+PIECES[p.pieceIndex].s.length+linePoints(p.cleared),0));for(const p of solution.placements)removeSelectedOnce(p.pieceIndex);const msg=abilitySpawn(old,placedCount);solution=null;dotRecommendCell=null;timingCache={key:"",value:null};persist();renderAll();setStatus(msg||"선택한 블록 "+count+"개를 추천 순서대로 모두 적용했어요.")}
 function addPiece(i){if(swapDraft){if(swapDraft.stage==="old"){const at=selected.indexOf(i);if(at<0){setStatus("현재 선택된 블록 중 바꿀 블록을 눌러 주세요.");return}selected.splice(at,1);swapDraft.stage="new";renderAll();setStatus("게임에서 바뀐 결과 블록을 눌러 주세요.");return}selected.push(i);abilities.swap=Math.max(0,abilities.swap-1);past.push(swapDraft.before);if(past.length>WMAX)past.shift();future=[];swapDraft=null;persist();renderAll();if(selected.length){setStatus("바꿔 뽑기 1개를 사용했어요. 결과를 반영하고 다시 추천해요.");setTimeout(solve,0)}else setStatus("바꿔 뽑기 1개를 사용했어요.");return}if(selected.length>=3){setStatus("한 번에 블록은 3개까지 선택할 수 있어요.");return}beforeChange();selected.push(i);afterChange();setStatus("")}
 function removePiece(i){if(swapDraft){restore(swapDraft.before);swapDraft=null;renderAll();setStatus("바꿔 뽑기를 취소했어요.");return}const at=selected.lastIndexOf(i);if(at<0)return;beforeChange();selected.splice(at,1);afterChange()}
-function gainAbility(type){if(abilities.dot+abilities.swap>=7){setStatus("능력은 합계 7개까지만 보유할 수 있어요.");return}beforeChange();abilities[type]++;if(pendingIcons>0)pendingIcons--;afterChange();setStatus(type==="dot"?"점 찍기 능력을 등록했어요.":"바꿔 뽑기 능력을 등록했어요.")}
+function gainAbility(type){if(abilities.dot+abilities.swap>=7){setStatus("능력은 합계 7개까지만 보유할 수 있어요.");return}beforeChange();abilities[type]++;if(pendingIcons>0){pendingIcons--;gameScore=Math.min(500000,gameScore+50)}afterChange();setStatus(type==="dot"?"점 찍기 능력을 등록했어요.":"바꿔 뽑기 능력을 등록했어요.")}
 function toggleDot(){if(abilities.dot<1)return;if(dotArmed){dotArmed=false;dotRecommendCell=null;renderAll();setStatus("점 찍기를 취소했어요.");return}if(swapDraft){restore(swapDraft.before);swapDraft=null}solution=null;dotArmed=true;const rec=bestDotRecommendation();dotRecommendCell=rec?rec.cell:null;renderAll();setStatus(dotRecommendCell!==null?"점 찍기 추천 위치를 표시했어요. 원하는 다른 빈 칸을 눌러도 돼요.":"점 찍기 가능한 빈 칸이 없어요.")}
 function toggleSwap(){if(abilities.swap<1||!selected.length)return;if(swapDraft){restore(swapDraft.before);swapDraft=null;renderAll();setStatus("바꿔 뽑기를 취소했어요.");return}dotArmed=false;dotRecommendCell=null;solution=null;const recommended=recommendedSwapPiece();swapDraft={before:snapshot(),stage:"old",recommended};renderAll();setStatus("바꿔 뽑기: "+(recommended+1)+"번 블록을 교체 추천해요. 다른 선택 블록을 눌러도 돼요.")}
-function boardClick(k){if(dotArmed){if(filled.has(k)){setStatus("점 찍기는 빈 칸에만 사용할 수 있어요.");return}beforeChange();filled.add(k);abilities.dot=Math.max(0,abilities.dot-1);dotArmed=false;dotRecommendCell=null;const result=clearLines(filled);filled=result.board;clearedCount+=result.cleared;afterChange();if(selected.length){setStatus(result.cleared?"점 찍기 1개를 사용해 줄을 지웠어요. 남은 블록을 다시 추천해요.":"점 찍기 1개를 사용했어요. 남은 블록을 다시 추천해요.");setTimeout(solve,0)}else setStatus(result.cleared?"점 찍기 1개를 사용해 줄을 지웠어요.":"점 찍기 1개를 사용했어요. 조각 배치 횟수에는 포함되지 않아요.");return}beforeChange();if(filled.has(k))filled.delete(k);else filled.add(k);afterChange();setStatus("")}
+function boardClick(k){if(dotArmed){if(filled.has(k)){setStatus("점 찍기는 빈 칸에만 사용할 수 있어요.");return}beforeChange();filled.add(k);abilities.dot=Math.max(0,abilities.dot-1);dotArmed=false;dotRecommendCell=null;const result=clearLines(filled);filled=result.board;clearedCount+=result.cleared;gameScore=Math.min(500000,gameScore+linePoints(result.cleared));afterChange();if(selected.length){setStatus(result.cleared?"점 찍기 1개를 사용해 줄을 지웠어요. 남은 블록을 다시 추천해요.":"점 찍기 1개를 사용했어요. 남은 블록을 다시 추천해요.");setTimeout(solve,0)}else setStatus(result.cleared?"점 찍기 1개를 사용해 줄을 지웠어요.":"점 찍기 1개를 사용했어요. 조각 배치 횟수에는 포함되지 않아요.");return}beforeChange();if(filled.has(k))filled.delete(k);else filled.add(k);afterChange();setStatus("")}
 $("pieces").addEventListener("click",e=>{const minus=e.target.closest("[data-remove-index]");if(minus){removePiece(Number(minus.dataset.removeIndex));return}const hit=e.target.closest("[data-add-index]");if(hit)addPiece(Number(hit.dataset.addIndex))});
 $("board").addEventListener("click",e=>{const c=e.target.closest("[data-cell]");if(c)boardClick(Number(c.dataset.cell))});
 $("clearPieces").addEventListener("click",()=>{if(!selected.length)return;if(swapDraft){restore(swapDraft.before);swapDraft=null;renderAll();return}beforeChange();selected=[];afterChange();setStatus("블록 선택을 비웠어요.")});
@@ -241,7 +342,7 @@ $("dotMode").addEventListener("click",toggleDot);
 $("useSwap").addEventListener("click",toggleSwap);
 $("gainDot").addEventListener("click",()=>gainAbility("dot"));
 $("gainSwap").addEventListener("click",()=>gainAbility("swap"));
-$("resetMap").addEventListener("click",()=>{if(!confirm("맵과 누적 기록, 능력, 되돌리기 기록까지 모두 초기화할까요?"))return;filled=new Set();selected=[];placedCount=0;clearedCount=0;abilities={dot:0,swap:0};pendingIcons=0;solution=null;dotArmed=false;dotRecommendCell=null;swapDraft=null;past=[];future=[];persist();renderAll();setStatus("맵을 완전히 초기화했어요.")});
+$("resetMap").addEventListener("click",()=>{if(!confirm("맵과 누적 기록, 능력, 되돌리기 기록까지 모두 초기화할까요?"))return;filled=new Set();selected=[];placedCount=0;clearedCount=0;gameScore=0;abilities={dot:0,swap:0};pendingIcons=0;solution=null;dotArmed=false;dotRecommendCell=null;swapDraft=null;past=[];future=[];persist();renderAll();setStatus("맵을 완전히 초기화했어요.")});
 document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&!e.altKey){const k=e.key.toLowerCase();if(k==="z"){e.preventDefault();if(e.shiftKey)redo();else undo()}else if(k==="y"){e.preventDefault();redo()}}});
 load();renderAll();
 
