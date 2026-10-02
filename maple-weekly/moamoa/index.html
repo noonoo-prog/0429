@@ -71,7 +71,7 @@
 <div class="steps"><div class="result"><div class="result-title"><strong style="color:#fff">답안</strong><span id="scoreText">블록을 선택해 주세요</span></div><div id="resultList" class="empty-result">맵의 채워진 칸을 입력하고 블록을 선택한 뒤 <strong>추천 배치 찾기</strong>를 눌러 주세요.</div></div></div>
 </section>
 </div>
-<div class="help"><strong>사용법</strong> · 블록 최대 3개 선택 → 추천 배치 찾기 → 실제 게임에 그대로 놓았다면 <strong>추천 전체 적용</strong>. 선택한 블록이 한 번에 누적돼요. ↶/↷ 또는 Ctrl+Z로 되돌릴 수 있어요. 능력 칸에는 지금 사용 추천/아껴두기가 표시돼요. 각 능력은 실제로 한 번 사용하면 1개가 사라져요. 점 찍기는 7회 능력 생성 카운트에 포함하지 않고, 중간에 수동 사용해도 남은 블록을 바로 다시 계산해요.</div>
+<div class="help"><strong>사용법</strong> · 블록 최대 3개 선택 → 추천 배치 찾기 → 실제 게임에 그대로 놓았다면 <strong>추천 전체 적용</strong>. 선택한 블록이 한 번에 누적돼요. ↶/↷ 또는 Ctrl+Z로 되돌릴 수 있어요. 능력 칸에는 지금 사용 추천/아껴두기가 표시돼요. 점 찍기는 비상용으로 보수적으로 추천하고, 각 능력은 실제로 한 번 사용하면 1개가 사라져요. 점 찍기는 7회 능력 생성 카운트에 포함하지 않고, 중간에 수동 사용해도 남은 블록을 바로 다시 계산해요.</div>
 <a class="home-link" href="../">← 메인으로</a>
 </main>
 <script>
@@ -186,18 +186,20 @@ function abilityTiming(){
   const stats=piecePlacementStats(),worst=stats[0]||null;
   let dot={mode:"none",label:"보유 없음",reason:"점 찍기 능력이 없어요."};
   if(abilities.dot>0){
-    dot={mode:"hold",label:"아껴두기",reason:selected.length?"지금 블록은 배치 가능해서 우선 아끼는 편이 좋아요.":"블록을 고르면 사용 타이밍을 비교해요."};
+    dot={mode:"hold",label:"아껴두기",reason:selected.length?"점 찍기는 비상용으로 아껴요. 지금은 일반 블록 배치를 우선해요.":"블록을 고르면 꼭 필요한 순간만 추천해요."};
     const near=almostFullRow();
-    if(near)dot={mode:"use",label:"지금 쓰기 추천",reason:"한 칸만 채우면 바로 1줄을 지울 수 있어요."};
-    else if(worst&&worst.legal===0){
+    if(near){
+      const coverable=selected.some(piece=>candidates(filled,piece).some(c=>c.cells.includes(near.cell)));
+      if(!coverable)dot={mode:"use",label:"지금 쓰기 추천",reason:"일반 블록으로 채우기 어려운 마지막 1칸이라, 점 하나로 즉시 1줄을 지울 수 있어요."};
+      else dot={mode:"hold",label:"아껴두기",reason:"한 칸 남았지만 현재 블록으로 채울 수 있어서 점 찍기는 아껴요."};
+    }else if(worst&&worst.legal===0){
       const rec=bestDotRecommendation();
       if(rec){
         const board=new Set(filled);board.add(rec.cell);const cleared=clearLines(board);
         const after=piecePlacementStats(cleared.board);
-        if(after.length&&after[0].legal>worst.legal)dot={mode:"use",label:"지금 쓰기 추천",reason:"현재 놓기 어려운 블록의 배치 가능 자리를 만들 수 있어요."};
+        const rescued=after.find(x=>x.piece===worst.piece);
+        if(rescued&&rescued.legal>0)dot={mode:"use",label:"지금 쓰기 추천",reason:(worst.piece+1)+"번 블록이 현재는 완전히 막혔고, 점 하나로 배치 가능 상태를 만들 수 있어요."};
       }
-    }else if(holes(filled)>=8&&filled.size>=35){
-      dot={mode:"use",label:"지금 쓰기 고려",reason:"맵의 빈틈이 많아 점 찍기로 형태를 정리할 가치가 있어요."};
     }
   }
   let swap={mode:"none",label:"보유 없음",reason:"바꿔 뽑기 능력이 없어요."};
