@@ -52,7 +52,7 @@
 </head>
 <body>
 <main class="wrap">
-<header class="hero"><h1>한글 모아모아</h1><p>50만점 목표 · 장기 생존 · 능력 보존까지 실시간으로 계산해요</p></header>
+<header class="hero"><h1>한글 모아모아</h1><p>50만점 목표 · 가로줄 완성 최우선 · 퍼즐처럼 어디든 배치해요</p></header>
 <div class="layout">
 <section class="panel">
 <div class="panel-head"><div><h2>블록 선택 <span id="pieceCount">(0 / 3)</span></h2><p>같은 블록도 최대 3개까지 선택 · 회전/반전 자동 계산</p></div><div class="head-actions"><button id="clearPieces" class="mini" type="button">× 선택 취소</button></div></div>
@@ -84,7 +84,7 @@
 <div class="steps"><div class="result"><div class="result-title"><strong style="color:#fff">답안</strong><span id="scoreText">블록을 선택해 주세요</span></div><div id="resultList" class="empty-result">맵의 채워진 칸을 입력하고 블록을 선택한 뒤 <strong>추천 배치 찾기</strong>를 눌러 주세요.</div></div></div>
 </section>
 </div>
-<div class="help"><strong>50만점 전략</strong> · 큰 빈 공간을 보존하고 2~5줄 동시 삭제를 노리며, 19종 다음 손패의 배치 가능성까지 비교해 막힘을 최소화해요. 블록 최대 3개 선택 → 추천 배치 찾기 → 실제 게임에 그대로 놓았다면 <strong>추천 전체 적용</strong>. 선택한 블록이 한 번에 누적돼요. ↶/↷ 또는 Ctrl+Z로 되돌릴 수 있어요. 능력 칸에는 지금 사용 추천/아껴두기가 표시돼요. 점 찍기는 비상용으로 보수적으로 추천해요. 7수마다 아이콘이 나오면 실제 위치를 등록하면 그 줄 회수까지 계산하고, 각 능력은 실제로 한 번 사용하면 1개가 사라져요. 점 찍기는 7회 능력 생성 카운트에 포함하지 않고, 중간에 수동 사용해도 남은 블록을 바로 다시 계산해요.</div>
+<div class="help"><strong>50만점 전략</strong> · 블록은 아래에서 쌓는 방식이 아니라 <strong>빈칸이면 어디든 배치</strong>해요. 이번 3개로 가능하면 <strong>가로 1줄 이상 완성</strong>을 최우선으로 찾고, 불가능할 때만 다음 턴 가로줄 완성을 준비해요. 블록 최대 3개 선택 → 추천 배치 찾기 → 실제 게임에 그대로 놓았다면 <strong>추천 전체 적용</strong>. 선택한 블록이 한 번에 누적돼요. ↶/↷ 또는 Ctrl+Z로 되돌릴 수 있어요. 능력 칸에는 지금 사용 추천/아껴두기가 표시돼요. 점 찍기는 비상용으로 보수적으로 추천해요. 7수마다 아이콘이 나오면 실제 위치를 등록하면 그 줄 회수까지 계산하고, 각 능력은 실제로 한 번 사용하면 1개가 사라져요. 점 찍기는 7회 능력 생성 카운트에 포함하지 않고, 중간에 수동 사용해도 남은 블록을 바로 다시 계산해요.</div>
 <a class="home-link" href="../">← 메인으로</a>
 </main>
 <script>
@@ -184,16 +184,23 @@ function edgeTransitions(board){
 }
 function boardQuality(board){
   const stage=stageForLines(clearedCount),rows=rowFillCounts(board),occ=board.size,free=W*H-occ;
-  let rowSetup=0;
-  for(const n of rows){if(n>=6&&n<=9)rowSetup+=(n-5)*(n-5)*18;else if(n>0&&n<=3)rowSetup-=n*4}
+  let rowSetup=0,nearRows=0;
+  for(const n of rows){
+    if(n===9){rowSetup+=5200;nearRows++}
+    else if(n===8){rowSetup+=2300;nearRows++}
+    else if(n===7){rowSetup+=1050}
+    else if(n===6){rowSetup+=420}
+    else if(n>=4){rowSetup+=(n-3)*85}
+  }
   const rect=largestEmptyRect(board),open2=openBlocks(board,2),open3=openBlocks(board,3);
   const iso=isolatedEmpty(board),edges=edgeTransitions(board);
-  const stageWeight=1+(stage-1)*0.22;
-  const crowdPenalty=Math.max(0,occ-82);
+  const stageWeight=1+(stage-1)*0.18;
+  const crowdPenalty=Math.max(0,occ-105);
   let iconSetup=0;
-  for(const cell of iconCells){const n=rows[Math.floor(cell/W)]||0;if(n>=5)iconSetup+=(n-4)*(n-4)*45}
-  return free*4 + rect*28*stageWeight + open2*3 + open3*12*stageWeight + rowSetup + iconSetup
-    - iso*120*stageWeight - edges*5 - crowdPenalty*crowdPenalty*1.7*stageWeight;
+  for(const cell of iconCells){const n=rows[Math.floor(cell/W)]||0;if(n>=6)iconSetup+=(n-5)*(n-5)*180}
+  return rowSetup + nearRows*900 + iconSetup
+    + rect*8*stageWeight + open2*1.5 + open3*5*stageWeight + free*1.5
+    - iso*70*stageWeight - edges*1.8 - crowdPenalty*crowdPenalty*1.3*stageWeight;
 }
 function heuristic(board,turnPoints,placed,totalClears){
   return boardQuality(board)+turnPoints*5+linePoints(totalClears)*0.8+placed*80;
@@ -201,9 +208,15 @@ function heuristic(board,turnPoints,placed,totalClears){
 function fastQuality(board,turnPoints,placed,totalClears){
   const rows=Array(H).fill(0);for(const k of board)rows[Math.floor(k/W)]++;
   let setup=0;
-  for(const n of rows){if(n>=7&&n<=9)setup+=(n-6)*(n-6)*32;else if(n>0&&n<=2)setup-=n*3}
-  const crowd=Math.max(0,board.size-92);
-  return turnPoints*8+linePoints(totalClears)*1.2+setup-board.size*7-crowd*crowd*2+placed*50;
+  for(const n of rows){
+    if(n===9)setup+=4200;
+    else if(n===8)setup+=1800;
+    else if(n===7)setup+=700;
+    else if(n===6)setup+=260;
+    else if(n>=4)setup+=(n-3)*55;
+  }
+  const crowd=Math.max(0,board.size-108);
+  return turnPoints*11+linePoints(totalClears)*4.5+totalClears*9500+setup-board.size*1.5-crowd*crowd*1.4+placed*35;
 }
 function keepTop(list,item,limit){
   if(list.length<limit){list.push(item);return}
@@ -382,10 +395,16 @@ function solve(){
     if(!beam.length){solution=null;setStatus("현재 맵에서는 선택한 블록을 놓을 자리를 찾지 못했어요.");renderAll();return}
     const complete=beam.filter(x=>x.placements.length===selected.length);
     if(!complete.length){solution=beam[0]||null;setStatus("3개를 모두 안전하게 놓는 경로가 없어요. 능력 사용을 먼저 확인해 주세요.");renderAll();return}
-    for(const st of complete){const future=futureMobility(st.board);st.future=future;st.finalScore=boardQuality(st.board)+future.score+st.points*6+linePoints(st.clears)+st.gainedIcons*22000}
-    complete.sort((a,b)=>b.finalScore-a.finalScore);
-    solution=complete[0];
-    setStatus(solution.gainedIcons?"능력 아이콘 회수까지 포함한 50만점 경로예요.":"장기 생존·다중 줄 삭제·다음 손패 생존성을 우선한 경로예요.");renderAll();
+    const clearing=complete.filter(st=>st.clears>=1),pool=clearing.length?clearing:complete;
+    for(const st of pool){
+      const future=futureMobility(st.board);st.future=future;
+      st.finalScore=st.clears*90000+linePoints(st.clears)*30+st.gainedIcons*26000+boardQuality(st.board)+future.score+st.points*5;
+    }
+    pool.sort((a,b)=>b.clears-a.clears||b.gainedIcons-a.gainedIcons||b.finalScore-a.finalScore);
+    solution=pool[0];
+    if(solution.clears>=1)setStatus("이번 3개로 가로 "+solution.clears+"줄을 완성하는 경로를 최우선으로 골랐어요.");
+    else setStatus("이번 3개로 가로줄 완성이 불가능해서, 다음 턴에 완성하기 쉬운 가로줄을 만들어요.");
+    renderAll();
   },0)
 }
 function removeSelectedOnce(piece){const i=selected.indexOf(piece);if(i>=0)selected.splice(i,1)}
