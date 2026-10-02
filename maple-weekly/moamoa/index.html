@@ -36,8 +36,27 @@
 <script>
 (()=>{"use strict";
 const W=10,H=16;
+// 조각 모양은 사용자가 제공한 실제 19종 선택 화면을 기준으로 맞췄습니다.
 const PIECES=[
-{n:"1칸",c:0,s:[[0,0]]},{n:"3칸 ㄱ",c:1,s:[[1,0],[0,1],[0,2]]},{n:"3칸 ㅡ",c:2,s:[[0,0],[1,0],[2,0]]},{n:"3칸 ㄴ",c:0,s:[[0,0],[0,1],[1,1]]},{n:"4칸 ㄱ",c:0,s:[[2,0],[0,1],[1,1],[2,1]]},{n:"4칸 ㅏ",c:2,s:[[0,0],[0,1],[1,1],[0,2]]},{n:"4칸 ㅗ",c:1,s:[[1,0],[0,1],[1,1],[2,1]]},{n:"5칸 ㅂ",c:0,s:[[0,0],[1,0],[0,1],[0,2],[1,2]]},{n:"5칸 ㅡ",c:2,s:[[0,0],[1,0],[2,0],[3,0],[4,0]]},{n:"6칸 ㄴ",c:1,s:[[1,0],[0,1],[1,1],[0,2],[1,2],[2,2]]},{n:"6칸 ㄹ",c:3,s:[[0,0],[1,0],[1,1],[0,2],[1,2],[1,3]]},{n:"7칸 ㅓ",c:1,s:[[0,0],[0,1],[1,1],[0,2],[0,3],[0,4],[1,4]]},{n:"7칸 ㅁ",c:3,s:[[1,0],[0,1],[1,1],[2,1],[1,2],[0,3],[1,3]]},{n:"8칸 ㅁ",c:1,s:[[0,0],[1,0],[2,0],[0,1],[2,1],[0,2],[1,2],[2,2]]},{n:"8칸 ㅍ",c:0,s:[[0,0],[1,0],[0,1],[0,2],[1,2],[0,3],[0,4],[1,4]]},{n:"8칸 ㄹ",c:3,s:[[0,0],[1,0],[0,1],[0,2],[1,2],[0,3],[0,4],[1,4]]},{n:"9칸 ㅈ",c:1,s:[[1,0],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2],[1,3],[1,4]]},{n:"10칸 ㅂ",c:1,s:[[0,0],[2,0],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2],[0,3],[2,3]]},{n:"10칸 ㅁ",c:2,s:[[0,0],[2,0],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2],[0,3],[1,3]]}
+{n:"1번",c:0,s:[[0,0]]},
+{n:"2번",c:1,s:[[0,0],[1,1],[0,2]]},
+{n:"3번",c:2,s:[[0,0],[1,0],[2,0]]},
+{n:"4번",c:0,s:[[0,0],[0,1],[1,1]]},
+{n:"5번",c:0,s:[[2,0],[0,1],[1,1],[2,1]]},
+{n:"6번",c:2,s:[[0,0],[0,1],[1,1],[0,2]]},
+{n:"7번",c:1,s:[[1,0],[0,1],[2,1],[1,2]]},
+{n:"8번",c:0,s:[[0,0],[1,0],[0,1],[0,2],[1,2]]},
+{n:"9번",c:2,s:[[0,0],[1,0],[2,0],[3,0],[4,0]]},
+{n:"10번",c:1,s:[[0,0],[2,0],[1,1],[0,2],[1,2],[2,2]]},
+{n:"11번",c:3,s:[[0,0],[1,0],[1,1],[0,2],[1,2],[1,3]]},
+{n:"12번",c:1,s:[[0,0],[0,1],[1,1],[0,2],[0,3],[1,3],[0,4]]},
+{n:"13번",c:3,s:[[1,0],[0,1],[1,1],[2,1],[1,2],[0,3],[2,3]]},
+{n:"14번",c:1,s:[[0,0],[1,0],[2,0],[0,1],[2,1],[0,2],[1,2],[2,2]]},
+{n:"15번",c:0,s:[[0,0],[1,0],[1,1],[0,2],[1,2],[0,3],[0,4],[1,4]]},
+{n:"16번",c:3,s:[[0,0],[1,0],[0,1],[0,2],[1,2],[0,3],[0,4],[1,4]]},
+{n:"17번",c:1,s:[[2,0],[1,1],[2,1],[0,2],[2,2],[3,2],[1,3],[2,3],[2,4]]},
+{n:"18번",c:1,s:[[0,0],[2,0],[0,1],[1,1],[2,1],[0,2],[2,2],[0,3],[1,3],[2,3]]},
+{n:"19번",c:2,s:[[0,0],[2,0],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2],[0,3],[2,3]]}
 ];
 const selected=[],filled=new Set();let solution=null;
 const $=id=>document.getElementById(id);
@@ -50,7 +69,7 @@ function size(shape){return [Math.max(...shape.map(p=>p[0]))+1,Math.max(...shape
 function miniShape(piece){const shape=norm(piece.s),[w,h]=size(shape),set=new Set(shape.map(([x,y])=>x+","+y));let html=`<div class="mini-grid" style="grid-template-columns:repeat(${w},10px);grid-template-rows:repeat(${h},10px)">`;for(let y=0;y<h;y++)for(let x=0;x<w;x++)html+=`<i class="mini-cell ${set.has(x+","+y)?"on c"+piece.c:""}"></i>`;return html+"</div>"}
 function renderPieces(){$("pieces").innerHTML=PIECES.map((p,i)=>{const pos=selected.indexOf(i);return `<button class="piece-card ${pos>=0?"selected":""}" data-index="${i}" data-order="${pos+1}" type="button"><span class="order">${pos+1}</span><span class="count">${p.s.length}칸</span><div class="piece-shape">${miniShape(p)}</div><div class="piece-name">${i+1}번</div></button>`}).join("");$("pieceCount").textContent=`(${selected.length} / 3)`}
 function renderBoard(){const placements=solution?.placements||[],rec=new Map();placements.forEach((p,i)=>p.cells.forEach(c=>rec.set(c,i+1)));$("board").innerHTML="";for(let y=0;y<H;y++)for(let x=0;x<W;x++){const k=key(x,y),div=document.createElement("button");div.type="button";div.className="cell"+(filled.has(k)?" filled":"")+(rec.has(k)?" reco"+rec.get(k):"");div.dataset.cell=k;if(rec.has(k))div.innerHTML=`<span class="num">${rec.get(k)}</span>`;$("board").append(div)}$("mapCount").textContent=`놓은 블록 ${filled.size}`}
-function clearLines(board){const full=[];for(let y=0;y<H;y++){let ok=true;for(let x=0;x<W;x++)if(!board.has(key(x,y))){ok=false;break}if(ok)full.push(y)}if(!full.length)return{board,cleared:0};const keep=[];for(let y=H-1;y>=0;y--)if(!full.includes(y)){const row=[];for(let x=0;x<W;x++)if(board.has(key(x,y)))row.push(x);keep.push(row)}const next=new Set();for(let ny=H-1,i=0;i<keep.length&&ny>=0;i++,ny--)for(const x of keep[i])next.add(key(x,ny));return{board:next,cleared:full.length}}
+function clearLines(board){const full=[];for(let y=0;y<H;y++){let ok=true;for(let x=0;x<W;x++)if(!board.has(key(x,y))){ok=false;break}if(ok)full.push(y)}if(!full.length)return{board,cleared:0};const next=new Set(board);for(const y of full)for(let x=0;x<W;x++)next.delete(key(x,y));return{board:next,cleared:full.length}}
 function holes(board){let n=0;for(let x=0;x<W;x++){let seen=false;for(let y=0;y<H;y++){if(board.has(key(x,y)))seen=true;else if(seen)n++}}return n}
 function heights(board){const a=[];for(let x=0;x<W;x++){let h=0;for(let y=0;y<H;y++)if(board.has(key(x,y))){h=H-y;break}a.push(h)}return a}
 function heuristic(board,clears,placed){const hs=heights(board),max=Math.max(...hs),sum=hs.reduce((a,b)=>a+b,0),bump=hs.slice(1).reduce((n,h,i)=>n+Math.abs(h-hs[i]),0),hole=holes(board);return clears*120000+placed*8000-hole*1800-max*220-sum*45-bump*80}
