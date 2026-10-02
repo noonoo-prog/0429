@@ -22,6 +22,14 @@
 .ability-use,.ability-add{min-height:42px;border:0;border-radius:9px;color:#fff;font-weight:900}.ability-use{background:#3c4b61}.ability-use.active{box-shadow:inset 0 0 0 2px #56d9ff;background:#324d67}.ability-use.swap-active{box-shadow:inset 0 0 0 2px #e778ff;background:#4c365d}.ability-add{background:#2e7d64;font-size:20px}
 .ability-rule{margin-top:8px;color:#8392a8;font-size:10px;line-height:1.5}
 .ability-advice{margin-top:8px;padding:8px 9px;border-radius:8px;background:#182942;border:1px solid #334e70;color:#c8d8ed;font-size:10px;line-height:1.55}
+.ability-timing{display:grid;gap:6px;margin-top:8px}
+.timing-row{display:grid;grid-template-columns:auto auto;gap:2px 8px;align-items:center;padding:8px 9px;border:1px solid #30435d;border-radius:9px;background:#101c2e}
+.timing-row>span{font-size:10px;color:#aab9cd;font-weight:800}.timing-row>strong{justify-self:end;font-size:11px}
+.timing-row>small{grid-column:1/-1;color:#8293aa;font-size:9px;line-height:1.45}
+.timing-row.use-now{border-color:#2f9b76;background:#122b29}.timing-row.use-now>strong{color:#66e0ad}
+.timing-row.hold{border-color:#4a5366}.timing-row.hold>strong{color:#b7c0cf}
+.timing-row.none{opacity:.68}
+
 .cell.dot-recommend{background:#18384d!important;box-shadow:inset 0 0 0 3px #55e0ff,0 0 13px rgba(85,224,255,.5)}
 .cell.dot-recommend:after{content:"◎";position:absolute;inset:0;display:grid;place-items:center;color:#95f2ff;font-size:18px;font-weight:950}
 .piece-card.swap-recommend{border-color:#e778ff!important;box-shadow:0 0 0 2px rgba(231,120,255,.26),0 0 18px rgba(231,120,255,.2)}
@@ -51,15 +59,19 @@
 <div class="ability-row"><button id="useDot" class="ability-use" type="button">◎ 점 찍기 ×0</button><button id="gainDot" class="ability-add" type="button">＋</button></div>
 <div class="ability-row"><button id="useSwap" class="ability-use" type="button">⇄ 바꿔 뽑기 ×0</button><button id="gainSwap" class="ability-add" type="button">＋</button></div>
 </div>
+<div class="ability-timing">
+  <div class="timing-row"><span>◎ 점 찍기</span><strong id="dotTiming">보유 없음</strong><small id="dotTimingReason">능력을 등록하면 사용 타이밍을 알려줘요.</small></div>
+  <div class="timing-row"><span>⇄ 바꿔 뽑기</span><strong id="swapTiming">보유 없음</strong><small id="swapTimingReason">능력을 등록하면 교체 타이밍을 알려줘요.</small></div>
+</div>
 <div id="abilityAdvice" class="ability-advice">능력을 누르면 현재 맵 기준 추천 위치·교체 블록을 표시해요.</div>
-<div class="ability-rule">7번 배치할 때마다 능력 아이콘 생성 · 실제 게임에서 획득한 능력을 ＋로 등록 · 능력 합계 최대 7개</div>
+<div class="ability-rule">각 능력은 <strong>1회 사용하면 1개 차감</strong> · 조각 7번 배치마다 능력 아이콘 생성 · 보유 능력 합계 최대 7개</div>
 </div>
 <div class="toolbar action-grid"><button id="solve" class="tool solve" type="button">추천 배치 찾기</button><button id="apply" class="tool apply" type="button" disabled>추천 1개 적용</button><button id="dotMode" class="tool mode" type="button">● 점 찍기</button><button id="resetMap" class="tool reset" type="button">맵 초기화</button></div>
 <div id="status" class="status" aria-live="polite"></div>
 <div class="steps"><div class="result"><div class="result-title"><strong style="color:#fff">답안</strong><span id="scoreText">블록을 선택해 주세요</span></div><div id="resultList" class="empty-result">맵의 채워진 칸을 입력하고 블록을 선택한 뒤 <strong>추천 배치 찾기</strong>를 눌러 주세요.</div></div></div>
 </section>
 </div>
-<div class="help"><strong>사용법</strong> · 블록 최대 3개 선택 → 추천 배치 찾기 → 실제 게임에 놓은 뒤 <strong>추천 적용</strong>. 결과가 맵에 계속 누적돼요. ↶/↷ 또는 Ctrl+Z로 되돌릴 수 있어요. 점 찍기는 7회 능력 생성 카운트에 포함하지 않아요. 점 찍기를 중간에 수동으로 사용해도 남은 블록 추천을 바로 다시 계산해요.</div>
+<div class="help"><strong>사용법</strong> · 블록 최대 3개 선택 → 추천 배치 찾기 → 실제 게임에 놓은 뒤 <strong>추천 적용</strong>. 결과가 맵에 계속 누적돼요. ↶/↷ 또는 Ctrl+Z로 되돌릴 수 있어요. 능력 칸에는 지금 사용 추천/아껴두기가 표시돼요. 각 능력은 실제로 한 번 사용하면 1개가 사라져요. 점 찍기는 7회 능력 생성 카운트에 포함하지 않고, 중간에 수동 사용해도 남은 블록을 바로 다시 계산해요.</div>
 <a class="home-link" href="../">← 메인으로</a>
 </main>
 <script>
@@ -88,7 +100,7 @@ const PIECES=[
 {n:"19번",c:2,s:[[0,0],[2,0],[0,1],[1,1],[2,1],[0,2],[1,2],[2,2],[0,3],[2,3]]}
 ];
 let filled=new Set(),selected=[],placedCount=0,clearedCount=0,abilities={dot:0,swap:0},pendingIcons=0;
-let solution=null,dotArmed=false,dotRecommendCell=null,swapDraft=null,past=[],future=[];
+let solution=null,dotArmed=false,dotRecommendCell=null,swapDraft=null,past=[],future=[],timingCache={key:"",value:null};
 const WMAX=80,STORE="moamoa-solver-v2";
 const $=id=>document.getElementById(id);
 function key(x,y){return y*W+x}
@@ -99,11 +111,11 @@ const TRANS=PIECES.map(p=>transforms(p.s));
 function size(shape){return [Math.max(...shape.map(p=>p[0]))+1,Math.max(...shape.map(p=>p[1]))+1]}
 function snapshot(){return{filled:[...filled],selected:[...selected],placedCount,clearedCount,abilities:{dot:abilities.dot,swap:abilities.swap},pendingIcons}}
 function validSnap(v){return v&&Array.isArray(v.filled)&&Array.isArray(v.selected)&&Number.isFinite(v.placedCount)&&Number.isFinite(v.clearedCount)&&v.abilities}
-function restore(v){if(!validSnap(v))return;filled=new Set(v.filled.filter(n=>Number.isInteger(n)&&n>=0&&n<W*H));selected=v.selected.filter(n=>Number.isInteger(n)&&n>=0&&n<PIECES.length).slice(0,3);placedCount=Math.max(0,Math.floor(v.placedCount));clearedCount=Math.max(0,Math.floor(v.clearedCount));abilities={dot:Math.max(0,Math.min(7,Math.floor(v.abilities.dot||0))),swap:Math.max(0,Math.min(7,Math.floor(v.abilities.swap||0)))};pendingIcons=Math.max(0,Math.min(3,Math.floor(v.pendingIcons||0)));solution=null;dotArmed=false;dotRecommendCell=null;swapDraft=null}
+function restore(v){if(!validSnap(v))return;filled=new Set(v.filled.filter(n=>Number.isInteger(n)&&n>=0&&n<W*H));selected=v.selected.filter(n=>Number.isInteger(n)&&n>=0&&n<PIECES.length).slice(0,3);placedCount=Math.max(0,Math.floor(v.placedCount));clearedCount=Math.max(0,Math.floor(v.clearedCount));abilities={dot:Math.max(0,Math.min(7,Math.floor(v.abilities.dot||0))),swap:Math.max(0,Math.min(7,Math.floor(v.abilities.swap||0)))};pendingIcons=Math.max(0,Math.min(3,Math.floor(v.pendingIcons||0)));solution=null;dotArmed=false;dotRecommendCell=null;swapDraft=null;timingCache={key:"",value:null}}
 function persist(){try{localStorage.setItem(STORE,JSON.stringify({state:snapshot(),past:past.slice(-WMAX),future:future.slice(-WMAX)}))}catch{}}
 function load(){try{const v=JSON.parse(localStorage.getItem(STORE)||"null");if(v&&validSnap(v.state)){restore(v.state);past=Array.isArray(v.past)?v.past.filter(validSnap).slice(-WMAX):[];future=Array.isArray(v.future)?v.future.filter(validSnap).slice(-WMAX):[]}}catch{}}
 function beforeChange(){past.push(snapshot());if(past.length>WMAX)past.shift();future=[]}
-function afterChange(){solution=null;dotRecommendCell=null;persist();renderAll()}
+function afterChange(){solution=null;dotRecommendCell=null;timingCache={key:"",value:null};persist();renderAll()}
 function undo(){if(!past.length)return;future.push(snapshot());restore(past.pop());persist();renderAll();setStatus("되돌렸어요.")}
 function redo(){if(!future.length)return;past.push(snapshot());restore(future.pop());persist();renderAll();setStatus("다시 실행했어요.")}
 function setStatus(v){$("status").textContent=v}
@@ -111,7 +123,7 @@ function miniShape(piece){const shape=norm(piece.s),wh=size(shape),w=wh[0],hh=wh
 function positionsOf(index){const a=[];selected.forEach((v,i)=>{if(v===index)a.push(i+1)});return a}
 function renderPieces(){$("pieces").innerHTML=PIECES.map((p,i)=>{const pos=positionsOf(i),orders=pos.map(n=>"<i>"+n+"</i>").join(""),swapRec=!!(swapDraft&&swapDraft.stage==="old"&&swapDraft.recommended===i);return '<div class="piece-card '+(pos.length?"selected ":"")+(swapRec?"swap-recommend":"")+'"><button class="piece-hit" type="button" data-add-index="'+i+'"><span class="count">'+p.s.length+'칸</span><div class="piece-shape">'+miniShape(p)+'</div><div class="piece-name">'+(i+1)+'번'+(pos.length?" · ×"+pos.length:"")+'</div></button>'+(pos.length?'<span class="order-stack">'+orders+'</span><button class="piece-minus" type="button" data-remove-index="'+i+'">−</button>':"")+'</div>'}).join("");$("pieceCount").textContent="("+selected.length+" / 3)"}
 function renderBoard(){const placements=solution&&solution.placements?solution.placements:[],rec=new Map();placements.forEach((p,i)=>p.cells.forEach(c=>rec.set(c,i+1)));$("board").innerHTML="";for(let y=0;y<H;y++)for(let x=0;x<W;x++){const k=key(x,y),div=document.createElement("button");div.type="button";div.className="cell"+(filled.has(k)?" filled":"")+(rec.has(k)?" reco"+rec.get(k):"")+(dotArmed?" dot-mode":"")+(dotArmed&&dotRecommendCell===k?" dot-recommend":"");div.dataset.cell=k;if(rec.has(k))div.innerHTML='<span class="num">'+rec.get(k)+"</span>";$("board").append(div)}$("placedStat").textContent="놓은 조각 "+placedCount;$("lineStat").textContent="지운 줄 "+clearedCount;$("iconStat").textContent="능력 아이콘 "+pendingIcons+" / 3"}
-function renderAbilities(){const total=abilities.dot+abilities.swap,mod=placedCount%7,next=mod===0?7:7-mod;$("useDot").textContent="◎ 점 찍기 ×"+abilities.dot;$("useSwap").textContent="⇄ 바꿔 뽑기 ×"+abilities.swap;$("dotMode").textContent="● 점 찍기 ×"+abilities.dot;$("useDot").disabled=abilities.dot<1;$("dotMode").disabled=abilities.dot<1;$("useSwap").disabled=abilities.swap<1||selected.length<1;$("gainDot").disabled=total>=7;$("gainSwap").disabled=total>=7;$("useDot").classList.toggle("active",dotArmed);$("dotMode").classList.toggle("active",dotArmed);$("useSwap").classList.toggle("swap-active",!!swapDraft);$("abilityProgress").textContent="보유 "+total+"/7 · 다음 생성까지 "+next+"조각";const advice=$("abilityAdvice");if(dotArmed&&dotRecommendCell!==null){const x=dotRecommendCell%W,y=Math.floor(dotRecommendCell/W);advice.textContent="점 찍기 추천 · 왼쪽 "+(x+1)+"칸 / 위 "+(y+1)+"칸. 다른 빈 칸을 직접 눌러도 돼요."}else if(swapDraft&&swapDraft.stage==="old"){advice.textContent="바꿔 뽑기 추천 · "+(swapDraft.recommended+1)+"번 블록 교체. 다른 선택 블록을 눌러도 돼요."}else if(swapDraft&&swapDraft.stage==="new"){advice.textContent="게임에서 새로 나온 블록을 눌러 주세요. 선택 즉시 다시 추천해요."}else advice.textContent="능력을 누르면 현재 맵 기준 추천 위치·교체 블록을 표시해요.";$("undo").disabled=!past.length;$("redo").disabled=!future.length;$("apply").disabled=!(solution&&solution.placements&&solution.placements.length)}
+function renderAbilities(){const total=abilities.dot+abilities.swap,mod=placedCount%7,next=mod===0?7:7-mod;const timing=abilityTiming();$("useDot").textContent="◎ 점 찍기 ×"+abilities.dot;$("useSwap").textContent="⇄ 바꿔 뽑기 ×"+abilities.swap;$("dotMode").textContent="● 점 찍기 ×"+abilities.dot;$("useDot").disabled=abilities.dot<1;$("dotMode").disabled=abilities.dot<1;$("useSwap").disabled=abilities.swap<1||selected.length<1;$("gainDot").disabled=total>=7;$("gainSwap").disabled=total>=7;$("useDot").classList.toggle("active",dotArmed);$("dotMode").classList.toggle("active",dotArmed);$("useSwap").classList.toggle("swap-active",!!swapDraft);$("abilityProgress").textContent="보유 "+total+"/7 · 다음 생성까지 "+next+"조각";paintTiming("dot",timing.dot);paintTiming("swap",timing.swap);const advice=$("abilityAdvice");if(dotArmed&&dotRecommendCell!==null){const x=dotRecommendCell%W,y=Math.floor(dotRecommendCell/W);advice.textContent="점 찍기 추천 · 왼쪽 "+(x+1)+"칸 / 위 "+(y+1)+"칸. 다른 빈 칸을 직접 눌러도 돼요."}else if(swapDraft&&swapDraft.stage==="old"){advice.textContent="바꿔 뽑기 추천 · "+(swapDraft.recommended+1)+"번 블록 교체. 다른 선택 블록을 눌러도 돼요."}else if(swapDraft&&swapDraft.stage==="new"){advice.textContent="게임에서 새로 나온 블록을 눌러 주세요. 선택 즉시 다시 추천해요."}else advice.textContent="능력을 누르면 현재 맵 기준 추천 위치·교체 블록을 표시해요.";$("undo").disabled=!past.length;$("redo").disabled=!future.length;$("apply").disabled=!(solution&&solution.placements&&solution.placements.length)}
 function renderAnswer(){if(!(solution&&solution.placements&&solution.placements.length)){$("scoreText").textContent=selected.length?"추천 배치 찾기를 눌러 주세요":"블록을 선택해 주세요";$("resultList").className="empty-result";$("resultList").textContent="현재 맵을 입력하고 블록을 선택해 주세요.";return}const p=solution.placements;$("scoreText").textContent=p.length+"개 배치 · "+solution.clears+"줄 제거";$("resultList").className="step-list";$("resultList").innerHTML=p.map((x,i)=>{const wh=size(TRANS[x.pieceIndex][x.transform]);return '<div class="step"><span class="step-badge">'+(i+1)+'</span><div><strong>'+(x.pieceIndex+1)+'번 블록 · '+PIECES[x.pieceIndex].s.length+'칸</strong><br><small>왼쪽 '+(x.x+1)+'칸 · 위 '+(x.y+1)+'칸'+(x.cleared?" · "+x.cleared+"줄 제거":"")+'</small></div><small>'+wh[0]+'×'+wh[1]+"</small></div>"}).join("")}
 function renderAll(){renderPieces();renderBoard();renderAbilities();renderAnswer()}
 function clearLines(board){const full=[];for(let y=0;y<H;y++){let ok=true;for(let x=0;x<W;x++)if(!board.has(key(x,y))){ok=false;break}if(ok)full.push(y)}if(!full.length)return{board,cleared:0};const next=new Set(board);for(const y of full)for(let x=0;x<W;x++)next.delete(key(x,y));return{board:next,cleared:full.length}}
@@ -150,16 +162,71 @@ function recommendedSwapPiece(){
   ranked.sort((a,b)=>a.legal-b.legal||a.best-b.best||PIECES[b.piece].s.length-PIECES[a.piece].s.length);
   return ranked[0].piece;
 }
+
+function almostFullRow(){
+  let best=null;
+  for(let y=0;y<H;y++){
+    let count=0,missing=null;
+    for(let x=0;x<W;x++){const k=key(x,y);if(filled.has(k))count++;else missing=k}
+    if(count===W-1)best={row:y,cell:missing};
+  }
+  return best;
+}
+function piecePlacementStats(board=filled){
+  return [...new Set(selected)].map(piece=>{
+    const cs=candidates(board,piece);
+    let best=-Infinity;
+    for(const c of cs)best=Math.max(best,heuristic(c.board,c.cleared,1));
+    return{piece,legal:cs.length,best};
+  }).sort((a,b)=>a.legal-b.legal||a.best-b.best);
+}
+function abilityTiming(){
+  const cacheKey=[...filled].sort((a,b)=>a-b).join(",")+"|"+selected.join(".")+"|"+abilities.dot+"|"+abilities.swap;
+  if(timingCache.key===cacheKey&&timingCache.value)return timingCache.value;
+  const stats=piecePlacementStats(),worst=stats[0]||null;
+  let dot={mode:"none",label:"보유 없음",reason:"점 찍기 능력이 없어요."};
+  if(abilities.dot>0){
+    dot={mode:"hold",label:"아껴두기",reason:selected.length?"지금 블록은 배치 가능해서 우선 아끼는 편이 좋아요.":"블록을 고르면 사용 타이밍을 비교해요."};
+    const near=almostFullRow();
+    if(near)dot={mode:"use",label:"지금 쓰기 추천",reason:"한 칸만 채우면 바로 1줄을 지울 수 있어요."};
+    else if(worst&&worst.legal===0){
+      const rec=bestDotRecommendation();
+      if(rec){
+        const board=new Set(filled);board.add(rec.cell);const cleared=clearLines(board);
+        const after=piecePlacementStats(cleared.board);
+        if(after.length&&after[0].legal>worst.legal)dot={mode:"use",label:"지금 쓰기 추천",reason:"현재 놓기 어려운 블록의 배치 가능 자리를 만들 수 있어요."};
+      }
+    }else if(holes(filled)>=8&&filled.size>=35){
+      dot={mode:"use",label:"지금 쓰기 고려",reason:"맵의 빈틈이 많아 점 찍기로 형태를 정리할 가치가 있어요."};
+    }
+  }
+  let swap={mode:"none",label:"보유 없음",reason:"바꿔 뽑기 능력이 없어요."};
+  if(abilities.swap>0){
+    if(!selected.length)swap={mode:"hold",label:"블록 선택 필요",reason:"현재 블록을 고르면 교체 타이밍을 판단해요."};
+    else if(worst&&worst.legal===0)swap={mode:"use",label:"지금 쓰기 추천",reason:(worst.piece+1)+"번 블록은 현재 맵에 놓을 자리가 없어요."};
+    else if(worst&&worst.legal<=2)swap={mode:"use",label:"지금 쓰기 고려",reason:(worst.piece+1)+"번 블록의 배치 가능한 자리가 매우 적어요."};
+    else swap={mode:"hold",label:"아껴두기",reason:"현재 블록들은 아직 배치 선택지가 충분해요."};
+  }
+  timingCache={key:cacheKey,value:{dot,swap}};
+  return timingCache.value;
+}
+function paintTiming(id,data){
+  const label=$(id+"Timing"),reason=$(id+"TimingReason"),row=label.closest(".timing-row");
+  label.textContent=data.label;reason.textContent=data.reason;
+  row.classList.toggle("use-now",data.mode==="use");
+  row.classList.toggle("hold",data.mode==="hold");
+  row.classList.toggle("none",data.mode==="none");
+}
 function solve(){if(!selected.length){setStatus("블록을 1개 이상 선택해 주세요.");return}setStatus("추천 배치를 계산하고 있어요…");solution=null;renderBoard();setTimeout(()=>{let beam=[{board:new Set(filled),remaining:selected.slice(),placements:[],clears:0,score:0}];for(let depth=0;depth<selected.length;depth++){const next=[];for(const state of beam){const tried=new Set();for(let ri=0;ri<state.remaining.length;ri++){const pieceIndex=state.remaining[ri];if(tried.has(pieceIndex))continue;tried.add(pieceIndex);const rest=state.remaining.slice();rest.splice(ri,1);for(const c of candidates(state.board,pieceIndex)){const placements=state.placements.concat([{pieceIndex,cells:c.cells,x:c.x,y:c.y,transform:c.transform,cleared:c.cleared}]),clears=state.clears+c.cleared;next.push({board:c.board,remaining:rest,placements,clears,score:heuristic(c.board,clears,placements.length)})}}}if(!next.length)break;next.sort((a,b)=>b.score-a.score);const uniq=new Map();for(const st of next){const k=[...st.board].sort((a,b)=>a-b).join(",")+"|"+st.remaining.slice().sort((a,b)=>a-b).join(".");if(!uniq.has(k))uniq.set(k,st);if(uniq.size>=850)break}beam=[...uniq.values()]}beam.sort((a,b)=>b.placements.length-a.placements.length||b.clears-a.clears||b.score-a.score);solution=beam[0]||null;if(!(solution&&solution.placements.length)){setStatus("현재 맵에서는 선택한 블록을 놓을 자리를 찾지 못했어요.");solution=null;renderAll();return}setStatus("추천을 찾았어요. 실제 게임에 놓은 뒤 추천 적용을 눌러 누적하세요.");renderAll()},0)}
 function removeSelectedOnce(piece){const i=selected.indexOf(piece);if(i>=0)selected.splice(i,1)}
 function abilitySpawn(oldCount,newCount){const spawn=Math.floor(newCount/7)-Math.floor(oldCount/7);if(spawn<=0)return"";const before=pendingIcons;pendingIcons=Math.min(3,pendingIcons+spawn);if(before+spawn>3)return"능력 아이콘 "+spawn+"회 생성 · 3개 초과분은 가장 오래된 아이콘이 사라져요.";return"능력 아이콘 "+spawn+"회 생성! 실제 게임에서 획득한 능력을 ＋로 등록해 주세요."}
 function applySolution(){if(!(solution&&solution.placements.length))return;const p=solution.placements[0];beforeChange();const old=placedCount,next=new Set(filled);p.cells.forEach(k=>next.add(k));const result=clearLines(next);filled=result.board;placedCount+=1;clearedCount+=result.cleared;removeSelectedOnce(p.pieceIndex);const msg=abilitySpawn(old,placedCount);solution=null;dotRecommendCell=null;persist();renderAll();if(selected.length){setStatus(msg||"1순위 블록을 적용했어요. 남은 블록을 다시 계산해요.");setTimeout(solve,0)}else setStatus(msg||"추천 블록을 적용했어요.")}
-function addPiece(i){if(swapDraft){if(swapDraft.stage==="old"){const at=selected.indexOf(i);if(at<0){setStatus("현재 선택된 블록 중 바꿀 블록을 눌러 주세요.");return}selected.splice(at,1);swapDraft.stage="new";renderAll();setStatus("게임에서 바뀐 결과 블록을 눌러 주세요.");return}selected.push(i);abilities.swap--;past.push(swapDraft.before);if(past.length>WMAX)past.shift();future=[];swapDraft=null;persist();renderAll();if(selected.length){setStatus("바꿔 뽑기 결과를 반영했어요. 다시 추천해요.");setTimeout(solve,0)}else setStatus("바꿔 뽑기 결과를 반영했어요.");return}if(selected.length>=3){setStatus("한 번에 블록은 3개까지 선택할 수 있어요.");return}beforeChange();selected.push(i);afterChange();setStatus("")}
+function addPiece(i){if(swapDraft){if(swapDraft.stage==="old"){const at=selected.indexOf(i);if(at<0){setStatus("현재 선택된 블록 중 바꿀 블록을 눌러 주세요.");return}selected.splice(at,1);swapDraft.stage="new";renderAll();setStatus("게임에서 바뀐 결과 블록을 눌러 주세요.");return}selected.push(i);abilities.swap=Math.max(0,abilities.swap-1);past.push(swapDraft.before);if(past.length>WMAX)past.shift();future=[];swapDraft=null;persist();renderAll();if(selected.length){setStatus("바꿔 뽑기 1개를 사용했어요. 결과를 반영하고 다시 추천해요.");setTimeout(solve,0)}else setStatus("바꿔 뽑기 1개를 사용했어요.");return}if(selected.length>=3){setStatus("한 번에 블록은 3개까지 선택할 수 있어요.");return}beforeChange();selected.push(i);afterChange();setStatus("")}
 function removePiece(i){if(swapDraft){restore(swapDraft.before);swapDraft=null;renderAll();setStatus("바꿔 뽑기를 취소했어요.");return}const at=selected.lastIndexOf(i);if(at<0)return;beforeChange();selected.splice(at,1);afterChange()}
 function gainAbility(type){if(abilities.dot+abilities.swap>=7){setStatus("능력은 합계 7개까지만 보유할 수 있어요.");return}beforeChange();abilities[type]++;if(pendingIcons>0)pendingIcons--;afterChange();setStatus(type==="dot"?"점 찍기 능력을 등록했어요.":"바꿔 뽑기 능력을 등록했어요.")}
 function toggleDot(){if(abilities.dot<1)return;if(dotArmed){dotArmed=false;dotRecommendCell=null;renderAll();setStatus("점 찍기를 취소했어요.");return}if(swapDraft){restore(swapDraft.before);swapDraft=null}solution=null;dotArmed=true;const rec=bestDotRecommendation();dotRecommendCell=rec?rec.cell:null;renderAll();setStatus(dotRecommendCell!==null?"점 찍기 추천 위치를 표시했어요. 원하는 다른 빈 칸을 눌러도 돼요.":"점 찍기 가능한 빈 칸이 없어요.")}
 function toggleSwap(){if(abilities.swap<1||!selected.length)return;if(swapDraft){restore(swapDraft.before);swapDraft=null;renderAll();setStatus("바꿔 뽑기를 취소했어요.");return}dotArmed=false;dotRecommendCell=null;solution=null;const recommended=recommendedSwapPiece();swapDraft={before:snapshot(),stage:"old",recommended};renderAll();setStatus("바꿔 뽑기: "+(recommended+1)+"번 블록을 교체 추천해요. 다른 선택 블록을 눌러도 돼요.")}
-function boardClick(k){if(dotArmed){if(filled.has(k)){setStatus("점 찍기는 빈 칸에만 사용할 수 있어요.");return}beforeChange();filled.add(k);abilities.dot--;dotArmed=false;dotRecommendCell=null;const result=clearLines(filled);filled=result.board;clearedCount+=result.cleared;afterChange();if(selected.length){setStatus(result.cleared?"점 찍기로 줄을 지웠어요. 남은 블록을 다시 추천해요.":"점 찍기를 적용했어요. 남은 블록을 다시 추천해요.");setTimeout(solve,0)}else setStatus(result.cleared?"점 찍기로 줄을 지웠어요.":"점 찍기를 사용했어요. 조각 배치 횟수에는 포함되지 않아요.");return}beforeChange();if(filled.has(k))filled.delete(k);else filled.add(k);afterChange();setStatus("")}
+function boardClick(k){if(dotArmed){if(filled.has(k)){setStatus("점 찍기는 빈 칸에만 사용할 수 있어요.");return}beforeChange();filled.add(k);abilities.dot=Math.max(0,abilities.dot-1);dotArmed=false;dotRecommendCell=null;const result=clearLines(filled);filled=result.board;clearedCount+=result.cleared;afterChange();if(selected.length){setStatus(result.cleared?"점 찍기 1개를 사용해 줄을 지웠어요. 남은 블록을 다시 추천해요.":"점 찍기 1개를 사용했어요. 남은 블록을 다시 추천해요.");setTimeout(solve,0)}else setStatus(result.cleared?"점 찍기 1개를 사용해 줄을 지웠어요.":"점 찍기 1개를 사용했어요. 조각 배치 횟수에는 포함되지 않아요.");return}beforeChange();if(filled.has(k))filled.delete(k);else filled.add(k);afterChange();setStatus("")}
 $("pieces").addEventListener("click",e=>{const minus=e.target.closest("[data-remove-index]");if(minus){removePiece(Number(minus.dataset.removeIndex));return}const hit=e.target.closest("[data-add-index]");if(hit)addPiece(Number(hit.dataset.addIndex))});
 $("board").addEventListener("click",e=>{const c=e.target.closest("[data-cell]");if(c)boardClick(Number(c.dataset.cell))});
 $("clearPieces").addEventListener("click",()=>{if(!selected.length)return;if(swapDraft){restore(swapDraft.before);swapDraft=null;renderAll();return}beforeChange();selected=[];afterChange();setStatus("블록 선택을 비웠어요.")});
