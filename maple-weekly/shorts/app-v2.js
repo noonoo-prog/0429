@@ -331,6 +331,7 @@ function incomeClick(e){
 }
 async function saveIncomeManual(){
   if(INCOME_MANUAL.saving)return;
+  syncIncomeInputsFromDom();
   const invalid=$("ownerIncomeGrid").querySelector('[aria-invalid="true"]');
   if(invalid){notify("추가 수익 금액을 확인해 주세요.");invalid.focus();return}
   const date=dayKey(),owners=OWNERS.filter(owner=>INCOME_MANUAL.drafts.has(incomeKey(owner,date)));
@@ -467,6 +468,66 @@ function renderBosses(){
       ${other?`<button type="button" class="move-button" data-kind="move" data-index="${i}">선택 날짜로 이동 →</button>`:""}
     </article>`;
   }).join("");
+}
+function manualEntryFocused(){
+  const active=document.activeElement;
+  return !!active&&(
+    $("ownerExpenseGrid")?.contains(active)||
+    $("ownerIncomeGrid")?.contains(active)
+  );
+}
+function renderAfterBossSync(){
+  if(!manualEntryFocused()){render();return}
+  document.documentElement.dataset.theme=S.theme;
+  document.documentElement.dataset.owner=S.owner;
+  $("themeToggle").textContent=S.theme==="dark"?"☀ 라이트 모드":"☾ 다크 모드";
+  renderStats();renderBosses();renderSyncStatus();drawShort();renderSpendStatus();renderIncomeStatus();
+}
+function syncSpendInputsFromDom(){
+  const grid=$("ownerExpenseGrid"),date=dayKey();
+  if(!grid)return;
+  for(const owner of OWNERS){
+    const rows=ownerSpendRows(owner,date);
+    let changed=false;
+    rows.forEach(record=>{
+      const note=grid.querySelector('[data-spend-note="'+owner+'"][data-spend-id="'+record.id+'"]');
+      const amount=grid.querySelector('[data-spend-amount="'+owner+'"][data-spend-id="'+record.id+'"]');
+      if(note){
+        const value=note.value.slice(0,80);
+        if(record.note!==value){record.note=value;changed=true}
+      }
+      if(amount){
+        const value=amountFromInput(amount.value);
+        if(value!==null&&value<=999999999999999&&record.amount!==value){
+          record.amount=value;changed=true;
+        }
+      }
+    });
+    if(changed)setOwnerSpendRows(owner,date,rows);
+  }
+}
+function syncIncomeInputsFromDom(){
+  const grid=$("ownerIncomeGrid"),date=dayKey();
+  if(!grid)return;
+  for(const owner of OWNERS){
+    const rows=incomeRows(owner,date);
+    let changed=false;
+    rows.forEach(record=>{
+      const note=grid.querySelector('[data-income-note="'+owner+'"][data-income-id="'+record.id+'"]');
+      const amount=grid.querySelector('[data-income-amount="'+owner+'"][data-income-id="'+record.id+'"]');
+      if(note){
+        const value=note.value.slice(0,80);
+        if(record.note!==value){record.note=value;changed=true}
+      }
+      if(amount){
+        const value=amountFromInput(amount.value);
+        if(value!==null&&value<=999999999999999&&record.amount!==value){
+          record.amount=value;changed=true;
+        }
+      }
+    });
+    if(changed)setIncomeRows(owner,date,rows);
+  }
 }
 function render(){
   document.documentElement.dataset.theme=S.theme;document.documentElement.dataset.owner=S.owner;
@@ -718,6 +779,7 @@ async function expenseApi(action,body){
 }
 async function saveSpendManual(){
   if(SPEND_MANUAL.saving)return;
+  syncSpendInputsFromDom();
   const invalid=$("ownerExpenseGrid").querySelector('[aria-invalid="true"]');
   if(invalid){notify("사용 메소 금액을 확인해 주세요.");invalid.focus();return}
   const date=dayKey(),toSave=OWNERS.filter(owner=>{
@@ -980,10 +1042,10 @@ async function refreshBossSync(forceOwners){
     const data=await bossApi("checklist_bootstrap");
     SYNC.rows=Array.isArray(data.bossRunChecklists)?data.bossRunChecklists:[];
     SYNC.ready=true;SYNC.error="";SYNC.lastCheck=Date.now();
-    mergeRemoteRecords();render();
+    mergeRemoteRecords();renderAfterBossSync();
   }catch(err){
     SYNC.error=String(err?.message||err);
-    if(!SYNC.ready)render();
+    if(!SYNC.ready)renderAfterBossSync();
     renderSyncStatus();
     if(forceOwners)notify("보스판 연결 실패: "+SYNC.error);
   }finally{SYNC.busy=false;renderSyncStatus()}
@@ -1055,11 +1117,11 @@ function pushBossCheck(c,b,week,day,rec){
   send.then(items=>{
     items.forEach(updateRemoteRow);
     keys.forEach(k=>SYNC.pending.delete(k));
-    mergeRemoteRecords();render();
+    mergeRemoteRecords();renderAfterBossSync();
     notify(b[0]+" · "+targets.length+"명 보스판 체크가 함께 저장됐어요.");
   }).catch(err=>{
     keys.forEach(k=>SYNC.pending.delete(k));
-    render();
+    renderAfterBossSync();
     notify("보스판 저장 실패: "+(err?.message||"연결 오류")+" · 서버와 다시 확인해 주세요.");
     refreshBossSync(false);
   });
@@ -1080,10 +1142,12 @@ function register(){
   $("nextWeek").addEventListener("click",()=>navigateWeek(S.week+WEEK));
   $("dayTabs").addEventListener("click",e=>{const b=e.target.closest("[data-day]");if(b)setDay(Number(b.dataset.day))});
   $("ownerExpenseGrid").addEventListener("input",spendChanged);
+  $("ownerExpenseGrid").addEventListener("compositionend",spendChanged);
   $("ownerExpenseGrid").addEventListener("focusout",formatAmountOnBlur);
   $("ownerExpenseGrid").addEventListener("click",spendClick);
   $("saveSpend").addEventListener("click",saveSpendManual);
   $("ownerIncomeGrid").addEventListener("input",incomeChanged);
+  $("ownerIncomeGrid").addEventListener("compositionend",incomeChanged);
   $("ownerIncomeGrid").addEventListener("focusout",incomeBlur);
   $("ownerIncomeGrid").addEventListener("click",incomeClick);
   $("saveIncome").addEventListener("click",saveIncomeManual);
