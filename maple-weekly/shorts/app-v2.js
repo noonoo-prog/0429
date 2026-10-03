@@ -896,7 +896,7 @@ function configuration(c,b){
   if(!b[1].some(x=>x[0]===diff))return null;
   return{diff,party,amount:earned(b,diff,party),cell};
 }
-function savedAmount(b,r){return earned(b,r.diff,r.party)}
+function savedAmount(b,r){if(r&&r.fromBoss&&Number.isFinite(Number(r.mesoEarned)))return Math.max(0,Math.floor(Number(r.mesoEarned)));return earned(b,r.diff,r.party)}
 async function bossApi(action,payload){
   const body=JSON.stringify(Object.assign({action},payload||{}));
   const retryable=action==="bootstrap"||action==="checklist_bootstrap"||action==="save_party_run_atomic"||action==="save_monthly_party_run_atomic";
@@ -983,12 +983,11 @@ function mergeRemoteRecords(){
     if(!o)return;
     const rec=records(c.id).bosses;
 
-    // The shared boss checklist is authoritative for every configured weekly boss.
-    // Missing or incomplete remote rows mean unchecked, so stale local Shorts rows
-    // must not continue contributing to "today's boss income".
+    // The shared checklist is the single source of truth.
+    // A missing/incomplete checklist row removes any stale local Shorts row.
+    // A completed row imports the checklist's stored meso_earned amount directly.
     BOSSES.forEach(b=>{
-      const bossName=remoteBossName(b[0]),cfg=configuration(c,b);
-      if(!cfg)return;
+      const bossName=remoteBossName(b[0]);
       if(SYNC.pending.has(syncKey(c,bossName,week)))return;
       const r=SYNC.rows.find(row=>
         row.owner_id===o.id&&
@@ -1000,34 +999,32 @@ function mergeRemoteRecords(){
         if(rec[b[0]]){delete rec[b[0]];changedWeek=true}
         return;
       }
-      const before=rec[b[0]]||{};
+      const cfg=configuration(c,b),before=rec[b[0]]||{};
       const next={
         day:r.run_date||r.week_start,
-        diff:cfg.diff,
-        party:cfg.party,
+        diff:cfg?.diff||before.diff||defaultDiff(b),
+        party:cfg?.party||before.party||1,
         mesoEarned:Math.max(0,Number(r.meso_earned)||0),
         fromBoss:true
       };
       if(JSON.stringify(before)!==JSON.stringify(next)){rec[b[0]]=next;changedWeek=true}
     });
 
-    // Black Mage follows the monthly checklist table and is also authoritative.
-    const blackCfg=configuration(c,BLACK);
-    if(blackCfg&&!SYNC.pending.has(syncKey(c,BLACK[0],monthStart))){
-      const r=SYNC.monthlyRows.find(row=>
-        row.owner_id===o.id&&
-        String(row.month_start||"")===monthStart&&
-        row.character_name===c.remoteCharacter&&
-        row.boss_name===BLACK[0]
-      );
+    const r=SYNC.monthlyRows.find(row=>
+      row.owner_id===o.id&&
+      String(row.month_start||"")===monthStart&&
+      row.character_name===c.remoteCharacter&&
+      row.boss_name===BLACK[0]
+    );
+    if(!SYNC.pending.has(syncKey(c,BLACK[0],monthStart))){
       if(!r||!r.completed){
         if(S.month.byId[c.id]){delete S.month.byId[c.id];changedMonth=true}
       }else{
-        const before=S.month.byId[c.id]||{};
+        const cfg=configuration(c,BLACK),before=S.month.byId[c.id]||{};
         const next={
           day:r.run_date||monthStart,
-          diff:blackCfg.diff,
-          party:blackCfg.party,
+          diff:cfg?.diff||before.diff||defaultDiff(BLACK),
+          party:cfg?.party||before.party||1,
           mesoEarned:Math.max(0,Number(r.meso_earned)||0),
           fromBoss:true
         };
