@@ -880,7 +880,7 @@ const REMOTE_OWNER_NAMES={"옥수수목금":"오똑","콩국수목금":"츠죠"}
 const REMOTE_NAMES={"가디언 엔젤 슬라임":"가엔슬","진 힐라":"진힐라","선택받은 세렌":"세렌","감시자 칼로스":"칼로스","최초의 대적자":"대적자","찬란한 흉성":"흉성"};
 const LOCAL_NAMES=Object.fromEntries(BOSSES.concat([BLACK]).map(b=>[REMOTE_NAMES[b[0]]||b[0],b[0]]));
 const SOLO_BOSSES=new Set(["데미안","루시드","윌","더스크","진힐라","듄켈"]);
-const SYNC={owners:[],rows:[],busy:false,pending:new Set(),ready:false,lastCheck:0,lastOwners:0,error:""};
+const SYNC={owners:[],rows:[],monthlyRows:[],busy:false,pending:new Set(),ready:false,lastCheck:0,lastOwners:0,error:""};
 function remoteOwner(owner){return SYNC.owners.find(o=>o.name===REMOTE_OWNER_NAMES[owner])||null}
 function remoteBossName(name){return REMOTE_NAMES[name]||name}
 function linked(c){return c&&c.remoteCharacter&&remoteOwner(c.owner)&&remoteOwner(c.owner).board&&remoteOwner(c.owner).board.players.includes(c.remoteCharacter)}
@@ -898,15 +898,33 @@ function configuration(c,b){
 }
 function savedAmount(b,r){return earned(b,r.diff,r.party)}
 async function bossApi(action,payload){
-  const res=await fetch(BOSS_API,{
-    method:"POST",mode:"cors",cache:"no-store",
-    headers:{"Content-Type":"application/json","apikey":BOSS_PUBLIC_KEY},
-    body:JSON.stringify(Object.assign({action},payload||{}))
-  });
-  const raw=await res.text();let data;
-  try{data=JSON.parse(raw)}catch{data={}}
-  if(!res.ok||data.ok===false)throw new Error(data.error||"연동 서버 요청 실패 ("+res.status+")");
-  return data;
+  const body=JSON.stringify(Object.assign({action},payload||{}));
+  const retryable=action==="bootstrap"||action==="checklist_bootstrap"||action==="save_party_run_atomic"||action==="save_monthly_party_run_atomic";
+  async function attempt(n){
+    try{
+      const res=await fetch(BOSS_API,{
+        method:"POST",mode:"cors",cache:"no-store",
+        headers:{"Content-Type":"application/json","apikey":BOSS_PUBLIC_KEY},
+        body
+      });
+      const raw=await res.text();let data;
+      try{data=JSON.parse(raw)}catch{data={}}
+      if(!res.ok||data.ok===false){
+        const err=new Error(data.error||"연동 서버 요청 실패 ("+res.status+")");
+        err.status=res.status;
+        throw err;
+      }
+      return data;
+    }catch(err){
+      const transient=!err?.status||[500,502,503,504].includes(err.status);
+      if(retryable&&transient&&n<2){
+        await new Promise(resolve=>setTimeout(resolve,n===0?350:900));
+        return attempt(n+1);
+      }
+      throw err;
+    }
+  }
+  return attempt(0);
 }
 function importBossCharacters(){
   let changed=false,added=0;
@@ -958,36 +976,64 @@ function mergeRemoteRecords(){
   if(!SYNC.ready)return false;
   backupBeforeMerge();
   let changedWeek=false,changedMonth=false;
+  const week=weekKey(),monthStart=monthKey()+"-01";
   allChars().forEach(c=>{
     if(!linked(c))return;
+    const o=remoteOwner(c.owner);
+    if(!o)return;
     const rec=records(c.id).bosses;
-    remoteRowsFor(c,weekKey()).forEach(r=>{
-      const name=LOCAL_NAMES[r.boss_name];if(!name||name===BLACK[0])return;
-      if(SYNC.pending.has(syncKey(c,r.boss_name,r.week_start)))return;
-      if(!r.completed){
-        if(rec[name]){delete rec[name];changedWeek=true}
+
+    // The shared boss checklist is authoritative for every configured weekly boss.
+    // Missing or incomplete remote rows mean unchecked, so stale local Shorts rows
+    // must not continue contributing to "today's boss income".
+    BOSSES.forEach(b=>{
+      const bossName=remoteBossName(b[0]),cfg=configuration(c,b);
+      if(!cfg)return;
+      if(SYNC.pending.has(syncKey(c,bossName,week)))return;
+      const r=SYNC.rows.find(row=>
+        row.owner_id===o.id&&
+        row.week_start===week&&
+        row.character_name===c.remoteCharacter&&
+        row.boss_name===bossName
+      );
+      if(!r||!r.completed){
+        if(rec[b[0]]){delete rec[b[0]];changedWeek=true}
         return;
       }
-      const b=BOSSES.find(x=>x[0]===name);if(!b)return;
-      const config=configuration(c,b),before=rec[name]||{};
-      const diff=config?.diff||before.diff||defaultDiff(b),party=config?.party||before.party||1;
-      const next={day:r.run_date||r.week_start,diff,party,mesoEarned:Math.max(0,Number(r.meso_earned)||0),fromBoss:true};
-      if(JSON.stringify(before)!==JSON.stringify(next)){rec[name]=next;changedWeek=true}
+      const before=rec[b[0]]||{};
+      const next={
+        day:r.run_date||r.week_start,
+        diff:cfg.diff,
+        party:cfg.party,
+        mesoEarned:Math.max(0,Number(r.meso_earned)||0),
+        fromBoss:true
+      };
+      if(JSON.stringify(before)!==JSON.stringify(next)){rec[b[0]]=next;changedWeek=true}
     });
-    // Black Mage is monthly and may have been checked in a different week.
-    const month=monthKey();
-    const candidate=SYNC.rows.filter(r=>r.owner_id===remoteOwner(c.owner).id&&r.character_name===c.remoteCharacter&&r.boss_name===BLACK[0]&&(r.run_date||r.week_start).slice(0,7)===month)
-      .sort((a,b)=>String(a.updated_at||"").localeCompare(String(b.updated_at||"")));
-    if(!candidate.length)return;
-    const r=candidate[candidate.length-1];
-    if(SYNC.pending.has(syncKey(c,BLACK[0],r.week_start)))return;
-    if(!r.completed){
-      if(S.month.byId[c.id]){delete S.month.byId[c.id];changedMonth=true}
-      return;
+
+    // Black Mage follows the monthly checklist table and is also authoritative.
+    const blackCfg=configuration(c,BLACK);
+    if(blackCfg&&!SYNC.pending.has(syncKey(c,BLACK[0],monthStart))){
+      const r=SYNC.monthlyRows.find(row=>
+        row.owner_id===o.id&&
+        String(row.month_start||"")===monthStart&&
+        row.character_name===c.remoteCharacter&&
+        row.boss_name===BLACK[0]
+      );
+      if(!r||!r.completed){
+        if(S.month.byId[c.id]){delete S.month.byId[c.id];changedMonth=true}
+      }else{
+        const before=S.month.byId[c.id]||{};
+        const next={
+          day:r.run_date||monthStart,
+          diff:blackCfg.diff,
+          party:blackCfg.party,
+          mesoEarned:Math.max(0,Number(r.meso_earned)||0),
+          fromBoss:true
+        };
+        if(JSON.stringify(before)!==JSON.stringify(next)){S.month.byId[c.id]=next;changedMonth=true}
+      }
     }
-    const old=S.month.byId[c.id]||{},cfg=configuration(c,BLACK);
-    const next={day:r.run_date||r.week_start,diff:cfg?.diff||old.diff||defaultDiff(BLACK),party:cfg?.party||old.party||1,mesoEarned:Math.max(0,Number(r.meso_earned)||0),fromBoss:true};
-    if(JSON.stringify(old)!==JSON.stringify(next)){S.month.byId[c.id]=next;changedMonth=true}
   });
   if(changedWeek)saveWeek();
   if(changedMonth)saveMonth();
@@ -1041,6 +1087,7 @@ async function refreshBossSync(forceOwners){
     }
     const data=await bossApi("checklist_bootstrap");
     SYNC.rows=Array.isArray(data.bossRunChecklists)?data.bossRunChecklists:[];
+    SYNC.monthlyRows=Array.isArray(data.monthlyBossRunChecklists)?data.monthlyBossRunChecklists:[];
     SYNC.ready=true;SYNC.error="";SYNC.lastCheck=Date.now();
     mergeRemoteRecords();renderAfterBossSync();
   }catch(err){
@@ -1053,6 +1100,10 @@ async function refreshBossSync(forceOwners){
 function updateRemoteRow(item){
   const idx=SYNC.rows.findIndex(r=>r.owner_id===item.owner_id&&r.week_start===item.week_start&&r.character_name===item.character_name&&r.boss_name===item.boss_name);
   if(idx>=0)SYNC.rows[idx]=item;else SYNC.rows.push(item);
+}
+function updateMonthlyRemoteRow(item){
+  const idx=SYNC.monthlyRows.findIndex(r=>r.owner_id===item.owner_id&&r.month_start===item.month_start&&r.character_name===item.character_name&&r.boss_name===item.boss_name);
+  if(idx>=0)SYNC.monthlyRows[idx]=item;else SYNC.monthlyRows.push(item);
 }
 
 function bossPartyTargets(c,b){
@@ -1090,39 +1141,71 @@ function pushBossCheck(c,b,week,day,rec){
   }
   const targets=bossPartyTargets(c,b);
   if(!targets.length)return;
-  const keys=targets.map(t=>t.ownerId+"|"+week+"|"+t.characterName+"|"+bossName);
+
+  const monthly=b[0]===BLACK[0];
+  const period=monthly?day.slice(0,7)+"-01":week;
+  const keys=targets.map(t=>t.ownerId+"|"+period+"|"+t.characterName+"|"+bossName);
   if(keys.some(k=>SYNC.pending.has(k)))return;
+
   if(rec){
     rec.diff=cfg.diff;rec.party=cfg.party;rec.mesoEarned=cfg.amount;rec.fromBoss=true;
-    if(b[0]===BLACK[0])saveMonth();else saveWeek();
+    if(monthly)saveMonth();else saveWeek();
   }
   keys.forEach(k=>SYNC.pending.add(k));
   renderBosses();renderStats();drawShort();
-  // Match /boss/'s existing party behavior: checking a configured party
-  // propagates to its participating characters under these two owners.
-  const groups={};
-  targets.forEach(t=>{
-    if(!groups[t.ownerId])groups[t.ownerId]=[];
-    groups[t.ownerId].push({characterName:t.characterName,bossName,completed:!!rec,mesoEarned:rec?t.payout:0});
-  });
-  const send=targets.length===1
-    ?bossApi("save_boss_run_check",{
-      ownerId:targets[0].ownerId,weekStart:week,runDate:day,
-      characterName:targets[0].characterName,bossName,
-      completed:!!rec,mesoEarned:rec?targets[0].payout:0
-    }).then(data=>[data.item].filter(Boolean))
-    :Promise.all(Object.entries(groups).map(([ownerId,items])=>
-      bossApi("save_boss_run_bulk",{ownerId,weekStart:week,runDate:day,items})
-    )).then(data=>data.flatMap(x=>x.items||[]));
+
+  const items=targets.map(t=>({
+    ownerId:t.ownerId,
+    characterName:t.characterName,
+    bossName,
+    completed:!!rec,
+    mesoEarned:rec?t.payout:0
+  }));
+
+  let send;
+  if(monthly){
+    send=targets.length===1
+      ?bossApi("save_monthly_boss_run_check",{
+        ownerId:targets[0].ownerId,
+        monthStart:period,
+        runDate:day,
+        characterName:targets[0].characterName,
+        bossName,
+        completed:!!rec,
+        mesoEarned:rec?targets[0].payout:0
+      }).then(data=>[data.item].filter(Boolean))
+      :bossApi("save_monthly_party_run_atomic",{
+        monthStart:period,
+        runDate:day,
+        items
+      }).then(data=>data.items||[]);
+  }else{
+    send=targets.length===1
+      ?bossApi("save_boss_run_check",{
+        ownerId:targets[0].ownerId,
+        weekStart:week,
+        runDate:day,
+        characterName:targets[0].characterName,
+        bossName,
+        completed:!!rec,
+        mesoEarned:rec?targets[0].payout:0
+      }).then(data=>[data.item].filter(Boolean))
+      :bossApi("save_party_run_atomic",{
+        weekStart:week,
+        runDate:day,
+        items
+      }).then(data=>data.items||[]);
+  }
+
   send.then(items=>{
-    items.forEach(updateRemoteRow);
+    items.forEach(monthly?updateMonthlyRemoteRow:updateRemoteRow);
     keys.forEach(k=>SYNC.pending.delete(k));
     mergeRemoteRecords();renderAfterBossSync();
-    notify(b[0]+" · "+targets.length+"명 보스판 체크가 함께 저장됐어요.");
+    notify(b[0]+" · "+targets.length+"명 보스 체크리스트에 함께 저장됐어요.");
   }).catch(err=>{
     keys.forEach(k=>SYNC.pending.delete(k));
     renderAfterBossSync();
-    notify("보스판 저장 실패: "+(err?.message||"연결 오류")+" · 서버와 다시 확인해 주세요.");
+    notify("보스 체크리스트 저장 실패: "+(err?.message||"연결 오류")+" · 체크리스트 기록을 다시 불러옵니다.");
     refreshBossSync(false);
   });
 }
