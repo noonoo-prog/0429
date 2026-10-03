@@ -1477,6 +1477,7 @@ function callApi(action,payload){
   payload=payload||{};
   var body=JSON.stringify(Object.assign({action:action},payload));
   var readOnly=action==="bootstrap"||action==="checklist_bootstrap"||action==="route_slots";
+  var idempotentPartyWrite=action==="save_party_run_atomic"||action==="save_monthly_party_run_atomic";
   function attempt(n){
     return fetch(API_URL,{
       method:"POST",
@@ -1492,7 +1493,7 @@ function callApi(action,payload){
       });
     }).catch(function(err){
       var transient=!err.status||err.status===500||err.status===502||err.status===503||err.status===504;
-      if(readOnly&&transient&&n<2){
+      if((readOnly||idempotentPartyWrite)&&transient&&n<2){
         return new Promise(function(resolve){setTimeout(resolve,n===0?350:900)}).then(function(){return attempt(n+1)});
       }
       throw err;
@@ -1856,6 +1857,7 @@ function saveSharedPartyMonthlyBossCheck(bossName,pi,completed){
     saveMonthlyBossRunCheck(runDate,String(st.players[pi]||""),bossName,pi,completed);
     return;
   }
+
   var before=targets.map(function(t){
     return {target:t,item:JSON.parse(JSON.stringify(monthlyBossRunItem(t.ownerId,monthStart,t.characterName,bossName)))};
   });
@@ -1866,40 +1868,37 @@ function saveSharedPartyMonthlyBossCheck(bossName,pi,completed){
       runDate:completed?runDate:(x.item.runDate||"")
     });
   });
-  var groups={};
-  targets.forEach(function(t){
-    if(!groups[t.ownerId])groups[t.ownerId]=[];
-    groups[t.ownerId].push({
+
+  var items=targets.map(function(t){
+    return {
+      ownerId:t.ownerId,
       characterName:t.characterName,
       bossName:bossName,
       completed:completed,
       mesoEarned:completed?t.payout:0
-    });
+    };
   });
+
   CHECKLIST_SAVING="monthlyparty|"+monthStart+"|"+bossName+"|"+targets.map(function(t){return t.characterName}).join(",");
   renderBossCheckState();
-  Promise.all(Object.keys(groups).map(function(ownerId){
-    return callApi("save_monthly_boss_run_bulk",{
-      ownerId:ownerId,
-      monthStart:monthStart,
-      runDate:runDate,
-      items:groups[ownerId]
-    });
-  })).then(function(responses){
-    responses.forEach(function(data){
-      (data.items||[]).forEach(function(item){
-        setMonthlyBossRunItem(
-          item.owner_id,
-          String(item.month_start||monthStart),
-          String(item.character_name||""),
-          String(item.boss_name||""),
-          {
-            completed:!!item.completed,
-            meso:Math.max(0,Number(item.meso_earned)||0),
-            runDate:String(item.run_date||"")
-          }
-        );
-      });
+
+  callApi("save_monthly_party_run_atomic",{
+    monthStart:monthStart,
+    runDate:runDate,
+    items:items
+  }).then(function(data){
+    (data.items||[]).forEach(function(item){
+      setMonthlyBossRunItem(
+        item.owner_id,
+        String(item.month_start||monthStart),
+        String(item.character_name||""),
+        String(item.boss_name||""),
+        {
+          completed:!!item.completed,
+          meso:Math.max(0,Number(item.meso_earned)||0),
+          runDate:String(item.run_date||"")
+        }
+      );
     });
     toast(bossName+" · 공용 파티 "+targets.length+"명 "+(completed?"월간 체크했어요.":"월간 체크를 해제했어요."));
   }).catch(function(e){
@@ -1913,7 +1912,6 @@ function saveSharedPartyMonthlyBossCheck(bossName,pi,completed){
     renderBossCheckState();
   });
 }
-
 function saveSharedPartyBossCheck(bossName,pi,completed){
   if(MONTHLY.has(bossName)){
     saveSharedPartyMonthlyBossCheck(bossName,pi,completed);
@@ -1943,42 +1941,36 @@ function saveSharedPartyBossCheck(bossName,pi,completed){
     });
   });
 
-  var groups={};
-  targets.forEach(function(t){
-    if(!groups[t.ownerId])groups[t.ownerId]=[];
-    groups[t.ownerId].push({
+  var items=targets.map(function(t){
+    return {
+      ownerId:t.ownerId,
       characterName:t.characterName,
       bossName:bossName,
       completed:completed,
       mesoEarned:completed?t.payout:0
-    });
+    };
   });
 
   CHECKLIST_SAVING="party|"+weekStart+"|"+bossName+"|"+targets.map(function(t){return t.characterName}).join(",");
   renderBossCheckState();
 
-  Promise.all(Object.keys(groups).map(function(ownerId){
-    return callApi("save_boss_run_bulk",{
-      ownerId:ownerId,
-      weekStart:weekStart,
-      runDate:runDate,
-      items:groups[ownerId]
-    });
-  })).then(function(responses){
-    responses.forEach(function(data){
-      (data.items||[]).forEach(function(item){
-        setBossRunItem(
-          item.owner_id,
-          item.week_start,
-          String(item.character_name||""),
-          String(item.boss_name||""),
-          {
-            completed:!!item.completed,
-            meso:Math.max(0,Number(item.meso_earned)||0),
-            runDate:String(item.run_date||runDate)
-          }
-        );
-      });
+  callApi("save_party_run_atomic",{
+    weekStart:weekStart,
+    runDate:runDate,
+    items:items
+  }).then(function(data){
+    (data.items||[]).forEach(function(item){
+      setBossRunItem(
+        item.owner_id,
+        item.week_start,
+        String(item.character_name||""),
+        String(item.boss_name||""),
+        {
+          completed:!!item.completed,
+          meso:Math.max(0,Number(item.meso_earned)||0),
+          runDate:String(item.run_date||runDate)
+        }
+      );
     });
     toast(bossName+" · 공용 파티 "+targets.length+"명 "+(completed?"같이 체크했어요.":"같이 해제했어요."));
   }).catch(function(e){
