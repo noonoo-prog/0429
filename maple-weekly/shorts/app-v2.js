@@ -40,6 +40,10 @@ function monthKey(){return dayKey().slice(0,7)}
 function currentWeek(){const k=new Date(Date.now()+9*3600000),utc=Date.UTC(k.getUTCFullYear(),k.getUTCMonth(),k.getUTCDate());return BASE+Math.max(0,Math.floor((utc-BASE)/WEEK))*WEEK}
 function format(n){n=Math.floor(Number(n)||0);const neg=n<0;n=Math.abs(n);if(!n)return"0 메소";const e=Math.floor(n/1e8),m=Math.floor(n%1e8/1e4),rest=n%1e4;const bits=[];if(e)bits.push(e.toLocaleString("ko-KR")+"억");if(m)bits.push(m.toLocaleString("ko-KR")+"만");if(rest)bits.push(rest.toLocaleString("ko-KR"));return (neg?"−":"")+bits.join(" ")+" 메소"}
 function compact(n){return format(n).replace(" 메소","")}
+function previewBossEok(n){
+  n=Math.max(0,Number(n)||0);
+  return (n/100000000).toFixed(3).replace(/\.000$/,"").replace(/(\.\d*?[1-9])0+$/,"$1")+"억";
+}
 function amountFromInput(raw){
   const value=String(raw||"").trim().replace(/[\s,]/g,"").replace(/메소|원/g,"");
   if(!value)return 0;
@@ -686,7 +690,7 @@ function drawOwnerHalf(ctx,owner,y,date){
     const bx=x+pad+i*(cardWidth+gap);
     rounded(ctx,bx,statY,cardWidth,150,17,isCorn?"#fffaf0":"#fff5f9","#e8e2e7");
     txt(ctx,item[0],bx+13,statY+39,24,"#62606a","800");
-    const value=compact(item[1]);
+    const value=i===0?previewBossEok(item[1]):compact(item[1]);
     const ink=i===1?"#278557":i===3?(totalNet<0?"#b74366":isCorn?"#9c7414":"#c03c78"):"#252735";
     txt(ctx,value,bx+13,statY+109,fitting(ctx,value,cardWidth-25,38,17),ink,"900");
   });
