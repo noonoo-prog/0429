@@ -76,6 +76,7 @@ let CHECKLIST_MONTH=(function(){
   return y+"-"+String(m).padStart(2,"0");
 })();
 let BOSS_RUN_CHECKS={};
+let BOSS_MONTHLY_CHECKS={};
 let CHECKLIST_SELECTED_DATE="";
 let CHECKLIST_LOADED=false;
 let CHECKLIST_LOADING=false;
@@ -266,6 +267,19 @@ function monthRunStats(ownerId,monthKey){
       });
     });
   });
+  var monthStart=monthKey+"-01";
+  var monthlyOwner=BOSS_MONTHLY_CHECKS[ownerId]||{};
+  var month=monthlyOwner[monthStart]||{};
+  Object.keys(month).forEach(function(characterName){
+    var bosses=month[characterName]||{};
+    Object.keys(bosses).forEach(function(bossName){
+      var x=bosses[bossName];
+      if(x&&x.completed){
+        count++;
+        total+=Math.max(0,Number(x.meso)||0);
+      }
+    });
+  });
   return{count:count,total:total};
 }
 function bossRunItem(ownerId,weekStart,characterName,bossName){
@@ -280,6 +294,22 @@ function setBossRunItem(ownerId,weekStart,characterName,bossName,item){
   if(!BOSS_RUN_CHECKS[ownerId][weekStart])BOSS_RUN_CHECKS[ownerId][weekStart]={};
   if(!BOSS_RUN_CHECKS[ownerId][weekStart][characterName])BOSS_RUN_CHECKS[ownerId][weekStart][characterName]={};
   BOSS_RUN_CHECKS[ownerId][weekStart][characterName][bossName]=item;
+}
+function monthStartForDate(dateKey){
+  return String(dateKey||koreaDateKey()).slice(0,7)+"-01";
+}
+function monthlyBossRunItem(ownerId,monthStart,characterName,bossName){
+  var o=BOSS_MONTHLY_CHECKS[ownerId];
+  var m=o&&o[monthStart];
+  var c=m&&m[characterName];
+  var item=c&&c[bossName];
+  return item&&typeof item==="object"?item:{completed:false,meso:0,runDate:""};
+}
+function setMonthlyBossRunItem(ownerId,monthStart,characterName,bossName,item){
+  if(!BOSS_MONTHLY_CHECKS[ownerId])BOSS_MONTHLY_CHECKS[ownerId]={};
+  if(!BOSS_MONTHLY_CHECKS[ownerId][monthStart])BOSS_MONTHLY_CHECKS[ownerId][monthStart]={};
+  if(!BOSS_MONTHLY_CHECKS[ownerId][monthStart][characterName])BOSS_MONTHLY_CHECKS[ownerId][monthStart][characterName]={};
+  BOSS_MONTHLY_CHECKS[ownerId][monthStart][characterName][bossName]=item;
 }
 function sumBossRunMeso(ownerId,weekStart,characterName){
   var week=BOSS_RUN_CHECKS[ownerId]&&BOSS_RUN_CHECKS[ownerId][weekStart];
@@ -300,18 +330,33 @@ function sumBossRunMeso(ownerId,weekStart,characterName){
 function dayRunData(ownerId,weekStart,runDate){
   var week=BOSS_RUN_CHECKS[ownerId]&&BOSS_RUN_CHECKS[ownerId][weekStart];
   var entries=[],total=0;
-  if(!week)return{entries:entries,total:0};
-  Object.keys(week).forEach(function(characterName){
-    var bosses=week[characterName]||{};
-    Object.keys(bosses).forEach(function(bossName){
-      var x=bosses[bossName];
-      if(x&&x.completed&&(x.runDate||weekStart)===runDate){
-        var meso=Math.max(0,Number(x.meso)||0);
-        total+=meso;
-        entries.push({character:characterName,boss:bossName,meso:meso});
-      }
+  if(week){
+    Object.keys(week).forEach(function(characterName){
+      var bosses=week[characterName]||{};
+      Object.keys(bosses).forEach(function(bossName){
+        var x=bosses[bossName];
+        if(x&&x.completed&&(x.runDate||weekStart)===runDate){
+          var meso=Math.max(0,Number(x.meso)||0);
+          total+=meso;
+          entries.push({character:characterName,boss:bossName,meso:meso});
+        }
+      });
     });
-  });
+  }
+  var month=BOSS_MONTHLY_CHECKS[ownerId]&&BOSS_MONTHLY_CHECKS[ownerId][monthStartForDate(runDate)];
+  if(month){
+    Object.keys(month).forEach(function(characterName){
+      var bosses=month[characterName]||{};
+      Object.keys(bosses).forEach(function(bossName){
+        var x=bosses[bossName];
+        if(x&&x.completed&&String(x.runDate||"")===runDate){
+          var meso=Math.max(0,Number(x.meso)||0);
+          total+=meso;
+          entries.push({character:characterName,boss:bossName,meso:meso});
+        }
+      });
+    });
+  }
   return{entries:entries,total:total};
 }
 function loadChecklist(show){
@@ -320,6 +365,7 @@ function loadChecklist(show){
   if(show!==false)renderChecklist();
   return callApi("checklist_bootstrap").then(function(data){
     BOSS_RUN_CHECKS={};
+    BOSS_MONTHLY_CHECKS={};
     (data.bossRunChecklists||[]).forEach(function(x){
       setBossRunItem(
         x.owner_id,
@@ -333,11 +379,24 @@ function loadChecklist(show){
         }
       );
     });
+    (data.monthlyBossRunChecklists||[]).forEach(function(x){
+      setMonthlyBossRunItem(
+        x.owner_id,
+        String(x.month_start||""),
+        String(x.character_name||""),
+        String(x.boss_name||""),
+        {
+          completed:!!x.completed,
+          meso:Math.max(0,Number(x.meso_earned)||0),
+          runDate:String(x.run_date||"")
+        }
+      );
+    });
     CHECKLIST_LOADED=true;
     if(PAGE_VIEW==="checklist")renderChecklist();
     else if(PAGE_VIEW==="board"){updateBoardTitle();renderDesktop();renderMobile()}
   }).catch(function(e){
-    toast(e.message||"체크리스트를 불러오지 못했습니다.");
+    if(show!==false)toast(e.message||"체크리스트를 불러오지 못했습니다.");
   }).finally(function(){CHECKLIST_LOADING=false});
 }
 function renderBossCheckState(){
@@ -389,6 +448,45 @@ function saveBossRunCheck(weekStart,runDate,characterName,bossName,pi,completed)
 
   doSave();
 }
+function saveMonthlyBossRunCheck(runDate,characterName,bossName,pi,completed){
+  var o=owner(),st=state();if(!o||!st)return;
+  var c=st.cells[bossName]&&st.cells[bossName][pi];
+  var payout=completed?Math.round(bossWeeklyIncome(bossName,c)):0;
+  var monthStart=monthStartForDate(runDate);
+  var before=JSON.parse(JSON.stringify(monthlyBossRunItem(o.id,monthStart,characterName,bossName)));
+  setMonthlyBossRunItem(o.id,monthStart,characterName,bossName,{
+    completed:completed,
+    meso:payout,
+    runDate:completed?runDate:(before.runDate||"")
+  });
+  CHECKLIST_SAVING="monthly|"+o.id+"|"+monthStart+"|"+characterName+"|"+bossName;
+  renderBossCheckState();
+
+  callApi("save_monthly_boss_run_check",{
+    ownerId:o.id,
+    monthStart:monthStart,
+    runDate:runDate,
+    characterName:characterName,
+    bossName:bossName,
+    completed:completed,
+    mesoEarned:payout
+  }).then(function(data){
+    var item=data.item||{};
+    setMonthlyBossRunItem(o.id,String(item.month_start||monthStart),characterName,bossName,{
+      completed:!!item.completed,
+      meso:Math.max(0,Number(item.meso_earned)||0),
+      runDate:String(item.run_date||"")
+    });
+    toast(completed?formatShortDate(parseDateUTC(runDate))+" · "+bossName+" 월간 체크":bossName+" 월간 체크를 해제했어요.");
+  }).catch(function(e){
+    setMonthlyBossRunItem(o.id,monthStart,characterName,bossName,before);
+    toast(e.message||"월간 보스 체크를 저장하지 못했습니다.");
+  }).finally(function(){
+    CHECKLIST_SAVING="";
+    renderBossCheckState();
+  });
+}
+
 function plannedWeeklyBossesForCharacter(pi){
   var st=state();if(!st)return[];
   return BOSSES.filter(function(b){
@@ -1377,19 +1475,30 @@ function normalizeBoard(board,name){
 
 function callApi(action,payload){
   payload=payload||{};
-  return fetch(API_URL,{
-    method:"POST",
-    mode:"cors",
-    cache:"no-store",
-    headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},
-    body:JSON.stringify(Object.assign({action:action},payload))
-  }).then(function(res){
-    return res.text().then(function(t){
-      var data={};try{data=JSON.parse(t)}catch(e){}
-      if(!res.ok){var err=new Error(data.error||("요청 실패 ("+res.status+")"));err.status=res.status;throw err}
-      return data;
+  var body=JSON.stringify(Object.assign({action:action},payload));
+  var readOnly=action==="bootstrap"||action==="checklist_bootstrap"||action==="route_slots";
+  function attempt(n){
+    return fetch(API_URL,{
+      method:"POST",
+      mode:"cors",
+      cache:"no-store",
+      headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},
+      body:body
+    }).then(function(res){
+      return res.text().then(function(t){
+        var data={};try{data=JSON.parse(t)}catch(e){}
+        if(!res.ok){var err=new Error(data.error||("요청 실패 ("+res.status+")"));err.status=res.status;throw err}
+        return data;
+      });
+    }).catch(function(err){
+      var transient=!err.status||err.status===500||err.status===502||err.status===503||err.status===504;
+      if(readOnly&&transient&&n<2){
+        return new Promise(function(resolve){setTimeout(resolve,n===0?350:900)}).then(function(){return attempt(n+1)});
+      }
+      throw err;
     });
-  });
+  }
+  return attempt(0);
 }
 
 function applyPayload(data){
@@ -1412,6 +1521,10 @@ function loadRemote(show){
     if(SELECT_ACTIVE||dirty||saving)return;
     applyPayload(data);dirty=false;render();document.getElementById("saveText").textContent="공용 DB 연결됨";
   }).catch(function(e){
+    if(show===false&&APP.owners.length){
+      document.getElementById("saveText").textContent="공용 DB 재연결 중…";
+      return;
+    }
     document.getElementById("saveText").textContent="DB 연결 실패";
     document.getElementById("mobileBoard").innerHTML='<div class="mobile-loading">연결하지 못했어요.<br><button class="btn" style="margin-top:10px" onclick="location.reload()">다시 시도</button></div>';
     toast(e.message||"보스판을 불러오지 못했습니다.");
@@ -1686,7 +1799,11 @@ function compactPartyMembers(c,bi,pi,editable){
 function boardBossChecked(bossName,pi){
   var o=owner(),st=state();
   if(!o||!st||!CHECKLIST_LOADED||!st.players[pi])return false;
-  return !!bossRunItem(o.id,currentBossWeekStart(),String(st.players[pi]),bossName).completed;
+  var characterName=String(st.players[pi]);
+  if(MONTHLY.has(bossName)){
+    return !!monthlyBossRunItem(o.id,monthStartForDate(koreaDateKey()),characterName,bossName).completed;
+  }
+  return !!bossRunItem(o.id,currentBossWeekStart(),characterName,bossName).completed;
 }
 function sharedPartyBossTargets(bossName,pi){
   var currentOwner=owner(),st=state();
@@ -1730,7 +1847,78 @@ function sharedPartyBossTargets(bossName,pi){
 
   return targets;
 }
+function saveSharedPartyMonthlyBossCheck(bossName,pi,completed){
+  var runDate=koreaDateKey(),monthStart=monthStartForDate(runDate);
+  var targets=sharedPartyBossTargets(bossName,pi);
+  if(targets.length<=1){
+    var o=owner(),st=state();
+    if(!o||!st)return;
+    saveMonthlyBossRunCheck(runDate,String(st.players[pi]||""),bossName,pi,completed);
+    return;
+  }
+  var before=targets.map(function(t){
+    return {target:t,item:JSON.parse(JSON.stringify(monthlyBossRunItem(t.ownerId,monthStart,t.characterName,bossName)))};
+  });
+  before.forEach(function(x){
+    setMonthlyBossRunItem(x.target.ownerId,monthStart,x.target.characterName,bossName,{
+      completed:completed,
+      meso:completed?x.target.payout:0,
+      runDate:completed?runDate:(x.item.runDate||"")
+    });
+  });
+  var groups={};
+  targets.forEach(function(t){
+    if(!groups[t.ownerId])groups[t.ownerId]=[];
+    groups[t.ownerId].push({
+      characterName:t.characterName,
+      bossName:bossName,
+      completed:completed,
+      mesoEarned:completed?t.payout:0
+    });
+  });
+  CHECKLIST_SAVING="monthlyparty|"+monthStart+"|"+bossName+"|"+targets.map(function(t){return t.characterName}).join(",");
+  renderBossCheckState();
+  Promise.all(Object.keys(groups).map(function(ownerId){
+    return callApi("save_monthly_boss_run_bulk",{
+      ownerId:ownerId,
+      monthStart:monthStart,
+      runDate:runDate,
+      items:groups[ownerId]
+    });
+  })).then(function(responses){
+    responses.forEach(function(data){
+      (data.items||[]).forEach(function(item){
+        setMonthlyBossRunItem(
+          item.owner_id,
+          String(item.month_start||monthStart),
+          String(item.character_name||""),
+          String(item.boss_name||""),
+          {
+            completed:!!item.completed,
+            meso:Math.max(0,Number(item.meso_earned)||0),
+            runDate:String(item.run_date||"")
+          }
+        );
+      });
+    });
+    toast(bossName+" · 공용 파티 "+targets.length+"명 "+(completed?"월간 체크했어요.":"월간 체크를 해제했어요."));
+  }).catch(function(e){
+    before.forEach(function(x){
+      setMonthlyBossRunItem(x.target.ownerId,monthStart,x.target.characterName,bossName,x.item);
+    });
+    toast(e.message||"공용 월간 보스 체크를 저장하지 못했습니다.");
+    loadChecklist(false);
+  }).finally(function(){
+    CHECKLIST_SAVING="";
+    renderBossCheckState();
+  });
+}
+
 function saveSharedPartyBossCheck(bossName,pi,completed){
+  if(MONTHLY.has(bossName)){
+    saveSharedPartyMonthlyBossCheck(bossName,pi,completed);
+    return;
+  }
   var weekStart=currentBossWeekStart(),runDate=koreaDateKey();
   var targets=sharedPartyBossTargets(bossName,pi);
   if(targets.length<=1){
@@ -1817,9 +2005,11 @@ function toggleBoardBossCheck(bi,pi){
   var characterName=String(st.players[pi]||"");
   if(!characterName)return;
   var weekStart=currentBossWeekStart(),runDate=koreaDateKey();
-  var completed=!!bossRunItem(o.id,weekStart,characterName,boss).completed;
+  var completed=boardBossChecked(boss,pi);
   if(isMultiPartyCell(cell)){
     saveSharedPartyBossCheck(boss,pi,!completed);
+  }else if(MONTHLY.has(boss)){
+    saveMonthlyBossRunCheck(runDate,characterName,boss,pi,!completed);
   }else{
     saveBossRunCheck(weekStart,runDate,characterName,boss,pi,!completed);
   }
