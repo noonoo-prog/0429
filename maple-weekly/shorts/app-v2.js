@@ -690,7 +690,7 @@ function drawOwnerHalf(ctx,owner,y,date){
     const bx=x+pad+i*(cardWidth+gap);
     rounded(ctx,bx,statY,cardWidth,150,17,isCorn?"#fffaf0":"#fff5f9","#e8e2e7");
     txt(ctx,item[0],bx+13,statY+39,24,"#62606a","800");
-    const value=i===0?previewBossEok(item[1]):compact(item[1]);
+    const value=previewBossEok(item[1]);
     const ink=i===1?"#278557":i===3?(totalNet<0?"#b74366":isCorn?"#9c7414":"#c03c78"):"#252735";
     txt(ctx,value,bx+13,statY+109,fitting(ctx,value,cardWidth-25,38,17),ink,"900");
   });
