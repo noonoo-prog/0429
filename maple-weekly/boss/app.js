@@ -335,14 +335,14 @@ function loadChecklist(show){
     });
     CHECKLIST_LOADED=true;
     if(PAGE_VIEW==="checklist")renderChecklist();
-    else if(PAGE_VIEW==="board"){renderDesktop();renderMobile()}
+    else if(PAGE_VIEW==="board"){updateBoardTitle();renderDesktop();renderMobile()}
   }).catch(function(e){
     toast(e.message||"체크리스트를 불러오지 못했습니다.");
   }).finally(function(){CHECKLIST_LOADING=false});
 }
 function renderBossCheckState(){
   if(PAGE_VIEW==="checklist")renderChecklist();
-  else if(PAGE_VIEW==="board"){renderDesktop();renderMobile()}
+  else if(PAGE_VIEW==="board"){updateBoardTitle();renderDesktop();renderMobile()}
 }
 function saveBossRunCheck(weekStart,runDate,characterName,bossName,pi,completed){
   var o=owner(),st=state();if(!o||!st)return;
@@ -1513,6 +1513,30 @@ function saveBoardNow(){
   });
 }
 
+function updateBoardTitle(){
+  var o=owner(),unlocked=o&&isUnlocked(o.id),title=document.getElementById("boardTitle");
+  if(!title)return;
+  title.className="board-title owner-themed";
+  if(o)title.setAttribute("data-theme",ownerTheme(o.name)); else title.removeAttribute("data-theme");
+
+  if(PAGE_VIEW==="route"){
+    title.innerHTML='전체 2인 이상 파티 <span class="lock-state open">루트 선택</span>';
+    return;
+  }
+  if(!o){title.innerHTML="";return}
+
+  if(PAGE_VIEW==="checklist"){
+    title.innerHTML=esc(o.name)+'의 보스 체크리스트 <span class="lock-state open">비밀번호 없이 체크</span>';
+    return;
+  }
+
+  var progress=weekRunProgress(o.id,currentBossWeekStart());
+  var done=CHECKLIST_LOADED?String(progress.done):"–";
+  title.innerHTML=esc(o.name)+'의 보스 현황 '+
+    '<span class="boss-progress-summary">잡은 보스 <strong>'+done+'</strong> / 총 <strong>'+progress.total+'</strong></span> '+
+    '<span class="lock-state '+(unlocked?"open":"")+'">'+(unlocked?"수정 가능":"보기 전용")+'</span>';
+}
+
 function renderOwners(){
   var el=document.getElementById("ownerTabs");
   el.innerHTML=APP.owners.map(function(o){return'<button class="owner-tab '+(o.id===activeOwnerId?"active ":"")+(isUnlocked(o.id)?"unlocked":"locked")+'" data-theme="'+ownerTheme(o.name)+'" data-owner="'+esc(o.id)+'">'+esc(o.name)+'</button>'}).join("");
@@ -1523,15 +1547,8 @@ function renderOwners(){
     document.documentElement.scrollLeft=0;document.body.scrollLeft=0;
     var mb=document.getElementById("mobileBoard");if(mb)mb.scrollLeft=0;
   }});
-  var o=owner(),unlocked=o&&isUnlocked(o.id),title=document.getElementById("boardTitle");
-  title.className="board-title owner-themed"; if(o)title.setAttribute("data-theme",ownerTheme(o.name)); else title.removeAttribute("data-theme");
-  if(PAGE_VIEW==="route"){
-    title.innerHTML='전체 2인 이상 파티 <span class="lock-state open">루트 선택</span>';
-  }else{
-    title.innerHTML=o?esc(o.name)+(PAGE_VIEW==="checklist"?'의 보스 체크리스트':'의 보스 현황')+
-      ' <span class="lock-state '+((PAGE_VIEW==="checklist"||unlocked)?"open":"")+'">'+
-      (PAGE_VIEW==="checklist"?"비밀번호 없이 체크":(unlocked?"수정 가능":"보기 전용"))+'</span>':"";
-  }
+  var o=owner(),unlocked=o&&isUnlocked(o.id);
+  updateBoardTitle();
   var ownerUnlock=document.getElementById("unlockOwner");
   ownerUnlock.textContent=ADMIN_UNLOCKED?"관리자 모드 중":(unlocked?"수정 잠그기":"수정 잠금 해제");
   ownerUnlock.disabled=ADMIN_UNLOCKED;
