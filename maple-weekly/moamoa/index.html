@@ -97,6 +97,14 @@ body{background:radial-gradient(circle at 50% -160px,#2b3853 0,#111b2f 45%,#0910
 .status{color:#ffe07a}
 .help{background:#152239;border-color:#405573}
 
+
+/* white page background + action buttons above board */
+body{background:#fff}
+.hero p{color:#5f6d82}
+.home-link{color:#52657d}
+.action-grid{margin-top:12px}
+@media(max-width:580px){.action-grid{margin-top:10px}}
+
 </style>
 </head>
 <body>
@@ -109,6 +117,7 @@ body{background:radial-gradient(circle at 50% -160px,#2b3853 0,#111b2f 45%,#0910
 </section>
 <section class="panel board-panel">
 <div class="panel-head"><div><h2>맵</h2><p>맵 초기화 전까지 계속 누적돼요</p></div><div class="head-actions"><button id="undo" class="mini history-btn" type="button" aria-label="되돌리기">↶</button><button id="redo" class="mini history-btn" type="button" aria-label="다시 실행">↷</button></div></div><div class="board-meta"><div class="board-stats"><span id="scoreStat">점수 0 / 500,000</span><span id="placedStat">놓은 조각 0</span><span id="lineStat">지운 줄 0</span></div><div class="board-stats"><span id="stageStat">1단계</span><span id="iconStat" class="icon-stat">능력 아이콘 0 / 3</span></div></div><div class="score-progress"><i id="scoreProgress"></i></div>
+<div class="toolbar action-grid"><button id="solve" class="tool solve" type="button">추천 배치 찾기</button><button id="apply" class="tool apply" type="button" disabled>추천 전체 적용</button><button id="dotMode" class="tool mode" type="button">● 점 찍기</button><button id="resetMap" class="tool reset" type="button">맵 초기화</button></div>
 <div class="legend"><span><i style="background:#3f92f5"></i>현재 블록</span><span><i style="background:#1edb79"></i>1번</span><span><i style="background:#39bdff"></i>2번</span><span><i style="background:#ffae21"></i>3번</span></div>
 <div class="board-wrap"><div id="board" class="board" aria-label="10 x 16 맵"></div></div>
 <div class="ability-box">
@@ -128,7 +137,7 @@ body{background:radial-gradient(circle at 50% -160px,#2b3853 0,#111b2f 45%,#0910
 <div id="abilityAdvice" class="ability-advice">능력을 누르면 현재 맵 기준 추천 위치·교체 블록을 표시해요.</div>
 <div class="ability-rule">각 능력은 <strong>1회 사용하면 1개 차감</strong> · 조각 7번 배치마다 능력 아이콘 생성 · 보유 능력 합계 최대 7개</div>
 </div>
-<div class="toolbar action-grid"><button id="solve" class="tool solve" type="button">추천 배치 찾기</button><button id="apply" class="tool apply" type="button" disabled>추천 전체 적용</button><button id="dotMode" class="tool mode" type="button">● 점 찍기</button><button id="resetMap" class="tool reset" type="button">맵 초기화</button></div>
+
 <div id="status" class="status" aria-live="polite"></div>
 <div class="steps"><div class="result"><div class="result-title"><strong style="color:#fff">답안</strong><span id="scoreText">블록을 선택해 주세요</span></div><div id="resultList" class="empty-result">맵의 채워진 칸을 입력하고 블록을 선택한 뒤 <strong>추천 배치 찾기</strong>를 눌러 주세요.</div></div></div>
 </section>
