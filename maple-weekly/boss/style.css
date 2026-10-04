@@ -4729,3 +4729,40 @@ html[data-theme="dark"] .compact-boss-card.is-cleared .compact-boss-name{
   .boss-progress-summary{font-size:10.5px}
   .boss-progress-summary strong{font-size:11.5px}
 }
+
+/* checklist manual save + monthly boss */
+.checklist-save-btn{
+  min-height:36px;
+  padding:0 13px;
+  border:1px solid var(--line-strong);
+  border-radius:10px;
+  background:var(--surface);
+  color:var(--text);
+  font-size:10px;
+  font-weight:950;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.checklist-save-btn.has-changes{
+  border-color:var(--owner-accent);
+  color:var(--owner-accent);
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--owner-accent) 12%,transparent);
+}
+.checklist-save-btn:disabled{
+  opacity:.55;
+  cursor:default;
+}
+.boss-run-section-label{
+  padding:8px 11px 5px;
+  border-top:1px dashed var(--line);
+  color:var(--muted);
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.04em;
+}
+.boss-run-row.monthly-run{
+  border-left:3px solid var(--owner-accent);
+}
+@media(max-width:959px){
+  .checklist-save-btn{min-height:34px;padding:0 10px;font-size:9px}
+}

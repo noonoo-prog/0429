@@ -81,6 +81,7 @@ let CHECKLIST_SELECTED_DATE="";
 let CHECKLIST_LOADED=false;
 let CHECKLIST_LOADING=false;
 let CHECKLIST_SAVING="";
+let CHECKLIST_DRAFTS={};
 let ROUTE_RESULT_READY=false;
 let ROUTE_LOADED_RUNS=null;
 let ROUTE_LOADED_SLOT=0;
@@ -403,6 +404,120 @@ function renderBossCheckState(){
   if(PAGE_VIEW==="checklist")renderChecklist();
   else if(PAGE_VIEW==="board"){updateBoardTitle();renderDesktop();renderMobile()}
 }
+function checklistDraftKey(type,ownerId,period,characterName,bossName){
+  return [type,ownerId,period,characterName,bossName].join("|");
+}
+function checklistDraftCount(){return Object.keys(CHECKLIST_DRAFTS).length}
+function checklistHasDrafts(){return checklistDraftCount()>0}
+function effectiveBossRunItem(ownerId,weekStart,characterName,bossName){
+  var key=checklistDraftKey("weekly",ownerId,weekStart,characterName,bossName);
+  return CHECKLIST_DRAFTS[key]||bossRunItem(ownerId,weekStart,characterName,bossName);
+}
+function effectiveMonthlyBossRunItem(ownerId,monthStart,characterName,bossName){
+  var key=checklistDraftKey("monthly",ownerId,monthStart,characterName,bossName);
+  return CHECKLIST_DRAFTS[key]||monthlyBossRunItem(ownerId,monthStart,characterName,bossName);
+}
+function stageChecklistBossRun(weekStart,runDate,characterName,bossName,pi,completed){
+  var o=owner(),st=state();if(!o||!st||CHECKLIST_SAVING)return;
+  var c=st.cells[bossName]&&st.cells[bossName][pi];
+  if(!planned(c))return;
+  var base=bossRunItem(o.id,weekStart,characterName,bossName);
+  var key=checklistDraftKey("weekly",o.id,weekStart,characterName,bossName);
+  if(!!base.completed===!!completed){
+    delete CHECKLIST_DRAFTS[key];
+  }else{
+    CHECKLIST_DRAFTS[key]={
+      type:"weekly",ownerId:o.id,weekStart:weekStart,runDate:runDate,
+      characterName:characterName,bossName:bossName,completed:!!completed,
+      meso:completed?Math.round(bossWeeklyIncome(bossName,c)):0
+    };
+  }
+  renderChecklist();
+}
+function stageChecklistMonthlyBossRun(runDate,characterName,bossName,pi,completed){
+  var o=owner(),st=state();if(!o||!st||CHECKLIST_SAVING)return;
+  var c=st.cells[bossName]&&st.cells[bossName][pi];
+  if(!planned(c))return;
+  var monthStart=monthStartForDate(runDate);
+  var base=monthlyBossRunItem(o.id,monthStart,characterName,bossName);
+  var key=checklistDraftKey("monthly",o.id,monthStart,characterName,bossName);
+  if(!!base.completed===!!completed){
+    delete CHECKLIST_DRAFTS[key];
+  }else{
+    CHECKLIST_DRAFTS[key]={
+      type:"monthly",ownerId:o.id,monthStart:monthStart,runDate:runDate,
+      characterName:characterName,bossName:bossName,completed:!!completed,
+      meso:completed?Math.round(bossWeeklyIncome(bossName,c)):0
+    };
+  }
+  renderChecklist();
+}
+function saveChecklistDrafts(){
+  if(CHECKLIST_SAVING||!checklistHasDrafts())return;
+  var drafts=Object.keys(CHECKLIST_DRAFTS).map(function(key){
+    return {key:key,item:CHECKLIST_DRAFTS[key]};
+  });
+  var groups={};
+  drafts.forEach(function(x){
+    var d=x.item;
+    var groupKey=d.type+"|"+d.ownerId+"|"+(d.type==="monthly"?d.monthStart:d.weekStart)+"|"+d.runDate;
+    if(!groups[groupKey])groups[groupKey]={type:d.type,ownerId:d.ownerId,period:d.type==="monthly"?d.monthStart:d.weekStart,runDate:d.runDate,items:[],keys:[]};
+    groups[groupKey].items.push({
+      characterName:d.characterName,
+      bossName:d.bossName,
+      completed:d.completed,
+      mesoEarned:d.meso
+    });
+    groups[groupKey].keys.push(x.key);
+  });
+  CHECKLIST_SAVING="manual";
+  renderChecklist();
+
+  var jobs=Object.keys(groups).map(function(groupKey){
+    var g=groups[groupKey];
+    var action=g.type==="monthly"?"save_monthly_boss_run_bulk":"save_boss_run_bulk";
+    var payload=g.type==="monthly"
+      ?{ownerId:g.ownerId,monthStart:g.period,runDate:g.runDate,items:g.items}
+      :{ownerId:g.ownerId,weekStart:g.period,runDate:g.runDate,items:g.items};
+    return callApi(action,payload).then(function(data){
+      return {ok:true,group:g,data:data};
+    }).catch(function(error){
+      return {ok:false,group:g,error:error};
+    });
+  });
+
+  Promise.all(jobs).then(function(results){
+    var saved=0,failed=0;
+    results.forEach(function(result){
+      if(!result.ok){failed+=result.group.keys.length;return}
+      var g=result.group;
+      if(g.type==="monthly"){
+        (result.data.items||[]).forEach(function(item){
+          setMonthlyBossRunItem(
+            item.owner_id,String(item.month_start||g.period),
+            String(item.character_name||""),String(item.boss_name||""),
+            {completed:!!item.completed,meso:Math.max(0,Number(item.meso_earned)||0),runDate:String(item.run_date||"")}
+          );
+        });
+      }else{
+        (result.data.items||[]).forEach(function(item){
+          setBossRunItem(
+            item.owner_id,String(item.week_start||g.period),
+            String(item.character_name||""),String(item.boss_name||""),
+            {completed:!!item.completed,meso:Math.max(0,Number(item.meso_earned)||0),runDate:String(item.run_date||g.runDate)}
+          );
+        });
+      }
+      result.group.keys.forEach(function(key){delete CHECKLIST_DRAFTS[key];saved++});
+    });
+    if(failed)toast(saved+"개 저장 · "+failed+"개 저장 실패");
+    else toast(saved+"개 체크리스트 저장 완료");
+  }).finally(function(){
+    CHECKLIST_SAVING="";
+    renderChecklist();
+  });
+}
+
 function saveBossRunCheck(weekStart,runDate,characterName,bossName,pi,completed){
   var o=owner(),st=state();if(!o||!st)return;
   var c=st.cells[bossName]&&st.cells[bossName][pi];
@@ -515,57 +630,13 @@ function toggleCharacterBossRuns(weekStart,runDate,characterName,pi){
   var o=owner(),st=state();if(!o||!st||CHECKLIST_SAVING)return;
   var bosses=plannedWeeklyBossesForCharacter(pi);
   if(!bosses.length){toast("이 캐릭터에 등록된 주간 보스가 없어요.");return}
-
-  var completed=!characterBossRunsChecked(o.id,weekStart,characterName,pi);
-  var items=[],before=[];
+  var allChecked=bosses.every(function(b){
+    return !!effectiveBossRunItem(o.id,weekStart,characterName,b).completed;
+  });
   bosses.forEach(function(b){
-    var c=st.cells[b]&&st.cells[b][pi];
-    var payout=completed?Math.round(bossWeeklyIncome(b,c)):0;
-    before.push({
-      bossName:b,
-      item:JSON.parse(JSON.stringify(bossRunItem(o.id,weekStart,characterName,b)))
-    });
-    items.push({characterName:characterName,bossName:b,completed:completed,mesoEarned:payout});
-    setBossRunItem(o.id,weekStart,characterName,b,{
-      completed:completed,
-      meso:payout,
-      runDate:runDate
-    });
+    stageChecklistBossRun(weekStart,runDate,characterName,b,pi,!allChecked);
   });
-
-  var savingKey="charbulk|"+weekStart+"|"+characterName;
-  CHECKLIST_SAVING=savingKey;
   renderChecklist();
-
-  callApi("save_boss_run_bulk",{
-    ownerId:o.id,
-    weekStart:weekStart,
-    runDate:runDate,
-    items:items
-  }).then(function(data){
-    (data.items||[]).forEach(function(item){
-      setBossRunItem(
-        item.owner_id,
-        item.week_start,
-        String(item.character_name||""),
-        String(item.boss_name||""),
-        {
-          completed:!!item.completed,
-          meso:Math.max(0,Number(item.meso_earned)||0),
-          runDate:String(item.run_date||runDate)
-        }
-      );
-    });
-    toast(completed?characterName+"의 보스를 모두 체크했어요.":characterName+"의 보스를 모두 해제했어요.");
-  }).catch(function(e){
-    before.forEach(function(x){
-      setBossRunItem(o.id,weekStart,characterName,x.bossName,x.item);
-    });
-    toast(e.message||"캐릭터 전체 체크를 저장하지 못했습니다.");
-  }).finally(function(){
-    CHECKLIST_SAVING="";
-    renderChecklist();
-  });
 }
 function renderChecklist(){
   var panel=document.getElementById("checklistPanel");
@@ -632,6 +703,7 @@ function renderChecklist(){
         '<div><strong>'+formatShortDate(parseDateUTC(pickedDate))+'에 잡은 보스 체크</strong>'+
         '<span>'+formatShortDate(parseDateUTC(pickedWeek))+' 목 ~ '+formatShortDate(parseDateUTC(pickedWeekEnd))+' 수 · '+progress.done+'/'+progress.total+' 보스 완료</span></div>'+
         '<div class="selected-day-actions">'+
+          '<button type="button" class="checklist-save-btn '+(checklistHasDrafts()?"has-changes":"")+'" data-checklist-save="1" '+((CHECKLIST_SAVING||!checklistHasDrafts())?"disabled":"")+'>'+(CHECKLIST_SAVING==="manual"?"저장 중…":(checklistHasDrafts()?"변경사항 저장 ("+checklistDraftCount()+")":"저장됨"))+'</button>'+
           '<div class="week-run-money"><small>주간 획득</small><b>'+formatEok(weekMeso)+'</b><em>예상 '+formatEok(weekEstimate)+'</em></div>'+
         '</div>'+
       '</div>'+
@@ -641,10 +713,10 @@ function renderChecklist(){
     var bosses=plannedWeeklyBossesForCharacter(pi);
     var charEarned=sumBossRunMeso(o.id,pickedWeek,characterName);
     var charEstimate=Math.round(characterWeeklyIncome(pi));
-    var charDone=bosses.filter(function(b){return bossRunItem(o.id,pickedWeek,characterName,b).completed}).length;
+    var charDone=bosses.filter(function(b){return effectiveBossRunItem(o.id,pickedWeek,characterName,b).completed}).length;
 
-    var charAllChecked=characterBossRunsChecked(o.id,pickedWeek,characterName,pi);
-    var charBulkSaving=CHECKLIST_SAVING==="charbulk|"+pickedWeek+"|"+characterName;
+    var charAllChecked=bosses.length>0&&bosses.every(function(b){return !!effectiveBossRunItem(o.id,pickedWeek,characterName,b).completed});
+    var charBulkSaving=CHECKLIST_SAVING==="manual";
     h+='<section class="character-run-card">'+
       '<header class="character-run-head">'+
         '<div class="character-run-title"><strong>'+esc(characterName)+'</strong><span>'+charDone+'/'+bosses.length+' 완료</span></div>'+
@@ -660,17 +732,39 @@ function renderChecklist(){
     }else{
       bosses.forEach(function(b){
         var c=st.cells[b][pi]||emptyCell();
-        var item=bossRunItem(o.id,pickedWeek,characterName,b);
+        var item=effectiveBossRunItem(o.id,pickedWeek,characterName,b);
         var checked=!!item.completed;
         var payout=checked?Math.max(0,Number(item.meso)||0):Math.round(bossWeeklyIncome(b,c));
         var saveKey=o.id+"|"+pickedWeek+"|"+characterName+"|"+b;
-        var saving=CHECKLIST_SAVING===saveKey||CHECKLIST_SAVING==="charbulk|"+pickedWeek+"|"+characterName;
+        var saving=!!CHECKLIST_SAVING;
         var runLabel=checked&&item.runDate?formatShortDate(parseDateUTC(item.runDate))+" 완료":formatShortDate(parseDateUTC(pickedDate))+"에 체크";
 
         h+='<label class="boss-run-row '+(checked?"done":"")+'">'+
           '<input class="boss-run-checkbox" type="checkbox" data-week="'+pickedWeek+'" data-run-date="'+pickedDate+'" data-character="'+esc(characterName)+'" data-pi="'+pi+'" data-boss="'+esc(b)+'" '+(checked?"checked":"")+' '+(saving?"disabled":"")+'>'+
           '<span class="boss-run-check">'+(checked?"✓":"")+'</span>'+
           '<span class="boss-run-name"><strong>'+esc(b)+'</strong><small>'+esc(c.difficulty||"")+' · '+runLabel+'</small></span>'+
+          '<span class="boss-run-meso"><small>'+(checked?"획득":"예상")+'</small><b>'+formatEok(payout)+'</b></span>'+
+        '</label>';
+      });
+    }
+
+    var monthlyBosses=BOSSES.filter(function(b){
+      return MONTHLY.has(b)&&planned(st.cells[b]&&st.cells[b][pi]);
+    });
+    if(monthlyBosses.length){
+      h+='<div class="boss-run-section-label">월간</div>';
+      monthlyBosses.forEach(function(b){
+        var c=st.cells[b][pi]||emptyCell();
+        var monthStart=monthStartForDate(pickedDate);
+        var item=effectiveMonthlyBossRunItem(o.id,monthStart,characterName,b);
+        var checked=!!item.completed;
+        var payout=checked?Math.max(0,Number(item.meso)||0):Math.round(bossWeeklyIncome(b,c));
+        var saving=!!CHECKLIST_SAVING;
+        var runLabel=checked&&item.runDate?formatShortDate(parseDateUTC(item.runDate))+" 완료":formatShortDate(parseDateUTC(pickedDate))+"에 체크";
+        h+='<label class="boss-run-row monthly-run '+(checked?"done":"")+'">'+
+          '<input class="boss-run-checkbox" type="checkbox" data-monthly="1" data-month-start="'+monthStart+'" data-run-date="'+pickedDate+'" data-character="'+esc(characterName)+'" data-pi="'+pi+'" data-boss="'+esc(b)+'" '+(checked?"checked":"")+' '+(saving?"disabled":"")+'>'+
+          '<span class="boss-run-check">'+(checked?"✓":"")+'</span>'+
+          '<span class="boss-run-name"><strong>'+esc(b)+'</strong><small>'+esc(c.difficulty||"")+' · 월 1회 · '+runLabel+'</small></span>'+
           '<span class="boss-run-meso"><small>'+(checked?"획득":"예상")+'</small><b>'+formatEok(payout)+'</b></span>'+
         '</label>';
       });
@@ -698,16 +792,29 @@ function renderChecklist(){
       );
     };
   });
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-checklist-save]"),function(btn){
+    btn.onclick=saveChecklistDrafts;
+  });
   Array.prototype.forEach.call(panel.querySelectorAll(".boss-run-checkbox"),function(input){
     input.onchange=function(){
-      saveBossRunCheck(
-        input.dataset.week,
-        input.dataset.runDate,
-        input.dataset.character,
-        input.dataset.boss,
-        Number(input.dataset.pi),
-        !!input.checked
-      );
+      if(input.dataset.monthly==="1"){
+        stageChecklistMonthlyBossRun(
+          input.dataset.runDate,
+          input.dataset.character,
+          input.dataset.boss,
+          Number(input.dataset.pi),
+          !!input.checked
+        );
+      }else{
+        stageChecklistBossRun(
+          input.dataset.week,
+          input.dataset.runDate,
+          input.dataset.character,
+          input.dataset.boss,
+          Number(input.dataset.pi),
+          !!input.checked
+        );
+      }
     };
   });
 }
@@ -2461,7 +2568,7 @@ document.getElementById("remainingBossFilter").onclick=function(){
 window.addEventListener("resize",function(){clearTimeout(window.__bossResize);window.__bossResize=setTimeout(guardedRender,120)});
 window.addEventListener("pageshow",function(e){if(e.persisted)loadRemote(false)});
 window.addEventListener("beforeunload",function(e){
-  if(!dirty)return;
+  if(!dirty&&!checklistHasDrafts())return;
   e.preventDefault();
   e.returnValue="";
 });
@@ -2475,7 +2582,7 @@ function startPolling(){
   pollTimer=setInterval(function(){
     if(document.hidden||dirty||saving||SELECT_ACTIVE)return;
     if(PAGE_VIEW==="checklist"){
-      loadChecklist(false);
+      if(!checklistHasDrafts())loadChecklist(false);
     }else if(PAGE_VIEW==="board"){
       loadRemote(false);
       loadChecklist(false);
