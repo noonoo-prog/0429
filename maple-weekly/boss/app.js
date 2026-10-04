@@ -456,17 +456,40 @@ function stageChecklistMonthlyBossRun(runDate,characterName,bossName,pi,complete
   var c=st.cells[bossName]&&st.cells[bossName][pi];
   if(!planned(c))return;
   var monthStart=monthStartForDate(runDate);
-  var base=monthlyBossRunItem(o.id,monthStart,characterName,bossName);
-  var key=checklistDraftKey("monthly",o.id,monthStart,characterName,bossName);
-  if(!!base.completed===!!completed){
-    delete CHECKLIST_DRAFTS[key];
-  }else{
-    CHECKLIST_DRAFTS[key]={
-      type:"monthly",ownerId:o.id,monthStart:monthStart,runDate:runDate,
-      characterName:characterName,bossName:bossName,completed:!!completed,
-      meso:completed?Math.round(bossWeeklyIncome(bossName,c)):0
-    };
+  var targets=isMultiPartyCell(c)?sharedPartyBossTargets(bossName,pi):[];
+  if(targets.length<=1){
+    targets=[{
+      ownerId:o.id,
+      characterName:characterName,
+      pi:pi,
+      cell:c,
+      payout:Math.round(bossWeeklyIncome(bossName,c))
+    }];
   }
+  var partyGroup=targets.length>1
+    ?"monthlyparty|"+monthStart+"|"+bossName+"|"+targets.map(function(t){return t.ownerId+":"+t.characterName}).sort().join(",")
+    :"";
+
+  targets.forEach(function(t){
+    var base=monthlyBossRunItem(t.ownerId,monthStart,t.characterName,bossName);
+    var key=checklistDraftKey("monthly",t.ownerId,monthStart,t.characterName,bossName);
+    if(!!base.completed===!!completed){
+      delete CHECKLIST_DRAFTS[key];
+    }else{
+      CHECKLIST_DRAFTS[key]={
+        type:"monthly",
+        ownerId:t.ownerId,
+        monthStart:monthStart,
+        runDate:runDate,
+        characterName:t.characterName,
+        bossName:bossName,
+        completed:!!completed,
+        meso:completed?t.payout:0,
+        partyGroup:partyGroup
+      };
+    }
+  });
+  if(targets.length>1)toast(bossName+" · 공용 파티 "+targets.length+"명 같이 선택했어요.");
   renderChecklist();
 }
 function saveChecklistDrafts(){
@@ -475,11 +498,25 @@ function saveChecklistDrafts(){
     return {key:key,item:CHECKLIST_DRAFTS[key]};
   });
   var groups={};
+
   drafts.forEach(function(x){
     var d=x.item;
-    var groupKey=d.type+"|"+d.ownerId+"|"+(d.type==="monthly"?d.monthStart:d.weekStart)+"|"+d.runDate;
-    if(!groups[groupKey])groups[groupKey]={type:d.type,ownerId:d.ownerId,period:d.type==="monthly"?d.monthStart:d.weekStart,runDate:d.runDate,items:[],keys:[]};
+    var groupKey=d.partyGroup
+      ?d.partyGroup+"|"+d.runDate
+      :d.type+"|"+d.ownerId+"|"+(d.type==="monthly"?d.monthStart:d.weekStart)+"|"+d.runDate;
+    if(!groups[groupKey]){
+      groups[groupKey]={
+        type:d.type,
+        ownerId:d.ownerId,
+        period:d.type==="monthly"?d.monthStart:d.weekStart,
+        runDate:d.runDate,
+        partyGroup:d.partyGroup||"",
+        items:[],
+        keys:[]
+      };
+    }
     groups[groupKey].items.push({
+      ownerId:d.ownerId,
       characterName:d.characterName,
       bossName:d.bossName,
       completed:d.completed,
@@ -487,15 +524,33 @@ function saveChecklistDrafts(){
     });
     groups[groupKey].keys.push(x.key);
   });
+
   CHECKLIST_SAVING="manual";
   renderChecklist();
 
   var jobs=Object.keys(groups).map(function(groupKey){
-    var g=groups[groupKey];
-    var action=g.type==="monthly"?"save_monthly_boss_run_bulk":"save_boss_run_bulk";
-    var payload=g.type==="monthly"
-      ?{ownerId:g.ownerId,monthStart:g.period,runDate:g.runDate,items:g.items}
-      :{ownerId:g.ownerId,weekStart:g.period,runDate:g.runDate,items:g.items};
+    var g=groups[groupKey],action,payload;
+    if(g.partyGroup&&g.type==="monthly"){
+      action="save_monthly_party_run_atomic";
+      payload={
+        monthStart:g.period,
+        runDate:g.runDate,
+        items:g.items
+      };
+    }else{
+      action=g.type==="monthly"?"save_monthly_boss_run_bulk":"save_boss_run_bulk";
+      var ownerItems=g.items.map(function(item){
+        return {
+          characterName:item.characterName,
+          bossName:item.bossName,
+          completed:item.completed,
+          mesoEarned:item.mesoEarned
+        };
+      });
+      payload=g.type==="monthly"
+        ?{ownerId:g.ownerId,monthStart:g.period,runDate:g.runDate,items:ownerItems}
+        :{ownerId:g.ownerId,weekStart:g.period,runDate:g.runDate,items:ownerItems};
+    }
     return callApi(action,payload).then(function(data){
       return {ok:true,group:g,data:data};
     }).catch(function(error){
