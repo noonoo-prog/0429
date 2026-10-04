@@ -82,6 +82,7 @@ let CHECKLIST_LOADED=false;
 let CHECKLIST_LOADING=false;
 let CHECKLIST_SAVING="";
 let CHECKLIST_DRAFTS={};
+let LAST_KST_MONTH="";
 let ROUTE_RESULT_READY=false;
 let ROUTE_LOADED_RUNS=null;
 let ROUTE_LOADED_SLOT=0;
@@ -223,6 +224,22 @@ function koreaDateKey(){
 }
 function currentBossWeekStart(){
   return weekStartForDate(koreaDateKey());
+}
+function currentKstMonthStart(){
+  return monthStartForDate(koreaDateKey());
+}
+function handleKstMonthRollover(){
+  var currentMonth=currentKstMonthStart();
+  if(!LAST_KST_MONTH){LAST_KST_MONTH=currentMonth;return false}
+  if(currentMonth===LAST_KST_MONTH)return false;
+  LAST_KST_MONTH=currentMonth;
+  Object.keys(CHECKLIST_DRAFTS).forEach(function(key){
+    var draft=CHECKLIST_DRAFTS[key];
+    if(draft&&draft.type==="monthly")delete CHECKLIST_DRAFTS[key];
+  });
+  CHECKLIST_MONTH=currentMonth.slice(0,7);
+  CHECKLIST_SELECTED_DATE="";
+  return true;
 }
 function monthGridDates(monthKey){
   var p=monthKey.split("-").map(Number),y=p[0],m=p[1]-1;
@@ -2566,7 +2583,13 @@ document.getElementById("remainingBossFilter").onclick=function(){
 };
 
 window.addEventListener("resize",function(){clearTimeout(window.__bossResize);window.__bossResize=setTimeout(guardedRender,120)});
-window.addEventListener("pageshow",function(e){if(e.persisted)loadRemote(false)});
+window.addEventListener("pageshow",function(e){
+  if(handleKstMonthRollover()){
+    loadChecklist(false).then(function(){renderBossCheckState();if(PAGE_VIEW==="checklist")renderChecklist()});
+    return;
+  }
+  if(e.persisted)loadRemote(false);
+});
 window.addEventListener("beforeunload",function(e){
   if(!dirty&&!checklistHasDrafts())return;
   e.preventDefault();
@@ -2581,6 +2604,14 @@ function startPolling(){
   clearInterval(pollTimer);
   pollTimer=setInterval(function(){
     if(document.hidden||dirty||saving||SELECT_ACTIVE)return;
+    if(handleKstMonthRollover()){
+      loadChecklist(false).then(function(){
+        renderBossCheckState();
+        if(PAGE_VIEW==="checklist")renderChecklist();
+        toast("새 달이 시작되어 검은 마법사 체크가 초기화됐어요.");
+      });
+      return;
+    }
     if(PAGE_VIEW==="checklist"){
       if(!checklistHasDrafts())loadChecklist(false);
     }else if(PAGE_VIEW==="board"){
@@ -2592,6 +2623,7 @@ function startPolling(){
     }
   },4000);
 }
+LAST_KST_MONTH=currentKstMonthStart();
 loadRemote(true).then(function(){
   updatePageView();
   if(PAGE_VIEW==="checklist")return loadChecklist(true);
