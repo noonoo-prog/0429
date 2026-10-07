@@ -14,6 +14,9 @@ var DATA={owners:[]};
 var RESULT=[];
 var loading=false;
 var DIRTY=false;
+var RENDERING=false;
+var RENDER_PENDING=false;
+var RENDER_TIMER=null;
 
 function esc(s){
   return String(s==null?"":s).replace(/[&<>"']/g,function(m){
@@ -278,6 +281,23 @@ function toggleOwner(ownerId){
   render();
 }
 function render(){
+  if(RENDERING){
+    RENDER_PENDING=true;
+    return;
+  }
+  RENDERING=true;
+  try{
+    return renderNow();
+  }finally{
+    RENDERING=false;
+    if(RENDER_PENDING){
+      RENDER_PENDING=false;
+      clearTimeout(RENDER_TIMER);
+      RENDER_TIMER=setTimeout(render,0);
+    }
+  }
+}
+function renderNow(){
   var panel=document.getElementById("partyBossPanel");
   if(!panel)return;
   var chars=allChars();
