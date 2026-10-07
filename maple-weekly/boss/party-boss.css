@@ -502,3 +502,113 @@ html[data-theme="dark"] .party-boss-result{
     padding:0;
   }
 }
+
+/* Party Boss difficulty + owner meso totals */
+.party-boss-controls{
+  grid-template-columns:minmax(135px,1fr) minmax(105px,.72fr) minmax(115px,.72fr) minmax(150px,.9fr) 100px minmax(155px,1fr);
+}
+.party-boss-party-totals{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:2px;
+}
+.party-boss-party-totals>strong{
+  color:var(--text);
+  font-size:16px;
+  font-weight:950;
+}
+.party-boss-party-totals>small{
+  color:var(--muted);
+  font-size:8px;
+  font-weight:850;
+}
+.party-boss-meso-summary{
+  margin-top:14px;
+  padding-top:13px;
+  border-top:1px solid var(--pb-line);
+}
+.party-boss-meso-summary>header{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:9px;
+}
+.party-boss-meso-summary>header>div>span{
+  display:block;
+  color:var(--pb-muted);
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.party-boss-meso-summary>header>div>strong{
+  display:block;
+  margin-top:2px;
+  color:var(--text);
+  font-size:14px;
+  font-weight:950;
+}
+.party-boss-meso-summary>header>small{
+  color:var(--muted);
+  font-size:8px;
+  font-weight:850;
+}
+.party-boss-meso-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+.party-boss-meso-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 11px;
+  border:1px solid var(--pb-line);
+  border-radius:10px;
+  background:var(--pb-soft);
+}
+.party-boss-meso-card>div{
+  min-width:0;
+}
+.party-boss-meso-card b{
+  display:block;
+  overflow:hidden;
+  color:var(--text);
+  font-size:11px;
+  font-weight:950;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.party-boss-meso-card small{
+  display:block;
+  margin-top:2px;
+  color:var(--owner-accent);
+  font-size:8px;
+  font-weight:850;
+}
+.party-boss-meso-card>strong{
+  flex:none;
+  color:var(--text);
+  font-size:14px;
+  font-weight:950;
+}
+@media(max-width:959px){
+  .party-boss-controls{
+    grid-template-columns:1fr 1fr;
+  }
+  .party-boss-meso-grid{
+    grid-template-columns:1fr 1fr;
+  }
+}
+@media(max-width:560px){
+  .party-boss-meso-grid{
+    grid-template-columns:1fr;
+  }
+  .party-boss-meso-summary>header{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:4px;
+  }
+}
