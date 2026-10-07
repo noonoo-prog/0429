@@ -14,6 +14,10 @@ var DATA={owners:[]};
 var RESULT=[];
 var loading=false;
 var DIRTY=false;
+var SAVING=false;
+var SHARED_UPDATED_BY="";
+var SHARED_UPDATED_AT="";
+var SHARED_LOADED=false;
 var RENDERING=false;
 var RENDER_PENDING=false;
 var RENDER_TIMER=null;
@@ -59,16 +63,123 @@ function restoreSavedResult(){
   }).filter(Boolean);
   if(RESULT.length!==SAVED_RESULT.length)RESULT=[];
 }
-function savePrefs(){
-  materializeCurrentBossMultipliers();
+function persistLocalCache(){
   localStorage.setItem(MULT_KEY,JSON.stringify(MULT));
   localStorage.setItem(SELECT_KEY,JSON.stringify(SELECTED));
   localStorage.setItem(SETTINGS_KEY,JSON.stringify(SETTINGS));
   localStorage.setItem(RESULT_KEY,JSON.stringify(serializeResult()));
-  SAVED_RESULT=serializeResult();
+}
+function currentSaverName(){
+  var activeId=localStorage.getItem("boss-board-active-owner-v6")||"";
+  var found=(DATA.owners||[]).find(function(o){return String(o.id)===String(activeId)});
+  return found?String(found.name||""):"";
+}
+function partyEditing(){
+  var panel=document.getElementById("partyBossPanel");
+  var active=document.activeElement;
+  return !!(panel&&active&&panel.contains(active)&&/^(INPUT|SELECT|TEXTAREA)$/.test(active.tagName));
+}
+function sharedMetaText(){
+  if(!SHARED_LOADED)return "공용 저장본 연결 중";
+  if(!SHARED_UPDATED_AT)return "공용 저장본 없음";
+  var who=SHARED_UPDATED_BY?(" · "+SHARED_UPDATED_BY):"";
+  var when="";
+  try{
+    var d=new Date(SHARED_UPDATED_AT);
+    when=" · "+new Intl.DateTimeFormat("ko-KR",{timeZone:"Asia/Seoul",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).format(d);
+  }catch(e){}
+  return "공용 저장"+who+when;
+}
+function apiCall(action,payload){
+  payload=payload||{};
+  var body=JSON.stringify(Object.assign({action:action},payload));
+  function attempt(n){
+    return fetch(API_URL,{
+      method:"POST",
+      mode:"cors",
+      cache:"no-store",
+      headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},
+      body:body
+    }).then(function(res){
+      return res.text().then(function(t){
+        var data={};try{data=JSON.parse(t)}catch(e){}
+        if(!res.ok){var err=new Error(data.error||("요청 실패 ("+res.status+")"));err.status=res.status;throw err}
+        return data;
+      });
+    }).catch(function(err){
+      var transient=!err.status||err.status===500||err.status===502||err.status===503||err.status===504;
+      if(transient&&n<2){
+        return new Promise(function(resolve){setTimeout(resolve,n===0?350:900)}).then(function(){return attempt(n+1)});
+      }
+      throw err;
+    });
+  }
+  return attempt(0);
+}
+function sharedPayload(){
+  materializeCurrentBossMultipliers();
+  return {
+    settings:{
+      boss:String(SETTINGS.boss||"카링"),
+      partySize:SETTINGS.partySize,
+      targetRate:Math.max(0,Number(SETTINGS.targetRate)||0)
+    },
+    selected:SELECTED.slice(),
+    multipliers:JSON.parse(JSON.stringify(MULT||{})),
+    result:serializeResult()
+  };
+}
+function applySharedState(state,updatedBy,updatedAt){
+  if(!state||typeof state!=="object"||Array.isArray(state))return false;
+  if(!state.settings&&!state.multipliers&&!state.selected&&!state.result)return false;
+  SETTINGS=Object.assign({boss:"카링",partySize:3,targetRate:0},state.settings||{});
+  SELECTED=Array.isArray(state.selected)?state.selected.slice():[];
+  MULT=(state.multipliers&&typeof state.multipliers==="object"&&!Array.isArray(state.multipliers))
+    ?JSON.parse(JSON.stringify(state.multipliers))
+    :{};
+  SAVED_RESULT=Array.isArray(state.result)?JSON.parse(JSON.stringify(state.result)):[];
+  SHARED_UPDATED_BY=String(updatedBy||"");
+  SHARED_UPDATED_AT=String(updatedAt||"");
+  SHARED_LOADED=true;
+  restoreSavedResult();
   DIRTY=false;
+  return true;
+}
+function loadSharedState(showError){
+  if(DIRTY||SAVING||partyEditing())return Promise.resolve(false);
+  return apiCall("party_boss_state_get").then(function(data){
+    SHARED_LOADED=true;
+    if(DIRTY||SAVING||partyEditing())return false;
+    var nextUpdatedAt=String(data.updatedAt||"");
+    if(nextUpdatedAt&&nextUpdatedAt===SHARED_UPDATED_AT)return false;
+    var applied=applySharedState(data.state,data.updatedBy,data.updatedAt);
+    if(!applied){
+      SHARED_UPDATED_BY=String(data.updatedBy||"");
+      SHARED_UPDATED_AT=nextUpdatedAt;
+    }
+    if(applied)render();
+    return applied;
+  }).catch(function(e){
+    SHARED_LOADED=true;
+    if(showError)notify(e.message||"공용 파티보스를 불러오지 못했어요.");
+    return false;
+  });
+}
+function savePrefs(){
+  if(SAVING||!DIRTY)return;
+  var payload=sharedPayload();
+  SAVING=true;
   render();
-  notify("파티보스를 저장했어요.");
+  apiCall("party_boss_state_save",{payload:payload,updatedBy:currentSaverName()}).then(function(data){
+    applySharedState(data.state,data.updatedBy,data.updatedAt);
+    persistLocalCache();
+    notify("공용 파티보스로 저장했어요.");
+  }).catch(function(e){
+    notify(e.message||"공용 파티보스를 저장하지 못했어요.");
+  }).finally(function(){
+    SAVING=false;
+    render();
+  });
 }
 function ownerTheme(name){
   if(name==="오똑")return"ottok";
@@ -371,7 +482,8 @@ function renderNow(){
   html+='<header class="party-boss-head">';
   html+='<div><span>PARTY BALANCER</span><strong>파티보스</strong><p>선택한 캐릭터들의 총 배율이 최대한 비슷하게 자동 편성됩니다.</p></div>';
   html+='<div class="party-boss-head-actions">';
-  html+='<button class="party-boss-save '+(DIRTY?"needs-save":"")+'" type="button" data-pb-save="1">'+(DIRTY?"저장":"저장됨")+'</button>';
+  html+='<span class="party-boss-shared-meta">'+esc(sharedMetaText())+'</span>';
+  html+='<button class="party-boss-save '+(DIRTY&&!SAVING?"needs-save":"")+'" type="button" data-pb-save="1" '+(SAVING?"disabled":"")+'>'+(SAVING?"저장 중…":(DIRTY?"저장":"공용 저장됨"))+'</button>';
   html+='<button class="party-boss-reset" type="button" data-pb-reset="1">선택 초기화</button>';
   html+='</div>';
   html+='</header>';
@@ -461,7 +573,7 @@ function renderNow(){
   var buildBtn=panel.querySelector("[data-pb-build]");
   if(buildBtn)buildBtn.onclick=build;
   var saveBtn=panel.querySelector("[data-pb-save]");
-  if(saveBtn)saveBtn.onclick=function(){if(DIRTY)savePrefs()};
+  if(saveBtn)saveBtn.onclick=savePrefs;
   var resetBtn=panel.querySelector("[data-pb-reset]");
   if(resetBtn)resetBtn.onclick=function(){SELECTED=[];RESULT=[];markDirty();render()};
 
@@ -491,8 +603,14 @@ function renderNow(){
   });
 }
 
+window.refreshPartyBossShared=function(){
+  if(DIRTY||SAVING||partyEditing())return Promise.resolve(false);
+  return loadSharedState(false);
+};
 window.renderPartyBossPage=function(){
-  fetchBoard(false).then(render).catch(function(e){
+  fetchBoard(false).then(function(){
+    return loadSharedState(false);
+  }).then(render).catch(function(e){
     var panel=document.getElementById("partyBossPanel");
     if(panel)panel.innerHTML='<div class="party-boss-empty"><strong>파티보스를 불러오지 못했어요.</strong><span>'+esc(e.message||"연결 오류")+'</span></div>';
   });
@@ -506,6 +624,8 @@ window.addEventListener("beforeunload",function(e){
 
 document.addEventListener("DOMContentLoaded",function(){
   fetchBoard(true).then(function(){
+    return loadSharedState(false);
+  }).then(function(){
     if(document.getElementById("partyBossPanel"))render();
   }).catch(function(){});
 });
