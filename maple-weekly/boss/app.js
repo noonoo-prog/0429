@@ -1688,7 +1688,7 @@ function ownerTheme(name){
 }
 
 function emptyCell(){return{difficulty:"",count:0,names:[]}}
-function isMobile(){return window.matchMedia&&window.matchMedia("(max-width:760px)").matches}
+function isMobile(){return window.matchMedia&&window.matchMedia("(max-width:959px)").matches}
 function activeChar(){var o=owner(),st=state();if(!o||!st)return 0;var k=CHAR_PREFIX+o.id;if(activeCharByOwner[o.id]==null){var stored=Number(localStorage.getItem(k));activeCharByOwner[o.id]=Number.isInteger(stored)&&stored>=0&&stored<st.players.length?stored:0}if(activeCharByOwner[o.id]>=st.players.length)activeCharByOwner[o.id]=0;return activeCharByOwner[o.id]}
 function setActiveChar(i){var o=owner();if(!o)return;activeCharByOwner[o.id]=i;localStorage.setItem(CHAR_PREFIX+o.id,String(i));renderMobile()}
 
