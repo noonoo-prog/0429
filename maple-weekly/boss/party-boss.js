@@ -5,6 +5,34 @@ var SUPABASE_URL="https://ibqpjcedzcllacbamrnu.supabase.co";
 var SUPABASE_KEY="sb_publishable_s-EiUNh66D17Xd3JFGUyvA_aNEDNMKq";
 var API_URL=SUPABASE_URL+"/functions/v1/boss-board-api";
 var BOSSES=["스우","가엔슬","세렌","칼로스","대적자","카링","흉성","벨로나","림보","발드릭스","유피테르","검은 마법사"];
+var BOSS_DIFFICULTIES={
+  "스우":["노말","하드","익스트림"],
+  "가엔슬":["노말","카오스"],
+  "세렌":["노말","하드","익스트림"],
+  "칼로스":["이지","노말","카오스","익스트림"],
+  "대적자":["이지","노말","하드","익스트림"],
+  "카링":["이지","노말","하드","익스트림"],
+  "흉성":["노말","하드"],
+  "벨로나":["이지","노말","하드"],
+  "림보":["노말","하드"],
+  "발드릭스":["노말","하드"],
+  "유피테르":["노말","하드"],
+  "검은 마법사":["하드","익스트림"]
+};
+var BOSS_CRYSTAL_PRICES={
+  "스우":{"노말":8350000,"하드":48900000,"익스트림":545000000},
+  "가엔슬":{"노말":12700000,"카오스":71300000},
+  "세렌":{"노말":167000000,"하드":302000000,"익스트림":1840000000},
+  "칼로스":{"이지":238000000,"노말":479000000,"카오스":1230000000,"익스트림":4140000000},
+  "대적자":{"이지":261000000,"노말":532000000,"하드":1390000000,"익스트림":4712000000},
+  "카링":{"이지":320000000,"노말":593000000,"하드":1560000000,"익스트림":5387000000},
+  "흉성":{"노말":576000000,"하드":2678000000},
+  "벨로나":{"이지":396000000,"노말":824000000,"하드":2950000000},
+  "림보":{"노말":995000000,"하드":2385000000},
+  "발드릭스":{"노말":1320000000,"하드":3078000000},
+  "유피테르":{"노말":1560000000,"하드":4845000000},
+  "검은 마법사":{"하드":465000000,"익스트림":5680000000}
+};
 var MULT_KEY="boss-board-party-boss-multipliers-v2";
 var LEGACY_MULT_KEY="boss-board-party-boss-multipliers-v1";
 var SELECT_KEY="boss-board-party-boss-selection-v1";
@@ -36,9 +64,46 @@ function readJSON(key,fallback){
 var MULT=readJSON(MULT_KEY,{});
 var LEGACY_MULT=readJSON(LEGACY_MULT_KEY,{});
 var SELECTED=readJSON(SELECT_KEY,[]);
-var SETTINGS=Object.assign({boss:"카링",partySize:3,targetRate:0},readJSON(SETTINGS_KEY,{}));
+var SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:3,targetRate:0},readJSON(SETTINGS_KEY,{}));
 var SAVED_RESULT=readJSON(RESULT_KEY,[]);
 
+function defaultDifficulty(boss){
+  var list=BOSS_DIFFICULTIES[boss]||[];
+  return list.indexOf("하드")>=0?"하드":String(list[0]||"");
+}
+function normalizeDifficulty(){
+  var list=BOSS_DIFFICULTIES[SETTINGS.boss]||[];
+  if(list.indexOf(SETTINGS.difficulty)<0)SETTINGS.difficulty=defaultDifficulty(SETTINGS.boss);
+}
+function crystalPrice(){
+  normalizeDifficulty();
+  return Math.max(0,Number((BOSS_CRYSTAL_PRICES[SETTINGS.boss]||{})[SETTINGS.difficulty])||0);
+}
+function formatMeso(n){
+  n=Math.max(0,Number(n)||0);
+  if(n>=100000000){
+    return (n/100000000).toFixed(2).replace(/\.00$/,"").replace(/(\.\d)0$/,"$1")+"억";
+  }
+  if(n>=10000){
+    return (n/10000).toFixed(1).replace(/\.0$/,"")+"만";
+  }
+  return Math.round(n).toLocaleString("ko-KR");
+}
+function ownerMesoTotals(){
+  var totals={};
+  var base=crystalPrice();
+  RESULT.forEach(function(p){
+    var count=Math.max(1,p.members.length);
+    var each=base/count;
+    p.members.forEach(function(c){
+      var key=String(c.ownerId||c.ownerName||"");
+      if(!totals[key])totals[key]={ownerId:c.ownerId,ownerName:c.ownerName,theme:c.theme,total:0,runs:0};
+      totals[key].total+=each;
+      totals[key].runs++;
+    });
+  });
+  return totals;
+}
 function markDirty(){DIRTY=true}
 function serializeResult(){
   return RESULT.map(function(p){
@@ -121,6 +186,7 @@ function sharedPayload(){
   return {
     settings:{
       boss:String(SETTINGS.boss||"카링"),
+      difficulty:String(SETTINGS.difficulty||defaultDifficulty(SETTINGS.boss)),
       partySize:SETTINGS.partySize,
       targetRate:Math.max(0,Number(SETTINGS.targetRate)||0)
     },
@@ -132,7 +198,8 @@ function sharedPayload(){
 function applySharedState(state,updatedBy,updatedAt){
   if(!state||typeof state!=="object"||Array.isArray(state))return false;
   if(!state.settings&&!state.multipliers&&!state.selected&&!state.result)return false;
-  SETTINGS=Object.assign({boss:"카링",partySize:3,targetRate:0},state.settings||{});
+  SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:3,targetRate:0},state.settings||{});
+  normalizeDifficulty();
   SELECTED=Array.isArray(state.selected)?state.selected.slice():[];
   MULT=(state.multipliers&&typeof state.multipliers==="object"&&!Array.isArray(state.multipliers))
     ?JSON.parse(JSON.stringify(state.multipliers))
@@ -494,6 +561,12 @@ function renderNow(){
     html+='<option value="'+esc(b)+'" '+(SETTINGS.boss===b?"selected":"")+'>'+esc(b)+'</option>';
   });
   html+='</select></label>';
+  normalizeDifficulty();
+  html+='<label><span>난이도</span><select data-pb-difficulty="1">';
+  (BOSS_DIFFICULTIES[SETTINGS.boss]||[]).forEach(function(d){
+    html+='<option value="'+esc(d)+'" '+(SETTINGS.difficulty===d?"selected":"")+'>'+esc(d)+'</option>';
+  });
+  html+='</select></label>';
   html+='<label><span>파티 인원</span><select data-pb-size="1">';
   html+='<option value="any" '+(String(SETTINGS.partySize)==="any"?"selected":"")+'>상관없음</option>';
   [2,3,4,5,6].forEach(function(n){
@@ -534,13 +607,14 @@ function renderNow(){
     var sizeLabel=String(SETTINGS.partySize)==="any"?"인원 상관없음":SETTINGS.partySize+"인 기준";
     var target=Number(SETTINGS.targetRate)||0;
     var targetLabel=target>0?" · 목표 "+formatRate(target)+" ~ "+formatRate(target+10):"";
-    html+='<header><div><span>자동 편성 결과</span><strong>'+esc(SETTINGS.boss)+' · '+sizeLabel+targetLabel+'</strong></div>';
+    html+='<header><div><span>자동 편성 결과</span><strong>'+esc(SETTINGS.boss)+' · '+esc(SETTINGS.difficulty)+' · '+sizeLabel+targetLabel+'</strong></div>';
     html+='<div class="party-boss-gap"><span>파티간 차이</span><b>'+formatRate(max-min)+'</b></div></header>';
     html+='<div class="party-boss-result-grid">';
     RESULT.forEach(function(p){
       html+='<article class="party-boss-party-card '+(target>0?(p.total>=target&&p.total<=target+10?"in-target":"out-target"):"")+'">';
       var status=target>0?(p.total<target?"목표보다 낮음":(p.total>target+10?"목표보다 높음":"목표 범위")):"";
-      html+='<header><div><span>'+p.id+'</span><b>'+p.id+'파티 · '+p.members.length+'명</b>'+(status?'<em>'+status+'</em>':'')+'</div><strong>'+formatRate(p.total)+'</strong></header>';
+      var partyMesoEach=crystalPrice()/Math.max(1,p.members.length);
+      html+='<header><div><span>'+p.id+'</span><b>'+p.id+'파티 · '+p.members.length+'명</b>'+(status?'<em>'+status+'</em>':'')+'</div><div class="party-boss-party-totals"><strong>'+formatRate(p.total)+'</strong><small>인당 '+formatMeso(partyMesoEach)+'</small></div></header>';
       html+='<div class="party-boss-members">';
       p.members.forEach(function(c){
         html+='<div class="party-boss-member owner-themed" data-theme="'+c.theme+'">';
@@ -551,7 +625,19 @@ function renderNow(){
       });
       html+='</div></article>';
     });
-    html+='</div></section>';
+    html+='</div>';
+    var mesoTotals=ownerMesoTotals();
+    var mesoRows=(DATA.owners||[]).map(function(o){return mesoTotals[String(o.id)]}).filter(Boolean);
+    if(mesoRows.length){
+      html+='<section class="party-boss-meso-summary">';
+      html+='<header><div><span>OWNER MESO</span><strong>주인별 예상 메소 총합</strong></div><small>'+esc(SETTINGS.boss)+' · '+esc(SETTINGS.difficulty)+' 결정석 기준</small></header>';
+      html+='<div class="party-boss-meso-grid">';
+      mesoRows.forEach(function(row){
+        html+='<article class="party-boss-meso-card owner-themed" data-theme="'+esc(row.theme)+'"><div><b>'+esc(row.ownerName)+'</b><small>'+row.runs+'캐릭터</small></div><strong>'+formatMeso(row.total)+'</strong></article>';
+      });
+      html+='</div></section>';
+    }
+    html+='</section>';
   }else{
     html+='<div class="party-boss-empty"><strong>캐릭터를 선택하고 배율을 입력해 주세요.</strong><span>자동 균형 맞추기를 누르면 파티별 총 배율 차이가 가장 작도록 나눕니다.</span></div>';
   }
@@ -560,7 +646,9 @@ function renderNow(){
   panel.innerHTML=html;
 
   var boss=panel.querySelector("[data-pb-boss]");
-  if(boss)boss.onchange=function(){SETTINGS.boss=boss.value;RESULT=[];markDirty();render()};
+  if(boss)boss.onchange=function(){SETTINGS.boss=boss.value;SETTINGS.difficulty=defaultDifficulty(SETTINGS.boss);RESULT=[];markDirty();render()};
+  var difficulty=panel.querySelector("[data-pb-difficulty]");
+  if(difficulty)difficulty.onchange=function(){SETTINGS.difficulty=difficulty.value;markDirty();render()};
   var size=panel.querySelector("[data-pb-size]");
   if(size)size.onchange=function(){SETTINGS.partySize=size.value==="any"?"any":(Number(size.value)||3);RESULT=[];markDirty();render()};
   var targetInput=panel.querySelector("[data-pb-target]");
