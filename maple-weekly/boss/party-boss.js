@@ -178,6 +178,7 @@ function build(){
   var chars=selectedChars();
   if(chars.length<2){
     RESULT=[];
+    markDirty();
     render();
     notify("파티를 짤 캐릭터를 2명 이상 선택해 주세요.");
     return;
@@ -185,6 +186,7 @@ function build(){
   var missing=chars.filter(function(c){return !(c.multiplier>0)});
   if(missing.length){
     RESULT=[];
+    markDirty();
     render();
     notify("선택한 캐릭터의 배율을 모두 입력해 주세요.");
     return;
