@@ -8,9 +8,11 @@ var BOSSES=["스우","가엔슬","세렌","칼로스","대적자","카링","흉�
 var MULT_KEY="boss-board-party-boss-multipliers-v1";
 var SELECT_KEY="boss-board-party-boss-selection-v1";
 var SETTINGS_KEY="boss-board-party-boss-settings-v1";
+var RESULT_KEY="boss-board-party-boss-result-v1";
 var DATA={owners:[]};
 var RESULT=[];
 var loading=false;
+var DIRTY=false;
 
 function esc(s){
   return String(s==null?"":s).replace(/[&<>"']/g,function(m){
@@ -26,11 +28,38 @@ function readJSON(key,fallback){
 var MULT=readJSON(MULT_KEY,{});
 var SELECTED=readJSON(SELECT_KEY,[]);
 var SETTINGS=Object.assign({boss:"카링",partySize:3},readJSON(SETTINGS_KEY,{}));
+var SAVED_RESULT=readJSON(RESULT_KEY,[]);
 
+function markDirty(){DIRTY=true}
+function serializeResult(){
+  return RESULT.map(function(p){
+    return {id:p.id,memberKeys:p.members.map(function(c){return c.key})};
+  });
+}
+function restoreSavedResult(){
+  if(!Array.isArray(SAVED_RESULT)||!SAVED_RESULT.length){RESULT=[];return}
+  var byKey={};
+  allChars().forEach(function(c){byKey[c.key]=c});
+  RESULT=SAVED_RESULT.map(function(saved,i){
+    var members=(saved.memberKeys||[]).map(function(key){return byKey[key]}).filter(Boolean);
+    if(!members.length)return null;
+    return {
+      id:Number(saved.id)||i+1,
+      max:members.length,
+      members:members,
+      total:members.reduce(function(sum,c){return sum+c.multiplier},0)
+    };
+  }).filter(Boolean);
+}
 function savePrefs(){
   localStorage.setItem(MULT_KEY,JSON.stringify(MULT));
   localStorage.setItem(SELECT_KEY,JSON.stringify(SELECTED));
   localStorage.setItem(SETTINGS_KEY,JSON.stringify(SETTINGS));
+  localStorage.setItem(RESULT_KEY,JSON.stringify(serializeResult()));
+  SAVED_RESULT=serializeResult();
+  DIRTY=false;
+  render();
+  notify("파티보스를 저장했어요.");
 }
 function ownerTheme(name){
   if(name==="오똑")return"ottok";
@@ -141,6 +170,7 @@ function fetchBoard(){
     return res.json().then(function(data){
       if(!res.ok||data.ok===false)throw new Error(data.error||"보스 현황판을 불러오지 못했습니다.");
       DATA.owners=Array.isArray(data.owners)?data.owners:[];
+      restoreSavedResult();
     });
   }).finally(function(){loading=false});
 }
@@ -160,6 +190,7 @@ function build(){
     return;
   }
   RESULT=balance(chars,SETTINGS.partySize);
+  markDirty();
   render();
 }
 function notify(msg){
@@ -178,7 +209,7 @@ function toggleOwner(ownerId){
     if(!all&&i<0)SELECTED.push(c.key);
   });
   RESULT=[];
-  savePrefs();
+  markDirty();
   render();
 }
 function render(){
@@ -196,7 +227,10 @@ function render(){
   html+='<section class="party-boss-shell">';
   html+='<header class="party-boss-head">';
   html+='<div><span>PARTY BALANCER</span><strong>파티보스</strong><p>선택한 캐릭터들의 총 배율이 최대한 비슷하게 자동 편성됩니다.</p></div>';
+  html+='<div class="party-boss-head-actions">';
+  html+='<button class="party-boss-save '+(DIRTY?"needs-save":"")+'" type="button" data-pb-save="1">'+(DIRTY?"저장":"저장됨")+'</button>';
   html+='<button class="party-boss-reset" type="button" data-pb-reset="1">선택 초기화</button>';
+  html+='</div>';
   html+='</header>';
 
   html+='<section class="party-boss-controls">';
@@ -265,13 +299,15 @@ function render(){
   panel.innerHTML=html;
 
   var boss=panel.querySelector("[data-pb-boss]");
-  if(boss)boss.onchange=function(){SETTINGS.boss=boss.value;RESULT=[];savePrefs();render()};
+  if(boss)boss.onchange=function(){SETTINGS.boss=boss.value;RESULT=[];markDirty();render()};
   var size=panel.querySelector("[data-pb-size]");
-  if(size)size.onchange=function(){SETTINGS.partySize=Number(size.value)||3;RESULT=[];savePrefs();render()};
+  if(size)size.onchange=function(){SETTINGS.partySize=Number(size.value)||3;RESULT=[];markDirty();render()};
   var buildBtn=panel.querySelector("[data-pb-build]");
   if(buildBtn)buildBtn.onclick=build;
+  var saveBtn=panel.querySelector("[data-pb-save]");
+  if(saveBtn)saveBtn.onclick=function(){if(DIRTY)savePrefs()};
   var resetBtn=panel.querySelector("[data-pb-reset]");
-  if(resetBtn)resetBtn.onclick=function(){SELECTED=[];RESULT=[];savePrefs();render()};
+  if(resetBtn)resetBtn.onclick=function(){SELECTED=[];RESULT=[];markDirty();render()};
 
   Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-owner]"),function(btn){
     btn.onclick=function(){toggleOwner(btn.dataset.pbOwner)};
@@ -282,7 +318,7 @@ function render(){
       var i=SELECTED.indexOf(key);
       if(i>=0)SELECTED.splice(i,1);else SELECTED.push(key);
       RESULT=[];
-      savePrefs();
+      markDirty();
       render();
     };
   });
@@ -292,7 +328,7 @@ function render(){
       var v=Math.max(0,Number(input.value)||0);
       if(v>0)MULT[key]=v;else delete MULT[key];
       RESULT=[];
-      savePrefs();
+      markDirty();
       render();
     };
     input.onclick=function(e){e.stopPropagation()};
@@ -309,6 +345,12 @@ window.renderPartyBossPage=function(){
     if(panel)panel.innerHTML='<div class="party-boss-empty"><strong>파티보스를 불러오지 못했어요.</strong><span>'+esc(e.message||"연결 오류")+'</span></div>';
   });
 };
+
+window.addEventListener("beforeunload",function(e){
+  if(!DIRTY)return;
+  e.preventDefault();
+  e.returnValue="";
+});
 
 document.addEventListener("DOMContentLoaded",function(){
   fetchBoard().then(function(){
