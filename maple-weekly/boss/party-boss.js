@@ -620,8 +620,12 @@ function renderNow(){
     var own=chars.filter(function(c){return c.ownerId===o.id});
     if(!own.length)return;
     var allSelected=own.every(function(c){return selectedSet.has(c.key)});
+    var ownSelected=own.filter(function(c){return selectedSet.has(c.key)});
+    var ownAverage=ownSelected.length
+      ?ownSelected.reduce(function(sum,c){return sum+(Number(c.multiplier)||0)},0)/ownSelected.length
+      :0;
     html+='<section class="party-boss-owner owner-themed" data-theme="'+ownerTheme(o.name)+'">';
-    html+='<header><strong>'+esc(o.name)+'</strong><button type="button" data-pb-owner="'+esc(o.id)+'">'+(allSelected?"전체 해제":"전체 선택")+'</button></header>';
+    html+='<header><div class="party-boss-owner-title"><strong>'+esc(o.name)+'</strong>'+(ownSelected.length?'<span>선택 '+ownSelected.length+'명 · 평균 '+formatRate(ownAverage)+'</span>':'')+'</div><button type="button" data-pb-owner="'+esc(o.id)+'">'+(allSelected?"전체 해제":"전체 선택")+'</button></header>';
     html+='<div class="party-boss-char-grid">';
     own.forEach(function(c){
       var active=selectedSet.has(c.key);
