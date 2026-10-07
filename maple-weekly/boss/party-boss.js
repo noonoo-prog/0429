@@ -98,7 +98,7 @@ function selectedChars(){
 }
 function formatRate(n){
   n=Math.max(0,Number(n)||0);
-  return n.toFixed(2).replace(/\.00$/,"").replace(/(\.\d)0$/,"$1")+"배";
+  return n.toFixed(2).replace(/\.00$/,"").replace(/(\.\d)0$/,"$1")+"%";
 }
 function improveParties(parties){
   var loops=0,improved=true;
@@ -283,7 +283,7 @@ function render(){
     html+='<option value="'+n+'" '+(String(SETTINGS.partySize)===String(n)?"selected":"")+'>'+n+'인</option>';
   });
   html+='</select></label>';
-  html+='<label class="party-boss-target"><span>목표 배율</span><div><input type="number" min="0" step="1" inputmode="decimal" data-pb-target="1" value="'+(Number(SETTINGS.targetRate)>0?String(SETTINGS.targetRate):"")+'" placeholder="140"><em>입력값 ~ +10</em></div></label>';
+  html+='<label class="party-boss-target"><span>목표 배율</span><div><input type="number" min="0" step="1" inputmode="decimal" data-pb-target="1" value="'+(Number(SETTINGS.targetRate)>0?String(SETTINGS.targetRate):"")+'" placeholder="140"><em>입력값 ~ +10%</em></div></label>';
   html+='<div class="party-boss-summary"><span>선택 캐릭터</span><b>'+selected.length+'명</b></div>';
   html+='<button class="party-boss-build" type="button" data-pb-build="1">자동 균형 맞추기</button>';
   html+='</section>';
