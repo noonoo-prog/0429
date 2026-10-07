@@ -680,7 +680,8 @@ function drawOwnerHalf(ctx,owner,y,date){
   const color=OWNER_META[owner].color,isCorn=owner===OWNERS[0];
   const x=46,w=988,h=795;
   const bossIncome=dayIncome(date,owner),extra=extraIncome(owner,date),spent=dayExpense(date,owner);
-  const totalNet=bossIncome+extra-spent;
+  const totalIncome=bossIncome+extra;
+  const totalNet=totalIncome-spent;
   const gains=incomeDetails(owner,date),expenses=spendingDetails(owner,date),bosses=dayItems(date,owner);
   rounded(ctx,x,y,w,h,27,"#ffffff",isCorn?"#e3d3a1":"#efd2e0");
   rounded(ctx,x+13,y+14,w-26,118,20,isCorn?"#fff4cc":"#ffe1ed");
@@ -689,7 +690,7 @@ function drawOwnerHalf(ctx,owner,y,date){
   txt(ctx,owner,x+131,y+79,45,"#272432","900");
   txt(ctx,ownerChars(owner).length+"개 캐릭터",x+134,y+115,23,"#756b73","700");
   const pad=27,gap=10,cardWidth=(w-2*pad-3*gap)/4,statY=y+153;
-  [["보스 수익",bossIncome],["추가 수익",extra],["사용 메소",spent],["순수익",totalNet]].forEach((item,i)=>{
+  [["총수익",totalIncome],["추가 수익",extra],["사용 메소",spent],["순수익",totalNet]].forEach((item,i)=>{
     const bx=x+pad+i*(cardWidth+gap);
     rounded(ctx,bx,statY,cardWidth,150,17,isCorn?"#fffaf0":"#fff5f9","#e8e2e7");
     txt(ctx,item[0],bx+13,statY+39,24,"#62606a","800");
@@ -734,7 +735,7 @@ function drawShort(){
   ctx.fillStyle="#ffffff";ctx.fillRect(0,0,1080,1920);
   ctx.fillStyle="#efbc32";ctx.fillRect(47,40,57,7);
   ctx.fillStyle="#fb5b9d";ctx.fillRect(104,40,57,7);
-  txt(ctx,"오늘의 보스 수익",46,109,59,"#242430","900");
+  txt(ctx,"오늘의 총수익",46,109,59,"#242430","900");
   txt(ctx,date.replaceAll("-",".")+"  ·  "+DAYS[S.day]+"요일",1031,107,28,"#74717b","750","right");
   drawOwnerHalf(ctx,OWNERS[0],148,date);
   drawOwnerHalf(ctx,OWNERS[1],968,date);
