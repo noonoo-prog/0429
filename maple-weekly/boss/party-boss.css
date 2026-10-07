@@ -1583,3 +1583,50 @@ html[data-theme="dark"] .party-boss-result{
     font-size:8px;
   }
 }
+
+
+/* Simplified character cards: no avatar, larger name/rate */
+.party-boss-char-toggle{
+  gap:0;
+}
+.party-boss-char-name{
+  min-width:0;
+}
+.party-boss-char-name b{
+  font-size:13px;
+  line-height:1.2;
+  font-weight:950;
+}
+.party-boss-char input{
+  font-size:13px;
+  font-weight:950;
+}
+@media(min-width:1200px){
+  .party-boss-char{
+    grid-template-columns:minmax(0,1fr) 76px;
+    gap:8px;
+  }
+  .party-boss-char-name b{
+    font-size:13px;
+  }
+  .party-boss-char input{
+    min-height:40px;
+    font-size:13px;
+  }
+}
+@media(max-width:959px){
+  .party-boss-char-name b{
+    font-size:13px;
+  }
+  .party-boss-char input{
+    font-size:12.5px;
+  }
+}
+@media(max-width:560px){
+  .party-boss-char-name b{
+    font-size:14px;
+  }
+  .party-boss-char input{
+    font-size:13.5px;
+  }
+}
