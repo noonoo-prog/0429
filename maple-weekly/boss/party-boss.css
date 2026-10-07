@@ -373,3 +373,32 @@ html[data-theme="dark"] .party-boss-controls,
 html[data-theme="dark"] .party-boss-result{
   background:#2d333b;
 }
+
+.party-boss-head-actions{
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.party-boss-save{
+  min-height:36px;
+  padding:0 14px;
+  border:1px solid var(--line-strong);
+  border-radius:9px;
+  background:var(--surface);
+  color:var(--muted);
+  font:inherit;
+  font-size:10px;
+  font-weight:950;
+  cursor:default;
+}
+.party-boss-save.needs-save{
+  border-color:var(--owner-accent,#6f7b88);
+  background:var(--owner-accent,#6f7b88);
+  color:#fff;
+  cursor:pointer;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--owner-accent,#6f7b88) 12%,transparent);
+}
+@media(max-width:959px){
+  .party-boss-head-actions{gap:5px}
+  .party-boss-save,.party-boss-reset{min-height:34px;padding:0 10px;font-size:9px}
+}
