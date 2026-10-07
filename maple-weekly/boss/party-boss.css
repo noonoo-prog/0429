@@ -402,3 +402,70 @@ html[data-theme="dark"] .party-boss-result{
   .party-boss-head-actions{gap:5px}
   .party-boss-save,.party-boss-reset{min-height:34px;padding:0 10px;font-size:9px}
 }
+
+/* Flexible party size + target multiplier */
+.party-boss-controls{
+  grid-template-columns:minmax(145px,1.05fr) minmax(120px,.75fr) minmax(155px,.9fr) 105px minmax(160px,1fr);
+}
+.party-boss-target>div{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:6px;
+  align-items:center;
+}
+.party-boss-target input{
+  width:100%;
+  min-width:0;
+  min-height:38px;
+  box-sizing:border-box;
+  padding:0 10px;
+  border:1px solid var(--line-strong);
+  border-radius:9px;
+  background:var(--surface);
+  color:var(--text);
+  font:inherit;
+  font-size:11px;
+  font-weight:900;
+  text-align:right;
+}
+.party-boss-target em{
+  color:var(--pb-muted);
+  font-size:8px;
+  font-style:normal;
+  font-weight:850;
+  white-space:nowrap;
+}
+.party-boss-party-card.in-target{
+  border-color:color-mix(in srgb,var(--owner-accent,#6f7b88) 52%,var(--pb-line));
+}
+.party-boss-party-card>header>div>em{
+  display:inline-flex;
+  align-items:center;
+  min-height:20px;
+  padding:0 6px;
+  border-radius:999px;
+  background:var(--surface);
+  color:var(--pb-muted);
+  font-size:8px;
+  font-style:normal;
+  font-weight:900;
+}
+.party-boss-party-card.in-target>header>div>em{
+  color:var(--text);
+}
+@media(max-width:959px){
+  .party-boss-controls{
+    grid-template-columns:1fr 1fr;
+  }
+  .party-boss-target{
+    grid-column:1/-1;
+  }
+}
+@media(max-width:560px){
+  .party-boss-target>div{
+    grid-template-columns:1fr;
+  }
+  .party-boss-target em{
+    white-space:normal;
+  }
+}
