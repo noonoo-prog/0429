@@ -632,7 +632,7 @@ function renderNow(){
       html+='<article class="party-boss-char owner-themed '+(active?"active":"")+'" data-theme="'+c.theme+'">';
       html+='<button class="party-boss-char-toggle" type="button" data-pb-char="'+esc(c.key)+'" aria-pressed="'+(active?"true":"false")+'">';
       html+='<span class="party-boss-avatar">'+esc(c.name.slice(0,1))+'</span>';
-      html+='<span class="party-boss-char-name"><b>'+esc(c.name)+'</b><small>'+esc(c.ownerName)+'</small></span>';
+      html+='<span class="party-boss-char-name"><b>'+esc(c.name)+'</b></span>';
       html+='</button>';
       html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(c.key)+'" value="'+String(c.multiplier||0)+'" placeholder="0"></label>';
       html+='</article>';
