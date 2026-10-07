@@ -64,7 +64,7 @@ function readJSON(key,fallback){
 var MULT=readJSON(MULT_KEY,{});
 var LEGACY_MULT=readJSON(LEGACY_MULT_KEY,{});
 var SELECTED=readJSON(SELECT_KEY,[]);
-var SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:3,targetRate:0},readJSON(SETTINGS_KEY,{}));
+var SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:3,partyCount:0,targetRate:0},readJSON(SETTINGS_KEY,{}));
 var SAVED_RESULT=readJSON(RESULT_KEY,[]);
 
 function defaultDifficulty(boss){
@@ -189,6 +189,7 @@ function sharedPayload(){
       boss:String(SETTINGS.boss||"카링"),
       difficulty:String(SETTINGS.difficulty||defaultDifficulty(SETTINGS.boss)),
       partySize:SETTINGS.partySize,
+      partyCount:Math.max(0,Math.floor(Number(SETTINGS.partyCount)||0)),
       targetRate:Math.max(0,Number(SETTINGS.targetRate)||0)
     },
     selected:SELECTED.slice(),
@@ -199,7 +200,7 @@ function sharedPayload(){
 function applySharedState(state,updatedBy,updatedAt){
   if(!state||typeof state!=="object"||Array.isArray(state))return false;
   if(!state.settings&&!state.multipliers&&!state.selected&&!state.result)return false;
-  SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:3,targetRate:0},state.settings||{});
+  SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:3,partyCount:0,targetRate:0},state.settings||{});
   normalizeDifficulty();
   SELECTED=Array.isArray(state.selected)?state.selected.slice():[];
   MULT=(state.multipliers&&typeof state.multipliers==="object"&&!Array.isArray(state.multipliers))
@@ -413,15 +414,29 @@ function scoreParties(parties,target){
   var centerError=totals.reduce(function(sum,v){var d=v-center;return sum+d*d},0);
   return targetBandPenalty(parties,target)+spread*spread+centerError*.03;
 }
-function balance(chars,partySize,targetRate){
+function balance(chars,partySize,targetRate,partyCount){
   if(!chars.length)return[];
   var ownerMin=maxSelectedOwnerCount(chars);
+  var requestedCount=Math.max(0,Math.floor(Number(partyCount)||0));
+
+  if(requestedCount>0){
+    if(requestedCount>Math.floor(chars.length/2))return[];
+    if(ownerMin>requestedCount)return[];
+    var requestedMax=partySize==="any"?6:Math.max(2,Math.min(6,Number(partySize)||3));
+    if(chars.length>requestedCount*requestedMax)return[];
+    var exact=balanceByPartyCount(chars,requestedCount,requestedMax);
+    if(!exact)return[];
+    if(exact.some(function(p){return p.members.length<2}))return[];
+    return exact;
+  }
 
   if(partySize!=="any"){
     var fixed=Math.max(2,Math.min(6,Number(partySize)||3));
     var count=Math.max(1,Math.ceil(chars.length/fixed),ownerMin);
+    if(count>Math.floor(chars.length/2))return[];
     var fixedResult=balanceByPartyCount(chars,count,fixed);
-    return fixedResult||[];
+    if(!fixedResult||fixedResult.some(function(p){return p.members.length<2}))return[];
+    return fixedResult;
   }
 
   var n=chars.length;
@@ -488,7 +503,32 @@ function build(){
     notify("같은 주인의 캐릭터가 너무 많아서 한 파티에 1캐릭터씩 나눌 수 없어요. 다른 주인 캐릭터를 더 선택해 주세요.");
     return;
   }
-  RESULT=balance(chars,SETTINGS.partySize,SETTINGS.targetRate);
+  var requestedCount=Math.max(0,Math.floor(Number(SETTINGS.partyCount)||0));
+  var requestedSize=SETTINGS.partySize==="any"?"any":Math.max(2,Math.min(6,Number(SETTINGS.partySize)||3));
+  if(requestedCount>0){
+    if(chars.length<requestedCount*2){
+      RESULT=[];
+      markDirty();
+      render();
+      notify(requestedCount+"파티를 만들려면 최소 "+(requestedCount*2)+"캐릭터가 필요해요.");
+      return;
+    }
+    if(requestedSize!=="any"&&chars.length>requestedCount*requestedSize){
+      RESULT=[];
+      markDirty();
+      render();
+      notify(requestedCount+"파티 · "+requestedSize+"인으로는 최대 "+(requestedCount*requestedSize)+"캐릭터까지만 넣을 수 있어요.");
+      return;
+    }
+    if(maxSelectedOwnerCount(chars)>requestedCount){
+      RESULT=[];
+      markDirty();
+      render();
+      notify("같은 주인 캐릭터 수보다 파티 수가 적어서 한 파티에 1캐릭터 규칙을 지킬 수 없어요.");
+      return;
+    }
+  }
+  RESULT=balance(chars,SETTINGS.partySize,SETTINGS.targetRate,SETTINGS.partyCount);
   if(!RESULT.length){
     markDirty();
     render();
@@ -568,12 +608,8 @@ function renderNow(){
     html+='<option value="'+esc(d)+'" '+(SETTINGS.difficulty===d?"selected":"")+'>'+esc(d)+'</option>';
   });
   html+='</select></label>';
-  html+='<label><span>파티 인원</span><select data-pb-size="1">';
-  html+='<option value="any" '+(String(SETTINGS.partySize)==="any"?"selected":"")+'>상관없음</option>';
-  [2,3,4,5,6].forEach(function(n){
-    html+='<option value="'+n+'" '+(String(SETTINGS.partySize)===String(n)?"selected":"")+'>'+n+'인</option>';
-  });
-  html+='</select></label>';
+  html+='<label class="party-boss-number"><span>파티 인원</span><div><input type="number" min="0" max="6" step="1" inputmode="numeric" data-pb-size="1" value="'+(String(SETTINGS.partySize)==="any"?"0":String(SETTINGS.partySize||0))+'" placeholder="0"><em>0 = 상관없음</em></div></label>';
+  html+='<label class="party-boss-number"><span>파티 수</span><div><input type="number" min="0" max="50" step="1" inputmode="numeric" data-pb-count="1" value="'+String(Math.max(0,Number(SETTINGS.partyCount)||0))+'" placeholder="0"><em>0 = 자동</em></div></label>';
   html+='<label class="party-boss-target"><span>목표 배율</span><div><input type="number" min="0" step="1" inputmode="decimal" data-pb-target="1" value="'+(Number(SETTINGS.targetRate)>0?String(SETTINGS.targetRate):"")+'" placeholder="140"><em>입력값 ~ +10%</em></div></label>';
   html+='<div class="party-boss-summary"><span>선택 캐릭터</span><b>'+selected.length+'명</b></div>';
   html+='<button class="party-boss-build" type="button" data-pb-build="1">자동 균형 맞추기</button>';
@@ -606,9 +642,10 @@ function renderNow(){
     var max=Math.max.apply(null,totals),min=Math.min.apply(null,totals);
     html+='<section class="party-boss-result">';
     var sizeLabel=String(SETTINGS.partySize)==="any"?"인원 상관없음":SETTINGS.partySize+"인 기준";
+    var countLabel=Math.max(0,Number(SETTINGS.partyCount)||0)>0?" · "+Math.floor(Number(SETTINGS.partyCount))+"파티":"";
     var target=Number(SETTINGS.targetRate)||0;
     var targetLabel=target>0?" · 목표 "+formatRate(target)+" ~ "+formatRate(target+10):"";
-    html+='<header><div><span>자동 편성 결과</span><strong>'+esc(SETTINGS.boss)+' · '+esc(SETTINGS.difficulty)+' · '+sizeLabel+targetLabel+'</strong></div>';
+    html+='<header><div><span>자동 편성 결과</span><strong>'+esc(SETTINGS.boss)+' · '+esc(SETTINGS.difficulty)+' · '+sizeLabel+countLabel+targetLabel+'</strong></div>';
     html+='<div class="party-boss-gap"><span>파티간 차이</span><b>'+formatRate(max-min)+'</b></div></header>';
     html+='<div class="party-boss-result-grid">';
     RESULT.forEach(function(p){
@@ -651,7 +688,16 @@ function renderNow(){
   var difficulty=panel.querySelector("[data-pb-difficulty]");
   if(difficulty)difficulty.onchange=function(){SETTINGS.difficulty=difficulty.value;markDirty();render()};
   var size=panel.querySelector("[data-pb-size]");
-  if(size)size.onchange=function(){SETTINGS.partySize=size.value==="any"?"any":(Number(size.value)||3);RESULT=[];markDirty();render()};
+  if(size)size.onchange=function(){
+    var n=Math.floor(Number(size.value)||0);
+    SETTINGS.partySize=n<=0?"any":Math.max(2,Math.min(6,n));
+    RESULT=[];markDirty();render();
+  };
+  var countInput=panel.querySelector("[data-pb-count]");
+  if(countInput)countInput.onchange=function(){
+    SETTINGS.partyCount=Math.max(0,Math.min(50,Math.floor(Number(countInput.value)||0)));
+    RESULT=[];markDirty();render();
+  };
   var targetInput=panel.querySelector("[data-pb-target]");
   if(targetInput)targetInput.onchange=function(){
     SETTINGS.targetRate=Math.max(0,Number(targetInput.value)||0);
