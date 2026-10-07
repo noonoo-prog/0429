@@ -49,6 +49,8 @@ var SHARED_LOADED=false;
 var RENDERING=false;
 var RENDER_PENDING=false;
 var RENDER_TIMER=null;
+var BUILDING=false;
+var MESO_SORT="original";
 
 function esc(s){
   return String(s==null?"":s).replace(/[&<>"']/g,function(m){
@@ -64,7 +66,7 @@ function readJSON(key,fallback){
 var MULT=readJSON(MULT_KEY,{});
 var LEGACY_MULT=readJSON(LEGACY_MULT_KEY,{});
 var SELECTED=readJSON(SELECT_KEY,[]);
-var SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:3,partyCount:0,targetRate:0},readJSON(SETTINGS_KEY,{}));
+var SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:"any",partyCount:0,targetRate:130},readJSON(SETTINGS_KEY,{}));
 var SAVED_RESULT=readJSON(RESULT_KEY,[]);
 
 function defaultDifficulty(boss){
@@ -118,8 +120,6 @@ function restoreSavedResult(){
   RESULT=SAVED_RESULT.map(function(saved,i){
     var members=(saved.memberKeys||[]).map(function(key){return byKey[key]}).filter(Boolean);
     if(!members.length)return null;
-    var ownerIds=members.map(function(c){return String(c.ownerId||c.ownerName||"")});
-    if(new Set(ownerIds).size!==ownerIds.length)return null;
     return {
       id:Number(saved.id)||i+1,
       max:members.length,
@@ -190,7 +190,7 @@ function sharedPayload(){
       difficulty:String(SETTINGS.difficulty||defaultDifficulty(SETTINGS.boss)),
       partySize:SETTINGS.partySize,
       partyCount:Math.max(0,Math.floor(Number(SETTINGS.partyCount)||0)),
-      targetRate:Math.max(0,Number(SETTINGS.targetRate)||0)
+      targetRate:Math.max(1,Number(SETTINGS.targetRate)||130)
     },
     selected:SELECTED.slice(),
     multipliers:JSON.parse(JSON.stringify(MULT||{})),
@@ -200,8 +200,9 @@ function sharedPayload(){
 function applySharedState(state,updatedBy,updatedAt){
   if(!state||typeof state!=="object"||Array.isArray(state))return false;
   if(!state.settings&&!state.multipliers&&!state.selected&&!state.result)return false;
-  SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:3,partyCount:0,targetRate:0},state.settings||{});
+  SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:"any",partyCount:0,targetRate:130},state.settings||{});
   normalizeDifficulty();
+  SETTINGS.targetRate=Math.max(1,Number(SETTINGS.targetRate)||130);
   SELECTED=Array.isArray(state.selected)?state.selected.slice():[];
   MULT=(state.multipliers&&typeof state.multipliers==="object"&&!Array.isArray(state.multipliers))
     ?JSON.parse(JSON.stringify(state.multipliers))
@@ -313,153 +314,200 @@ function formatRate(n){
   n=Math.max(0,Number(n)||0);
   return n.toFixed(2).replace(/\.00$/,"").replace(/(\.\d)0$/,"$1")+"%";
 }
-function partyHasOwner(party,ownerId,exceptIndex){
-  return party.members.some(function(member,index){
-    return index!==exceptIndex&&String(member.ownerId)===String(ownerId);
-  });
-}
-function maxSelectedOwnerCount(chars){
-  var counts={};
+function ownerAverages(chars){
+  var sums={},counts={},out={};
   chars.forEach(function(c){
     var key=String(c.ownerId||c.ownerName||"");
+    sums[key]=(sums[key]||0)+c.multiplier;
     counts[key]=(counts[key]||0)+1;
   });
-  var max=0;
-  Object.keys(counts).forEach(function(key){if(counts[key]>max)max=counts[key]});
-  return max;
+  Object.keys(counts).forEach(function(key){out[key]=sums[key]/counts[key]});
+  return out;
 }
-function canMakeTwoPlusParties(chars){
-  if(chars.length<2)return false;
-  return maxSelectedOwnerCount(chars)<=Math.floor(chars.length/2);
+function averageGrade(rate){
+  if(rate>=36)return {level:1,label:"소수팟 우선권 높음"};
+  if(rate>=33)return {level:2,label:"소수팟 우선권 중상"};
+  if(rate>=30)return {level:3,label:"기본 우선권"};
+  return {level:4,label:"다인팟 우선"};
 }
-function improveParties(parties){
-  var loops=0,improved=true;
-  while(improved&&loops<120){
-    improved=false;loops++;
-    var totals=parties.map(function(p){return p.total});
-    var currentRange=Math.max.apply(null,totals)-Math.min.apply(null,totals);
-    outer:
-    for(var ai=0;ai<parties.length;ai++){
-      for(var bi=ai+1;bi<parties.length;bi++){
-        var A=parties[ai],B=parties[bi];
-        for(var am=0;am<A.members.length;am++){
-          for(var bm=0;bm<B.members.length;bm++){
-            var aMember=A.members[am],bMember=B.members[bm];
-            if(partyHasOwner(A,bMember.ownerId,am))continue;
-            if(partyHasOwner(B,aMember.ownerId,bm))continue;
-            var av=aMember.multiplier,bv=bMember.multiplier;
-            var newA=A.total-av+bv,newB=B.total-bv+av;
-            var check=parties.map(function(p){return p===A?newA:(p===B?newB:p.total)});
-            var nextRange=Math.max.apply(null,check)-Math.min.apply(null,check);
-            if(nextRange+0.000001<currentRange){
-              var temp=A.members[am];A.members[am]=B.members[bm];B.members[bm]=temp;
-              A.total=newA;B.total=newB;improved=true;
-              break outer;
-            }
-          }
-        }
-      }
-    }
-  }
+function partyTotal(p){
+  return p.members.reduce(function(sum,c){return sum+c.multiplier},0);
+}
+function normalizeParties(parties){
+  parties.forEach(function(p,i){
+    p.id=i+1;
+    p.total=partyTotal(p);
+    p.max=6;
+  });
   return parties;
 }
-function balanceByPartyCount(chars,partyCount,maxPartySize){
-  partyCount=Math.max(1,Math.min(chars.length,Number(partyCount)||1));
-  maxPartySize=Math.max(1,Math.min(6,Number(maxPartySize)||6));
-  var parties=[];
-  for(var i=0;i<partyCount;i++){
-    parties.push({id:i+1,max:maxPartySize,members:[],total:0});
-  }
-  var ownerCounts={};
-  chars.forEach(function(c){
-    var ownerKey=String(c.ownerId||c.ownerName||"");
-    ownerCounts[ownerKey]=(ownerCounts[ownerKey]||0)+1;
-  });
-  var ordered=chars.slice().sort(function(a,b){
-    var ao=ownerCounts[String(a.ownerId||a.ownerName||"")]||0;
-    var bo=ownerCounts[String(b.ownerId||b.ownerName||"")]||0;
-    if(bo!==ao)return bo-ao;
-    if(b.multiplier!==a.multiplier)return b.multiplier-a.multiplier;
-    return String(a.name).localeCompare(String(b.name),"ko");
-  });
-
-  for(var oi=0;oi<ordered.length;oi++){
-    var ch=ordered[oi];
-    var candidates=parties.filter(function(p){
-      return p.members.length<p.max&&!partyHasOwner(p,ch.ownerId,-1);
+function candidateScore(parties,target,ownerAvgs){
+  var below=0,shortfall=0,above=0,min=Infinity,max=-Infinity;
+  var reward={},runs={};
+  var strongSizePenalty=0,duplicateOwners=0;
+  parties.forEach(function(p){
+    var total=p.total,sz=p.members.length;
+    if(total<target-0.000001){below++;shortfall+=Math.pow(target-total,2)}
+    if(total>target*1.1)above+=Math.pow(total-target*1.1,2);
+    min=Math.min(min,total);max=Math.max(max,total);
+    var seen={};
+    p.members.forEach(function(c){
+      var key=String(c.ownerId||c.ownerName||"");
+      if(seen[key])duplicateOwners++;
+      seen[key]=true;
+      var own=ownerAvgs[key]||0;
+      // Character strength leads. Owner average is a small tie-breaker.
+      strongSizePenalty+=(c.multiplier+own*.12)*Math.pow(sz-2,1.1);
+      reward[key]=(reward[key]||0)+1/sz;
+      runs[key]=(runs[key]||0)+1;
     });
-    if(!candidates.length)return null;
-    candidates.sort(function(a,b){
-      if(a.total!==b.total)return a.total-b.total;
-      return a.members.length-b.members.length;
-    });
-    var p=candidates[0];
-    p.members.push(ch);p.total+=ch.multiplier;
-  }
-  return improveParties(parties);
-}
-function targetBandPenalty(parties,target){
-  if(!(target>0))return 0;
-  var low=target,high=target+10;
-  return parties.reduce(function(score,p){
-    var miss=p.total<low?low-p.total:(p.total>high?p.total-high:0);
-    return score+miss*miss*100;
+  });
+  var keys=Object.keys(reward);
+  var rewardMean=keys.reduce(function(s,k){return s+reward[k]/runs[k]},0)/Math.max(1,keys.length);
+  var rewardVariance=keys.reduce(function(s,k){
+    return s+Math.pow(reward[k]/runs[k]-rewardMean,2);
   },0);
+  // Target is mandatory before soft preferences; the upper band is advisory.
+  return below*1e9+shortfall*1e6
+    +strongSizePenalty*55
+    +Math.pow(max-min,2)*.45
+    +above*.18
+    +duplicateOwners*180
+    +rewardVariance*18000;
 }
-function scoreParties(parties,target){
-  if(!parties.length)return Number.POSITIVE_INFINITY;
-  var totals=parties.map(function(p){return p.total});
-  var spread=Math.max.apply(null,totals)-Math.min.apply(null,totals);
-  var center=(target>0)?target+5:totals.reduce(function(a,b){return a+b},0)/totals.length;
-  var centerError=totals.reduce(function(sum,v){var d=v-center;return sum+d*d},0);
-  return targetBandPenalty(parties,target)+spread*spread+centerError*.03;
+function initialParties(chars,k,cap,target,ownerAvgs,seed){
+  var sorted=chars.slice().sort(function(a,b){
+    var ax=a.multiplier+(ownerAvgs[String(a.ownerId||a.ownerName||"")]||0)*.12;
+    var bx=b.multiplier+(ownerAvgs[String(b.ownerId||b.ownerName||"")]||0)*.12;
+    if(Math.abs(bx-ax)>0.000001)return bx-ax;
+    return a.key.localeCompare(b.key,"ko");
+  });
+  // Deterministic varied starts; strongest anchors stay separated.
+  var parties=Array.from({length:k},function(_,i){return{id:i+1,max:cap,members:[],total:0}});
+  sorted.slice(0,k).forEach(function(c,i){
+    var p=parties[(i+seed)%k];p.members.push(c);p.total+=c.multiplier;
+  });
+  var rest=sorted.slice(k);
+  if(seed%2)rest.reverse();
+  rest.forEach(function(c,idx){
+    var remaining=rest.length-idx-1;
+    var needy=parties.filter(function(p){return p.members.length<2});
+    var choices=parties.filter(function(p){return p.members.length<cap});
+    if(needy.length>=remaining+1)choices=choices.filter(function(p){return p.members.length<2});
+    var best=null,bestScore=Infinity;
+    choices.forEach(function(p){
+      var next=p.total+c.multiplier;
+      var ownerDuplicate=p.members.some(function(m){return m.ownerId===c.ownerId});
+      var score=Math.abs(target-next)*1.1
+        +(next<target?(target-next)*.9:(next-target)*.3)
+        +p.members.length*4
+        +(ownerDuplicate?20:0);
+      // Encourage a small group anchored by a strong character.
+      if(p.members.length===1)score-=14;
+      score+=((p.id*13+seed*7)%11)*.07;
+      if(score<bestScore){best=p;bestScore=score}
+    });
+    if(!best)return;
+    best.members.push(c);best.total+=c.multiplier;
+  });
+  if(parties.some(function(p){return p.members.length<2||p.members.length>cap}))return null;
+  return parties;
+}
+function optimizeParties(parties,target,ownerAvgs,cap,deadline){
+  normalizeParties(parties);
+  var bestScore=candidateScore(parties,target,ownerAvgs);
+  for(var round=0;round<12&&Date.now()<deadline;round++){
+    var best=null,nextScore=bestScore;
+    for(var i=0;i<parties.length;i++){
+      var A=parties[i];
+      for(var j=i+1;j<parties.length;j++){
+        var B=parties[j];
+        // Exchange one member; always preserves size.
+        for(var ai=0;ai<A.members.length;ai++){
+          for(var bj=0;bj<B.members.length;bj++){
+            var ca=A.members[ai],cb=B.members[bj];
+            if(ca.multiplier===cb.multiplier&&ca.ownerId===cb.ownerId)continue;
+            A.members[ai]=cb;B.members[bj]=ca;
+            A.total+=cb.multiplier-ca.multiplier;
+            B.total+=ca.multiplier-cb.multiplier;
+            var score=candidateScore(parties,target,ownerAvgs);
+            if(score<nextScore-0.000001){nextScore=score;best={type:"swap",i:i,j:j,ai:ai,bj:bj}}
+            A.members[ai]=ca;B.members[bj]=cb;
+            A.total-=cb.multiplier-ca.multiplier;
+            B.total-=ca.multiplier-cb.multiplier;
+          }
+        }
+        // Moving a character makes 2/3-person groups possible.
+        [[A,B,i,j],[B,A,j,i]].forEach(function(pair){
+          var from=pair[0],to=pair[1],fi=pair[2],ti=pair[3];
+          if(from.members.length<=2||to.members.length>=cap)return;
+          for(var mi=0;mi<from.members.length;mi++){
+            var member=from.members.splice(mi,1)[0];
+            to.members.push(member);
+            from.total-=member.multiplier;to.total+=member.multiplier;
+            var score=candidateScore(parties,target,ownerAvgs);
+            if(score<nextScore-0.000001){nextScore=score;best={type:"move",i:fi,j:ti,ai:mi}}
+            from.members.splice(mi,0,member);to.members.pop();
+            from.total+=member.multiplier;to.total-=member.multiplier;
+          }
+        });
+      }
+    }
+    if(!best)break;
+    var from=parties[best.i],to=parties[best.j];
+    if(best.type==="swap"){
+      var tmp=from.members[best.ai];from.members[best.ai]=to.members[best.bj];to.members[best.bj]=tmp;
+    }else{
+      to.members.push(from.members.splice(best.ai,1)[0]);
+    }
+    normalizeParties(parties);
+    bestScore=nextScore;
+  }
+  return normalizeParties(parties);
+}
+function partyCountOptions(n,cap,requested,total,target){
+  var min=Math.max(1,Math.ceil(n/cap)),max=Math.floor(n/2);
+  if(requested)return requested>=min&&requested<=max?[requested]:[];
+  var feasible=[];
+  for(var k=min;k<=max;k++)if(total+0.000001>=target*k)feasible.push(k);
+  if(!feasible.length)return [min]; // Show an explicitly insufficient result.
+  var priority=feasible.filter(function(k){return k===6||k===7});
+  if(priority.length)return priority;
+  // Outside the preferred range, choose the nearest feasible count.
+  var nearest=feasible.reduce(function(best,k){
+    var distance=Math.min(Math.abs(k-6),Math.abs(k-7));
+    var old=Math.min(Math.abs(best-6),Math.abs(best-7));
+    return distance<old? k:best;
+  },feasible[0]);
+  return [nearest];
 }
 function balance(chars,partySize,targetRate,partyCount){
-  if(!chars.length)return[];
-  var ownerMin=maxSelectedOwnerCount(chars);
-  var requestedCount=Math.max(0,Math.floor(Number(partyCount)||0));
-
-  if(requestedCount>0){
-    if(requestedCount>Math.floor(chars.length/2))return[];
-    if(ownerMin>requestedCount)return[];
-    var requestedMax=partySize==="any"?6:Math.max(2,Math.min(6,Number(partySize)||3));
-    if(chars.length>requestedCount*requestedMax)return[];
-    var exact=balanceByPartyCount(chars,requestedCount,requestedMax);
-    if(!exact)return[];
-    if(exact.some(function(p){return p.members.length<2}))return[];
-    return exact;
-  }
-
-  if(partySize!=="any"){
-    var fixed=Math.max(2,Math.min(6,Number(partySize)||3));
-    var count=Math.max(1,Math.ceil(chars.length/fixed),ownerMin);
-    if(count>Math.floor(chars.length/2))return[];
-    var fixedResult=balanceByPartyCount(chars,count,fixed);
-    if(!fixedResult||fixedResult.some(function(p){return p.members.length<2}))return[];
-    return fixedResult;
-  }
-
-  var n=chars.length;
-  if(n<=2){
-    var tiny=balanceByPartyCount(chars,Math.max(1,ownerMin),6);
-    return tiny||[];
-  }
-  var minParties=Math.max(1,Math.ceil(n/6),ownerMin);
-  var maxParties=Math.max(1,Math.floor(n/2));
-  if(maxParties<minParties)return[];
-
-  var target=Math.max(0,Number(targetRate)||0);
-  var best=null,bestScore=Number.POSITIVE_INFINITY;
-  for(var k=minParties;k<=maxParties;k++){
-    var candidate=balanceByPartyCount(chars,k,6);
-    if(!candidate)continue;
-    if(candidate.some(function(p){return p.members.length<2}))continue;
-    var score=scoreParties(candidate,target);
-    if(score<bestScore){
-      bestScore=score;
-      best=candidate;
+  if(chars.length<2)return[];
+  var target=Math.max(1,Number(targetRate)||130);
+  var cap=partySize==="any"?6:Math.max(2,Math.min(6,Number(partySize)||3));
+  var requested=Math.max(0,Math.floor(Number(partyCount)||0));
+  var total=chars.reduce(function(s,c){return s+c.multiplier},0);
+  var options=partyCountOptions(chars.length,cap,requested,total,target);
+  if(!options.length)return[];
+  var avgs=ownerAverages(chars);
+  var best=null,bestScore=Infinity;
+  var deadline=Date.now()+1100;
+  // When auto, favor 6-7 parties as long as the target remains feasible.
+  options.forEach(function(k){
+    for(var seed=0;seed<3;seed++){
+      if(Date.now()>deadline&&best)break;
+      var initial=initialParties(chars,k,cap,target,avgs,seed);
+      if(!initial)continue;
+      var candidate=optimizeParties(initial,target,avgs,cap,deadline);
+      var score=candidateScore(candidate,target,avgs);
+      if(!requested){
+        var distance=Math.min(Math.abs(k-6),Math.abs(k-7));
+        score+=distance*150;
+        if(total>=target*k)score+=(k===6||k===7?0:90);
+      }
+      if(score<bestScore-0.000001){bestScore=score;best=candidate}
     }
-  }
+  });
   return best||[];
 }
 function fetchBoard(restoreResult){
@@ -488,21 +536,6 @@ function build(){
     notify("파티를 짤 캐릭터를 2명 이상 선택해 주세요.");
     return;
   }
-  var missing=chars.filter(function(c){return !(c.multiplier>0)});
-  if(missing.length){
-    RESULT=[];
-    markDirty();
-    render();
-    notify("선택한 캐릭터의 배율을 모두 입력해 주세요.");
-    return;
-  }
-  if(!canMakeTwoPlusParties(chars)){
-    RESULT=[];
-    markDirty();
-    render();
-    notify("같은 주인의 캐릭터가 너무 많아서 한 파티에 1캐릭터씩 나눌 수 없어요. 다른 주인 캐릭터를 더 선택해 주세요.");
-    return;
-  }
   var requestedCount=Math.max(0,Math.floor(Number(SETTINGS.partyCount)||0));
   var requestedSize=SETTINGS.partySize==="any"?"any":Math.max(2,Math.min(6,Number(SETTINGS.partySize)||3));
   if(requestedCount>0){
@@ -520,19 +553,12 @@ function build(){
       notify(requestedCount+"파티 · "+requestedSize+"인으로는 최대 "+(requestedCount*requestedSize)+"캐릭터까지만 넣을 수 있어요.");
       return;
     }
-    if(maxSelectedOwnerCount(chars)>requestedCount){
-      RESULT=[];
-      markDirty();
-      render();
-      notify("같은 주인 캐릭터 수보다 파티 수가 적어서 한 파티에 1캐릭터 규칙을 지킬 수 없어요.");
-      return;
-    }
   }
   RESULT=balance(chars,SETTINGS.partySize,SETTINGS.targetRate,SETTINGS.partyCount);
   if(!RESULT.length){
     markDirty();
     render();
-    notify("같은 주인 캐릭터가 한 파티에 겹치지 않도록 편성할 수 없어요.");
+    notify("선택한 파티 수와 인원 제한으로 편성할 수 없어요.");
     return;
   }
   markDirty();
