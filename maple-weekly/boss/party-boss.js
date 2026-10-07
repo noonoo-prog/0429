@@ -48,6 +48,8 @@ function restoreSavedResult(){
   RESULT=SAVED_RESULT.map(function(saved,i){
     var members=(saved.memberKeys||[]).map(function(key){return byKey[key]}).filter(Boolean);
     if(!members.length)return null;
+    var ownerIds=members.map(function(c){return String(c.ownerId||c.ownerName||"")});
+    if(new Set(ownerIds).size!==ownerIds.length)return null;
     return {
       id:Number(saved.id)||i+1,
       max:members.length,
@@ -55,6 +57,7 @@ function restoreSavedResult(){
       total:members.reduce(function(sum,c){return sum+c.multiplier},0)
     };
   }).filter(Boolean);
+  if(RESULT.length!==SAVED_RESULT.length)RESULT=[];
 }
 function savePrefs(){
   materializeCurrentBossMultipliers();
