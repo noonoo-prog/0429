@@ -69,6 +69,7 @@ var SAVED_RESULT=readJSON(RESULT_KEY,[]);
 
 function defaultDifficulty(boss){
   var list=BOSS_DIFFICULTIES[boss]||[];
+  if(boss==="검은 마법사"&&list.indexOf("익스트림")>=0)return "익스트림";
   return list.indexOf("하드")>=0?"하드":String(list[0]||"");
 }
 function normalizeDifficulty(){
