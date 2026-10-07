@@ -130,6 +130,25 @@ function formatRate(n){
   n=Math.max(0,Number(n)||0);
   return n.toFixed(2).replace(/\.00$/,"").replace(/(\.\d)0$/,"$1")+"%";
 }
+function partyHasOwner(party,ownerId,exceptIndex){
+  return party.members.some(function(member,index){
+    return index!==exceptIndex&&String(member.ownerId)===String(ownerId);
+  });
+}
+function maxSelectedOwnerCount(chars){
+  var counts={};
+  chars.forEach(function(c){
+    var key=String(c.ownerId||c.ownerName||"");
+    counts[key]=(counts[key]||0)+1;
+  });
+  var max=0;
+  Object.keys(counts).forEach(function(key){if(counts[key]>max)max=counts[key]});
+  return max;
+}
+function canMakeTwoPlusParties(chars){
+  if(chars.length<2)return false;
+  return maxSelectedOwnerCount(chars)<=Math.floor(chars.length/2);
+}
 function improveParties(parties){
   var loops=0,improved=true;
   while(improved&&loops<120){
@@ -142,7 +161,10 @@ function improveParties(parties){
         var A=parties[ai],B=parties[bi];
         for(var am=0;am<A.members.length;am++){
           for(var bm=0;bm<B.members.length;bm++){
-            var av=A.members[am].multiplier,bv=B.members[bm].multiplier;
+            var aMember=A.members[am],bMember=B.members[bm];
+            if(partyHasOwner(A,bMember.ownerId,am))continue;
+            if(partyHasOwner(B,aMember.ownerId,bm))continue;
+            var av=aMember.multiplier,bv=bMember.multiplier;
             var newA=A.total-av+bv,newB=B.total-bv+av;
             var check=parties.map(function(p){return p===A?newA:(p===B?newB:p.total)});
             var nextRange=Math.max.apply(null,check)-Math.min.apply(null,check);
@@ -158,27 +180,39 @@ function improveParties(parties){
   }
   return parties;
 }
-function balanceByPartyCount(chars,partyCount){
+function balanceByPartyCount(chars,partyCount,maxPartySize){
   partyCount=Math.max(1,Math.min(chars.length,Number(partyCount)||1));
-  var base=Math.floor(chars.length/partyCount);
-  var extra=chars.length%partyCount;
+  maxPartySize=Math.max(1,Math.min(6,Number(maxPartySize)||6));
   var parties=[];
   for(var i=0;i<partyCount;i++){
-    parties.push({id:i+1,max:base+(i<extra?1:0),members:[],total:0});
+    parties.push({id:i+1,max:maxPartySize,members:[],total:0});
   }
+  var ownerCounts={};
+  chars.forEach(function(c){
+    var ownerKey=String(c.ownerId||c.ownerName||"");
+    ownerCounts[ownerKey]=(ownerCounts[ownerKey]||0)+1;
+  });
   var ordered=chars.slice().sort(function(a,b){
+    var ao=ownerCounts[String(a.ownerId||a.ownerName||"")]||0;
+    var bo=ownerCounts[String(b.ownerId||b.ownerName||"")]||0;
+    if(bo!==ao)return bo-ao;
     if(b.multiplier!==a.multiplier)return b.multiplier-a.multiplier;
     return String(a.name).localeCompare(String(b.name),"ko");
   });
-  ordered.forEach(function(ch){
-    var candidates=parties.filter(function(p){return p.members.length<p.max});
+
+  for(var oi=0;oi<ordered.length;oi++){
+    var ch=ordered[oi];
+    var candidates=parties.filter(function(p){
+      return p.members.length<p.max&&!partyHasOwner(p,ch.ownerId,-1);
+    });
+    if(!candidates.length)return null;
     candidates.sort(function(a,b){
       if(a.total!==b.total)return a.total-b.total;
       return a.members.length-b.members.length;
     });
     var p=candidates[0];
     p.members.push(ch);p.total+=ch.multiplier;
-  });
+  }
   return improveParties(parties);
 }
 function targetBandPenalty(parties,target){
@@ -199,29 +233,37 @@ function scoreParties(parties,target){
 }
 function balance(chars,partySize,targetRate){
   if(!chars.length)return[];
+  var ownerMin=maxSelectedOwnerCount(chars);
+
   if(partySize!=="any"){
     var fixed=Math.max(2,Math.min(6,Number(partySize)||3));
-    var count=Math.max(1,Math.ceil(chars.length/fixed));
-    return balanceByPartyCount(chars,count);
+    var count=Math.max(1,Math.ceil(chars.length/fixed),ownerMin);
+    var fixedResult=balanceByPartyCount(chars,count,fixed);
+    return fixedResult||[];
   }
 
   var n=chars.length;
-  if(n<=2)return balanceByPartyCount(chars,1);
-  var minParties=Math.max(1,Math.ceil(n/6));
+  if(n<=2){
+    var tiny=balanceByPartyCount(chars,Math.max(1,ownerMin),6);
+    return tiny||[];
+  }
+  var minParties=Math.max(1,Math.ceil(n/6),ownerMin);
   var maxParties=Math.max(1,Math.floor(n/2));
-  if(maxParties<minParties)maxParties=minParties;
+  if(maxParties<minParties)return[];
 
   var target=Math.max(0,Number(targetRate)||0);
   var best=null,bestScore=Number.POSITIVE_INFINITY;
   for(var k=minParties;k<=maxParties;k++){
-    var candidate=balanceByPartyCount(chars,k);
+    var candidate=balanceByPartyCount(chars,k,6);
+    if(!candidate)continue;
+    if(candidate.some(function(p){return p.members.length<2}))continue;
     var score=scoreParties(candidate,target);
     if(score<bestScore){
       bestScore=score;
       best=candidate;
     }
   }
-  return best||balanceByPartyCount(chars,1);
+  return best||[];
 }
 function fetchBoard(restoreResult){
   if(loading)return Promise.resolve();
@@ -257,7 +299,20 @@ function build(){
     notify("선택한 캐릭터의 배율을 모두 입력해 주세요.");
     return;
   }
+  if(!canMakeTwoPlusParties(chars)){
+    RESULT=[];
+    markDirty();
+    render();
+    notify("같은 주인의 캐릭터가 너무 많아서 한 파티에 1캐릭터씩 나눌 수 없어요. 다른 주인 캐릭터를 더 선택해 주세요.");
+    return;
+  }
   RESULT=balance(chars,SETTINGS.partySize,SETTINGS.targetRate);
+  if(!RESULT.length){
+    markDirty();
+    render();
+    notify("같은 주인 캐릭터가 한 파티에 겹치지 않도록 편성할 수 없어요.");
+    return;
+  }
   markDirty();
   render();
 }
