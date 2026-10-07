@@ -5,7 +5,8 @@ var SUPABASE_URL="https://ibqpjcedzcllacbamrnu.supabase.co";
 var SUPABASE_KEY="sb_publishable_s-EiUNh66D17Xd3JFGUyvA_aNEDNMKq";
 var API_URL=SUPABASE_URL+"/functions/v1/boss-board-api";
 var BOSSES=["스우","가엔슬","세렌","칼로스","대적자","카링","흉성","벨로나","림보","발드릭스","유피테르","검은 마법사"];
-var MULT_KEY="boss-board-party-boss-multipliers-v1";
+var MULT_KEY="boss-board-party-boss-multipliers-v2";
+var LEGACY_MULT_KEY="boss-board-party-boss-multipliers-v1";
 var SELECT_KEY="boss-board-party-boss-selection-v1";
 var SETTINGS_KEY="boss-board-party-boss-settings-v1";
 var RESULT_KEY="boss-board-party-boss-result-v1";
@@ -26,6 +27,7 @@ function readJSON(key,fallback){
   }catch(e){return fallback}
 }
 var MULT=readJSON(MULT_KEY,{});
+var LEGACY_MULT=readJSON(LEGACY_MULT_KEY,{});
 var SELECTED=readJSON(SELECT_KEY,[]);
 var SETTINGS=Object.assign({boss:"카링",partySize:3,targetRate:0},readJSON(SETTINGS_KEY,{}));
 var SAVED_RESULT=readJSON(RESULT_KEY,[]);
@@ -52,6 +54,7 @@ function restoreSavedResult(){
   }).filter(Boolean);
 }
 function savePrefs(){
+  materializeCurrentBossMultipliers();
   localStorage.setItem(MULT_KEY,JSON.stringify(MULT));
   localStorage.setItem(SELECT_KEY,JSON.stringify(SELECTED));
   localStorage.setItem(SETTINGS_KEY,JSON.stringify(SETTINGS));
@@ -71,6 +74,34 @@ function ownerTheme(name){
   return"default";
 }
 function charKey(ownerId,name){return String(ownerId||"")+"|"+String(name||"").trim()}
+function bossMultiplierMap(boss,create){
+  boss=String(boss||SETTINGS.boss||"");
+  var map=MULT[boss];
+  if(map&&typeof map==="object"&&!Array.isArray(map))return map;
+  if(create){MULT[boss]={};return MULT[boss]}
+  return null;
+}
+function getBossMultiplier(boss,key){
+  var map=bossMultiplierMap(boss,false);
+  if(map&&Number(map[key])>0)return Math.max(0,Number(map[key])||0);
+  if(Number(LEGACY_MULT[key])>0)return Math.max(0,Number(LEGACY_MULT[key])||0);
+  return 0;
+}
+function setBossMultiplier(boss,key,value){
+  var map=bossMultiplierMap(boss,true);
+  value=Math.max(0,Number(value)||0);
+  if(value>0)map[key]=value;
+  else delete map[key];
+}
+function materializeCurrentBossMultipliers(){
+  var boss=String(SETTINGS.boss||"");
+  var map=bossMultiplierMap(boss,true);
+  allChars().forEach(function(c){
+    if(Number(map[c.key])>0)return;
+    var legacy=Math.max(0,Number(LEGACY_MULT[c.key])||0);
+    if(legacy>0)map[c.key]=legacy;
+  });
+}
 function allChars(){
   var out=[];
   (DATA.owners||[]).forEach(function(o){
@@ -86,7 +117,7 @@ function allChars(){
         theme:ownerTheme(o.name),
         name:clean,
         pi:pi,
-        multiplier:Math.max(0,Number(MULT[key])||0)
+        multiplier:getBossMultiplier(SETTINGS.boss,key)
       });
     });
   });
@@ -303,7 +334,7 @@ function render(){
       html+='<span class="party-boss-avatar">'+esc(c.name.slice(0,1))+'</span>';
       html+='<span class="party-boss-char-name"><b>'+esc(c.name)+'</b><small>'+esc(c.ownerName)+'</small></span>';
       html+='</button>';
-      html+='<label><span>배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(c.key)+'" value="'+(c.multiplier?String(c.multiplier):"")+'" placeholder="78.32"></label>';
+      html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(c.key)+'" value="'+(c.multiplier?String(c.multiplier):"")+'" placeholder="78.32"></label>';
       html+='</article>';
     });
     html+='</div></section>';
@@ -377,7 +408,7 @@ function render(){
     input.onchange=function(){
       var key=input.dataset.pbMult;
       var v=Math.max(0,Number(input.value)||0);
-      if(v>0)MULT[key]=v;else delete MULT[key];
+      setBossMultiplier(SETTINGS.boss,key,v);
       RESULT=[];
       markDirty();
       render();
