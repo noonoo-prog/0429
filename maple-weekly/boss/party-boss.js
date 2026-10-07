@@ -78,7 +78,10 @@ function bossMultiplierMap(boss,create){
   boss=String(boss||SETTINGS.boss||"");
   var map=MULT[boss];
   if(map&&typeof map==="object"&&!Array.isArray(map))return map;
-  if(create){MULT[boss]={};return MULT[boss]}
+  if(create){
+    MULT[boss]=Object.assign({},LEGACY_MULT);
+    return MULT[boss];
+  }
   return null;
 }
 function getBossMultiplier(boss,key){
@@ -94,13 +97,7 @@ function setBossMultiplier(boss,key,value){
   else delete map[key];
 }
 function materializeCurrentBossMultipliers(){
-  var boss=String(SETTINGS.boss||"");
-  var map=bossMultiplierMap(boss,true);
-  allChars().forEach(function(c){
-    if(Number(map[c.key])>0)return;
-    var legacy=Math.max(0,Number(LEGACY_MULT[c.key])||0);
-    if(legacy>0)map[c.key]=legacy;
-  });
+  bossMultiplierMap(String(SETTINGS.boss||""),true);
 }
 function allChars(){
   var out=[];
@@ -224,7 +221,7 @@ function balance(chars,partySize,targetRate){
   }
   return best||balanceByPartyCount(chars,1);
 }
-function fetchBoard(){
+function fetchBoard(restoreResult){
   if(loading)return Promise.resolve();
   loading=true;
   return fetch(API_URL,{
@@ -237,7 +234,7 @@ function fetchBoard(){
     return res.json().then(function(data){
       if(!res.ok||data.ok===false)throw new Error(data.error||"보스 현황판을 불러오지 못했습니다.");
       DATA.owners=Array.isArray(data.owners)?data.owners:[];
-      restoreSavedResult();
+      if(restoreResult)restoreSavedResult();
     });
   }).finally(function(){loading=false});
 }
@@ -418,11 +415,7 @@ function render(){
 }
 
 window.renderPartyBossPage=function(){
-  if(DATA.owners.length){
-    render();
-    return;
-  }
-  fetchBoard().then(render).catch(function(e){
+  fetchBoard(false).then(render).catch(function(e){
     var panel=document.getElementById("partyBossPanel");
     if(panel)panel.innerHTML='<div class="party-boss-empty"><strong>파티보스를 불러오지 못했어요.</strong><span>'+esc(e.message||"연결 오류")+'</span></div>';
   });
@@ -435,7 +428,7 @@ window.addEventListener("beforeunload",function(e){
 });
 
 document.addEventListener("DOMContentLoaded",function(){
-  fetchBoard().then(function(){
+  fetchBoard(true).then(function(){
     if(document.getElementById("partyBossPanel"))render();
   }).catch(function(){});
 });
