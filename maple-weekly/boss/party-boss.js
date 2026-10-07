@@ -27,7 +27,7 @@ function readJSON(key,fallback){
 }
 var MULT=readJSON(MULT_KEY,{});
 var SELECTED=readJSON(SELECT_KEY,[]);
-var SETTINGS=Object.assign({boss:"카링",partySize:3},readJSON(SETTINGS_KEY,{}));
+var SETTINGS=Object.assign({boss:"카링",partySize:3,targetRate:0},readJSON(SETTINGS_KEY,{}));
 var SAVED_RESULT=readJSON(RESULT_KEY,[]);
 
 function markDirty(){DIRTY=true}
@@ -100,10 +100,36 @@ function formatRate(n){
   n=Math.max(0,Number(n)||0);
   return n.toFixed(2).replace(/\.00$/,"").replace(/(\.\d)0$/,"$1")+"배";
 }
-function balance(chars,partySize){
-  partySize=Math.max(2,Math.min(6,Number(partySize)||3));
-  if(!chars.length)return[];
-  var partyCount=Math.max(1,Math.ceil(chars.length/partySize));
+function improveParties(parties){
+  var loops=0,improved=true;
+  while(improved&&loops<120){
+    improved=false;loops++;
+    var totals=parties.map(function(p){return p.total});
+    var currentRange=Math.max.apply(null,totals)-Math.min.apply(null,totals);
+    outer:
+    for(var ai=0;ai<parties.length;ai++){
+      for(var bi=ai+1;bi<parties.length;bi++){
+        var A=parties[ai],B=parties[bi];
+        for(var am=0;am<A.members.length;am++){
+          for(var bm=0;bm<B.members.length;bm++){
+            var av=A.members[am].multiplier,bv=B.members[bm].multiplier;
+            var newA=A.total-av+bv,newB=B.total-bv+av;
+            var check=parties.map(function(p){return p===A?newA:(p===B?newB:p.total)});
+            var nextRange=Math.max.apply(null,check)-Math.min.apply(null,check);
+            if(nextRange+0.000001<currentRange){
+              var temp=A.members[am];A.members[am]=B.members[bm];B.members[bm]=temp;
+              A.total=newA;B.total=newB;improved=true;
+              break outer;
+            }
+          }
+        }
+      }
+    }
+  }
+  return parties;
+}
+function balanceByPartyCount(chars,partyCount){
+  partyCount=Math.max(1,Math.min(chars.length,Number(partyCount)||1));
   var base=Math.floor(chars.length/partyCount);
   var extra=chars.length%partyCount;
   var parties=[];
@@ -121,41 +147,51 @@ function balance(chars,partySize){
       return a.members.length-b.members.length;
     });
     var p=candidates[0];
-    p.members.push(ch);
-    p.total+=ch.multiplier;
+    p.members.push(ch);p.total+=ch.multiplier;
   });
+  return improveParties(parties);
+}
+function targetBandPenalty(parties,target){
+  if(!(target>0))return 0;
+  var low=target,high=target+10;
+  return parties.reduce(function(score,p){
+    var miss=p.total<low?low-p.total:(p.total>high?p.total-high:0);
+    return score+miss*miss*100;
+  },0);
+}
+function scoreParties(parties,target){
+  if(!parties.length)return Number.POSITIVE_INFINITY;
+  var totals=parties.map(function(p){return p.total});
+  var spread=Math.max.apply(null,totals)-Math.min.apply(null,totals);
+  var center=(target>0)?target+5:totals.reduce(function(a,b){return a+b},0)/totals.length;
+  var centerError=totals.reduce(function(sum,v){var d=v-center;return sum+d*d},0);
+  return targetBandPenalty(parties,target)+spread*spread+centerError*.03;
+}
+function balance(chars,partySize,targetRate){
+  if(!chars.length)return[];
+  if(partySize!=="any"){
+    var fixed=Math.max(2,Math.min(6,Number(partySize)||3));
+    var count=Math.max(1,Math.ceil(chars.length/fixed));
+    return balanceByPartyCount(chars,count);
+  }
 
-  var loops=0,improved=true;
-  while(improved&&loops<100){
-    improved=false;
-    loops++;
-    var totals=parties.map(function(p){return p.total});
-    var currentRange=Math.max.apply(null,totals)-Math.min.apply(null,totals);
-    outer:
-    for(var ai=0;ai<parties.length;ai++){
-      for(var bi=ai+1;bi<parties.length;bi++){
-        var A=parties[ai],B=parties[bi];
-        for(var am=0;am<A.members.length;am++){
-          for(var bm=0;bm<B.members.length;bm++){
-            var av=A.members[am].multiplier,bv=B.members[bm].multiplier;
-            var newA=A.total-av+bv,newB=B.total-bv+av;
-            var check=parties.map(function(p){return p===A?newA:(p===B?newB:p.total)});
-            var nextRange=Math.max.apply(null,check)-Math.min.apply(null,check);
-            if(nextRange+0.000001<currentRange){
-              var temp=A.members[am];
-              A.members[am]=B.members[bm];
-              B.members[bm]=temp;
-              A.total=newA;
-              B.total=newB;
-              improved=true;
-              break outer;
-            }
-          }
-        }
-      }
+  var n=chars.length;
+  if(n<=2)return balanceByPartyCount(chars,1);
+  var minParties=Math.max(1,Math.ceil(n/6));
+  var maxParties=Math.max(1,Math.floor(n/2));
+  if(maxParties<minParties)maxParties=minParties;
+
+  var target=Math.max(0,Number(targetRate)||0);
+  var best=null,bestScore=Number.POSITIVE_INFINITY;
+  for(var k=minParties;k<=maxParties;k++){
+    var candidate=balanceByPartyCount(chars,k);
+    var score=scoreParties(candidate,target);
+    if(score<bestScore){
+      bestScore=score;
+      best=candidate;
     }
   }
-  return parties;
+  return best||balanceByPartyCount(chars,1);
 }
 function fetchBoard(){
   if(loading)return Promise.resolve();
@@ -191,7 +227,7 @@ function build(){
     notify("선택한 캐릭터의 배율을 모두 입력해 주세요.");
     return;
   }
-  RESULT=balance(chars,SETTINGS.partySize);
+  RESULT=balance(chars,SETTINGS.partySize,SETTINGS.targetRate);
   markDirty();
   render();
 }
@@ -242,10 +278,12 @@ function render(){
   });
   html+='</select></label>';
   html+='<label><span>파티 인원</span><select data-pb-size="1">';
+  html+='<option value="any" '+(String(SETTINGS.partySize)==="any"?"selected":"")+'>상관없음</option>';
   [2,3,4,5,6].forEach(function(n){
-    html+='<option value="'+n+'" '+(Number(SETTINGS.partySize)===n?"selected":"")+'>'+n+'인</option>';
+    html+='<option value="'+n+'" '+(String(SETTINGS.partySize)===String(n)?"selected":"")+'>'+n+'인</option>';
   });
   html+='</select></label>';
+  html+='<label class="party-boss-target"><span>목표 배율</span><div><input type="number" min="0" step="1" inputmode="decimal" data-pb-target="1" value="'+(Number(SETTINGS.targetRate)>0?String(SETTINGS.targetRate):"")+'" placeholder="140"><em>입력값 ~ +10</em></div></label>';
   html+='<div class="party-boss-summary"><span>선택 캐릭터</span><b>'+selected.length+'명</b></div>';
   html+='<button class="party-boss-build" type="button" data-pb-build="1">자동 균형 맞추기</button>';
   html+='</section>';
@@ -276,12 +314,16 @@ function render(){
     var totals=RESULT.map(function(p){return p.total});
     var max=Math.max.apply(null,totals),min=Math.min.apply(null,totals);
     html+='<section class="party-boss-result">';
-    html+='<header><div><span>자동 편성 결과</span><strong>'+esc(SETTINGS.boss)+' · '+SETTINGS.partySize+'인 기준</strong></div>';
+    var sizeLabel=String(SETTINGS.partySize)==="any"?"인원 상관없음":SETTINGS.partySize+"인 기준";
+    var target=Number(SETTINGS.targetRate)||0;
+    var targetLabel=target>0?" · 목표 "+formatRate(target)+" ~ "+formatRate(target+10):"";
+    html+='<header><div><span>자동 편성 결과</span><strong>'+esc(SETTINGS.boss)+' · '+sizeLabel+targetLabel+'</strong></div>';
     html+='<div class="party-boss-gap"><span>파티간 차이</span><b>'+formatRate(max-min)+'</b></div></header>';
     html+='<div class="party-boss-result-grid">';
     RESULT.forEach(function(p){
-      html+='<article class="party-boss-party-card">';
-      html+='<header><div><span>'+p.id+'</span><b>'+p.id+'파티</b></div><strong>'+formatRate(p.total)+'</strong></header>';
+      html+='<article class="party-boss-party-card '+(target>0?(p.total>=target&&p.total<=target+10?"in-target":"out-target"):"")+'">';
+      var status=target>0?(p.total<target?"목표보다 낮음":(p.total>target+10?"목표보다 높음":"목표 범위")):"";
+      html+='<header><div><span>'+p.id+'</span><b>'+p.id+'파티 · '+p.members.length+'명</b>'+(status?'<em>'+status+'</em>':'')+'</div><strong>'+formatRate(p.total)+'</strong></header>';
       html+='<div class="party-boss-members">';
       p.members.forEach(function(c){
         html+='<div class="party-boss-member owner-themed" data-theme="'+c.theme+'">';
@@ -303,7 +345,14 @@ function render(){
   var boss=panel.querySelector("[data-pb-boss]");
   if(boss)boss.onchange=function(){SETTINGS.boss=boss.value;RESULT=[];markDirty();render()};
   var size=panel.querySelector("[data-pb-size]");
-  if(size)size.onchange=function(){SETTINGS.partySize=Number(size.value)||3;RESULT=[];markDirty();render()};
+  if(size)size.onchange=function(){SETTINGS.partySize=size.value==="any"?"any":(Number(size.value)||3);RESULT=[];markDirty();render()};
+  var targetInput=panel.querySelector("[data-pb-target]");
+  if(targetInput)targetInput.onchange=function(){
+    SETTINGS.targetRate=Math.max(0,Number(targetInput.value)||0);
+    RESULT=[];
+    markDirty();
+    render();
+  };
   var buildBtn=panel.querySelector("[data-pb-build]");
   if(buildBtn)buildBtn.onclick=build;
   var saveBtn=panel.querySelector("[data-pb-save]");
