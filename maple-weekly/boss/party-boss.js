@@ -86,7 +86,7 @@ function bossMultiplierMap(boss,create){
 }
 function getBossMultiplier(boss,key){
   var map=bossMultiplierMap(boss,false);
-  if(map&&Number(map[key])>0)return Math.max(0,Number(map[key])||0);
+  if(map)return Math.max(0,Number(map[key])||0);
   if(Number(LEGACY_MULT[key])>0)return Math.max(0,Number(LEGACY_MULT[key])||0);
   return 0;
 }
