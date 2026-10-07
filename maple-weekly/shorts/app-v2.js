@@ -47,7 +47,7 @@ function previewBossEok(n){
   const e=Math.floor(amount/100000000);
   const m=Math.floor((amount%100000000)/10000);
   const formatted=[e?e.toLocaleString("ko-KR")+"억":"",m?m.toLocaleString("ko-KR")+"만":""].filter(Boolean).join(" ");
-  return (raw<0?"마이너스 ":"")+formatted;
+  return (raw<0?"-":"")+formatted;
 }
 function amountFromInput(raw){
   const value=String(raw||"").trim().replace(/[\s,]/g,"").replace(/메소|원/g,"");
