@@ -79,7 +79,7 @@ function bossMultiplierMap(boss,create){
   var map=MULT[boss];
   if(map&&typeof map==="object"&&!Array.isArray(map))return map;
   if(create){
-    MULT[boss]=Object.assign({},LEGACY_MULT);
+    MULT[boss]={};
     return MULT[boss];
   }
   return null;
@@ -87,7 +87,6 @@ function bossMultiplierMap(boss,create){
 function getBossMultiplier(boss,key){
   var map=bossMultiplierMap(boss,false);
   if(map)return Math.max(0,Number(map[key])||0);
-  if(Number(LEGACY_MULT[key])>0)return Math.max(0,Number(LEGACY_MULT[key])||0);
   return 0;
 }
 function setBossMultiplier(boss,key,value){
@@ -331,7 +330,7 @@ function render(){
       html+='<span class="party-boss-avatar">'+esc(c.name.slice(0,1))+'</span>';
       html+='<span class="party-boss-char-name"><b>'+esc(c.name)+'</b><small>'+esc(c.ownerName)+'</small></span>';
       html+='</button>';
-      html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(c.key)+'" value="'+(c.multiplier?String(c.multiplier):"")+'" placeholder="78.32"></label>';
+      html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(c.key)+'" value="'+String(c.multiplier||0)+'" placeholder="0"></label>';
       html+='</article>';
     });
     html+='</div></section>';
