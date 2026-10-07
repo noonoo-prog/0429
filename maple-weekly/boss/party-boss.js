@@ -661,7 +661,7 @@ function renderNow(){
       p.members.forEach(function(c){
         html+='<div class="party-boss-member owner-themed" data-theme="'+c.theme+'">';
         html+='<span class="party-boss-member-dot"></span>';
-        html+='<div><b>'+esc(c.name)+'</b><small>'+esc(c.ownerName)+'</small></div>';
+        html+='<div><b>'+esc(c.name)+'</b></div>';
         html+='<strong>'+formatRate(c.multiplier)+'</strong>';
         html+='</div>';
       });
