@@ -689,14 +689,15 @@ function drawOwnerHalf(ctx,owner,y,date){
   txt(ctx,isCorn?"옥":"콩",x+70,y+85,42,isCorn?"#352900":"#ffffff","900","center");
   txt(ctx,owner,x+131,y+79,45,"#272432","900");
   txt(ctx,ownerChars(owner).length+"개 캐릭터",x+134,y+115,23,"#756b73","700");
-  const pad=27,gap=10,cardWidth=(w-2*pad-3*gap)/4,statY=y+153;
-  [["총수익",totalIncome],["추가 수익",extra],["사용 메소",spent],["순수익",totalNet]].forEach((item,i)=>{
+  const pad=27,gap=12,cardWidth=(w-2*pad-2*gap)/3,statY=y+153;
+  [["총수익",totalIncome],["사용 메소",spent],["순수익",totalNet]].forEach((item,i)=>{
     const bx=x+pad+i*(cardWidth+gap);
     rounded(ctx,bx,statY,cardWidth,150,17,isCorn?"#fffaf0":"#fff5f9","#e8e2e7");
     txt(ctx,item[0],bx+13,statY+39,24,"#62606a","800");
+    if(i===0)txt(ctx,"보스 + 추가 수익",bx+13,statY+65,18,"#89828b","700");
     const value=previewBossEok(item[1]);
-    const ink=i===1?"#278557":i===3?(totalNet<0?"#b74366":isCorn?"#9c7414":"#c03c78"):"#252735";
-    txt(ctx,value,bx+13,statY+109,fitting(ctx,value,cardWidth-25,38,17),ink,"900");
+    const ink=i===2?(totalNet<0?"#b74366":isCorn?"#9c7414":"#c03c78"):"#252735";
+    txt(ctx,value,bx+13,statY+113,fitting(ctx,value,cardWidth-25,42,19),ink,"900");
   });
   const listY=y+339,inner=28,columns=3,space=12,colWidth=(w-inner*2-(columns-1)*space)/columns;
   function listPanel(title,items,col){
