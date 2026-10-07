@@ -1507,3 +1507,45 @@ html[data-theme="dark"] .party-boss-result{
     align-items:flex-start;
   }
 }
+
+
+/* Desktop character density: 6 per row */
+@media(min-width:1200px){
+  .party-boss-char-grid{
+    grid-template-columns:repeat(6,minmax(0,1fr));
+    gap:8px;
+  }
+  .party-boss-char{
+    grid-template-columns:minmax(0,1fr) 72px;
+    gap:6px;
+    min-height:64px;
+    padding:8px;
+  }
+  .party-boss-avatar{
+    flex-basis:30px;
+    width:30px;
+    height:30px;
+    font-size:10px;
+  }
+  .party-boss-char-toggle{
+    gap:6px;
+  }
+  .party-boss-char-name b{
+    font-size:11px;
+  }
+  .party-boss-char-name small{
+    font-size:7.5px;
+  }
+  .party-boss-char label>span{
+    margin-bottom:4px;
+    overflow:hidden;
+    font-size:7.5px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .party-boss-char input{
+    min-height:38px;
+    padding:0 8px;
+    font-size:10px;
+  }
+}
