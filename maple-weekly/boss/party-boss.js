@@ -51,8 +51,23 @@ var RENDER_PENDING=false;
 var RENDER_TIMER=null;
 var BUILDING=false;
 var MESO_SORT="original";
-var BUILDING=false;
-var MESO_SORT="original";
+var COMPARING=false;
+var COMPARE_RESULTS=[];
+var COMPARE_PROGRESS="";
+var MODES=[
+  {id:"balanced",name:"균형형",desc:"파티별 총 배율을 비슷하게"},
+  {id:"strong",name:"강자 우대형",desc:"강한 캐릭터는 소수팟 우선"},
+  {id:"equal",name:"수익 균등형",desc:"주인별 결정석 수익 격차 완화"},
+  {id:"small",name:"최소 인원형",desc:"가능한 2~3인팟을 많이"},
+  {id:"safe",name:"안정형",desc:"목표보다 여유 있는 배율"}
+];
+function modeName(mode){
+  var found=MODES.find(function(m){return m.id===mode});
+  return found?found.name:"강자 우대형";
+}
+function normalizeMode(mode){
+  return MODES.some(function(m){return m.id===mode})?mode:"strong";
+}
 
 function esc(s){
   return String(s==null?"":s).replace(/[&<>"']/g,function(m){
@@ -68,9 +83,10 @@ function readJSON(key,fallback){
 var MULT=readJSON(MULT_KEY,{});
 var LEGACY_MULT=readJSON(LEGACY_MULT_KEY,{});
 var SELECTED=readJSON(SELECT_KEY,[]);
-var SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:"any",partyCount:0,targetRate:130},readJSON(SETTINGS_KEY,{}));
+var SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:"any",partyCount:0,targetRate:130,mode:"strong"},readJSON(SETTINGS_KEY,{}));
 var SAVED_RESULT=readJSON(RESULT_KEY,[]);
 SETTINGS.targetRate=Math.max(1,Number(SETTINGS.targetRate)||130);
+SETTINGS.mode=normalizeMode(SETTINGS.mode);
 
 function defaultDifficulty(boss){
   var list=BOSS_DIFFICULTIES[boss]||[];
@@ -201,7 +217,8 @@ function sharedPayload(){
       difficulty:String(SETTINGS.difficulty||defaultDifficulty(SETTINGS.boss)),
       partySize:SETTINGS.partySize,
       partyCount:Math.max(0,Math.floor(Number(SETTINGS.partyCount)||0)),
-      targetRate:Math.max(1,Number(SETTINGS.targetRate)||130)
+      targetRate:Math.max(1,Number(SETTINGS.targetRate)||130),
+      mode:normalizeMode(SETTINGS.mode)
     },
     selected:SELECTED.slice(),
     multipliers:JSON.parse(JSON.stringify(MULT||{})),
@@ -211,9 +228,11 @@ function sharedPayload(){
 function applySharedState(state,updatedBy,updatedAt){
   if(!state||typeof state!=="object"||Array.isArray(state))return false;
   if(!state.settings&&!state.multipliers&&!state.selected&&!state.result)return false;
-  SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:"any",partyCount:0,targetRate:130},state.settings||{});
+  SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:"any",partyCount:0,targetRate:130,mode:"strong"},state.settings||{});
   normalizeDifficulty();
   SETTINGS.targetRate=Math.max(1,Number(SETTINGS.targetRate)||130);
+  SETTINGS.mode=normalizeMode(SETTINGS.mode);
+  COMPARE_RESULTS=[];
   SELECTED=Array.isArray(state.selected)?state.selected.slice():[];
   MULT=(state.multipliers&&typeof state.multipliers==="object"&&!Array.isArray(state.multipliers))
     ?JSON.parse(JSON.stringify(state.multipliers))
@@ -366,22 +385,25 @@ function normalizeParties(parties){
   });
   return parties;
 }
-function candidateScore(parties,target,ownerAvgs){
+function candidateScore(parties,target,ownerAvgs,mode){
+  mode=normalizeMode(mode);
   var below=0,shortfall=0,above=0,min=Infinity,max=-Infinity;
   var reward={},runs={};
-  var strongSizePenalty=0,duplicateOwners=0;
+  var strongSizePenalty=0,duplicateOwners=0,stableShort=0;
+  var totalSizeDeviation=0;
   parties.forEach(function(p){
     var total=p.total,sz=p.members.length;
     if(total<target-0.000001){below++;shortfall+=Math.pow(target-total,2)}
     if(total>target*1.1)above+=Math.pow(total-target*1.1,2);
+    if(total<target*1.12)stableShort+=Math.pow(target*1.12-total,2);
     min=Math.min(min,total);max=Math.max(max,total);
+    totalSizeDeviation+=Math.pow(sz-2,2);
     var seen={};
     p.members.forEach(function(c){
-      var key=String(c.ownerId||c.ownerName||"");
+      var key=ownerKey(c);
       if(seen[key])duplicateOwners++;
       seen[key]=true;
       var own=ownerAvgs[key]||0;
-      // Character strength leads. Owner average is a small tie-breaker.
       var gradeBonus=own>=36?4:(own>=33?2.5:(own>=30?1:0));
       strongSizePenalty+=(c.multiplier+own*.12+gradeBonus)*Math.pow(sz-2,1.1);
       reward[key]=(reward[key]||0)+1/sz;
@@ -389,17 +411,21 @@ function candidateScore(parties,target,ownerAvgs){
     });
   });
   var keys=Object.keys(reward);
-  var rewardMean=keys.reduce(function(s,k){return s+reward[k]/runs[k]},0)/Math.max(1,keys.length);
-  var rewardVariance=keys.reduce(function(s,k){
-    return s+Math.pow(reward[k]/runs[k]-rewardMean,2);
+  var totalShares=keys.reduce(function(sum,k){return sum+reward[k]},0);
+  var meanShare=totalShares/Math.max(1,keys.length);
+  var equalTotal=keys.reduce(function(sum,k){return sum+Math.pow(reward[k]-meanShare,2)},0);
+  var meanPerChar=keys.reduce(function(sum,k){return sum+reward[k]/runs[k]},0)/Math.max(1,keys.length);
+  var equalPerChar=keys.reduce(function(sum,k){
+    return sum+Math.pow(reward[k]/runs[k]-meanPerChar,2);
   },0);
-  // Target is mandatory before soft preferences; the upper band is advisory.
-  return below*1e9+shortfall*1e6
-    +strongSizePenalty*55
-    +Math.pow(max-min,2)*.45
-    +above*.18
-    +duplicateOwners*180
-    +rewardVariance*18000;
+  // Mandatory: no duplicate owner, minimum target, then mode-specific preferences.
+  var mandatory=duplicateOwners*1e12+below*1e9+shortfall*1e6;
+  var spread=Math.pow(max-min,2);
+  if(mode==="balanced")return mandatory+spread*14+above*.4+strongSizePenalty*2+equalPerChar*1200;
+  if(mode==="equal")return mandatory+equalTotal*85000+equalPerChar*12000+spread*.45+strongSizePenalty*4+above*.12;
+  if(mode==="small")return mandatory+strongSizePenalty*32+spread*.3+above*.12+equalPerChar*4000;
+  if(mode==="safe")return mandatory+stableShort*900+spread*2+strongSizePenalty*3+equalPerChar*2500;
+  return mandatory+strongSizePenalty*55+spread*.45+above*.18+equalPerChar*18000;
 }
 function initialParties(chars,k,cap,target,ownerAvgs,seed){
   var groups={};
@@ -441,9 +467,9 @@ function initialParties(chars,k,cap,target,ownerAvgs,seed){
   if(parties.reduce(function(n,p){return n+p.members.length},0)!==chars.length)return null;
   return parties;
 }
-function optimizeParties(parties,target,ownerAvgs,cap,deadline){
+function optimizeParties(parties,target,ownerAvgs,cap,deadline,mode){
   normalizeParties(parties);
-  var bestScore=candidateScore(parties,target,ownerAvgs);
+  var bestScore=candidateScore(parties,target,ownerAvgs,mode);
   for(var round=0;round<12&&Date.now()<deadline;round++){
     var best=null,nextScore=bestScore;
     for(var i=0;i<parties.length;i++){
@@ -459,7 +485,7 @@ function optimizeParties(parties,target,ownerAvgs,cap,deadline){
             A.members[ai]=cb;B.members[bj]=ca;
             A.total+=cb.multiplier-ca.multiplier;
             B.total+=ca.multiplier-cb.multiplier;
-            var score=candidateScore(parties,target,ownerAvgs);
+            var score=candidateScore(parties,target,ownerAvgs,mode);
             if(score<nextScore-0.000001){nextScore=score;best={type:"swap",i:i,j:j,ai:ai,bj:bj}}
             A.members[ai]=ca;B.members[bj]=cb;
             A.total-=cb.multiplier-ca.multiplier;
@@ -475,7 +501,7 @@ function optimizeParties(parties,target,ownerAvgs,cap,deadline){
             var member=from.members.splice(mi,1)[0];
             to.members.push(member);
             from.total-=member.multiplier;to.total+=member.multiplier;
-            var score=candidateScore(parties,target,ownerAvgs);
+            var score=candidateScore(parties,target,ownerAvgs,mode);
             if(score<nextScore-0.000001){nextScore=score;best={type:"move",i:fi,j:ti,ai:mi}}
             from.members.splice(mi,0,member);to.members.pop();
             from.total+=member.multiplier;to.total-=member.multiplier;
@@ -495,12 +521,17 @@ function optimizeParties(parties,target,ownerAvgs,cap,deadline){
   }
   return validPartyOwners(parties)?normalizeParties(parties):null;
 }
-function partyCountOptions(n,cap,requested,total,target,ownerMin){
+function partyCountOptions(n,cap,requested,total,target,ownerMin,mode){
   var min=Math.max(1,Math.ceil(n/cap),ownerMin),max=Math.floor(n/2);
   if(requested)return requested>=min&&requested<=max?[requested]:[];
   var feasible=[];
   for(var k=min;k<=max;k++)if(total+0.000001>=target*k)feasible.push(k);
   if(!feasible.length)return [min]; // Show an explicitly insufficient result.
+  if(mode==="small")return feasible.slice().reverse();
+  if(mode==="safe"){
+    var safeFeasible=feasible.filter(function(k){return total>=target*1.12*k});
+    if(safeFeasible.length)feasible=safeFeasible;
+  }
   var priority=feasible.filter(function(k){return k===6||k===7});
   if(priority.length)return priority;
   // Outside the preferred range, choose the nearest feasible count.
@@ -511,27 +542,30 @@ function partyCountOptions(n,cap,requested,total,target,ownerMin){
   },feasible[0]);
   return [nearest];
 }
-function balance(chars,partySize,targetRate,partyCount){
+function balance(chars,partySize,targetRate,partyCount,mode){
+  mode=normalizeMode(mode);
   if(chars.length<2)return[];
   var target=Math.max(1,Number(targetRate)||130);
   var cap=partySize==="any"?6:Math.max(2,Math.min(6,Number(partySize)||3));
   var requested=Math.max(0,Math.floor(Number(partyCount)||0));
   var total=chars.reduce(function(s,c){return s+c.multiplier},0);
   var ownerMin=ownerMaxCount(chars);
-  var options=partyCountOptions(chars.length,cap,requested,total,target,ownerMin);
+  var options=partyCountOptions(chars.length,cap,requested,total,target,ownerMin,mode);
   if(!options.length)return[];
   var avgs=ownerAverages(chars);
   var best=null,bestScore=Infinity;
   var deadline=Date.now()+1100;
   // When auto, favor 6-7 parties as long as the target remains feasible.
   options.forEach(function(k){
+    if(mode==="small"&&best&&best.every(function(p){return p.total+0.000001>=target}))return;
+    if(Date.now()>deadline&&best)return;
     for(var seed=0;seed<3;seed++){
       if(Date.now()>deadline&&best)break;
       var initial=initialParties(chars,k,cap,target,avgs,seed);
       if(!initial)continue;
-      var candidate=optimizeParties(initial,target,avgs,cap,deadline);
+      var candidate=optimizeParties(initial,target,avgs,cap,deadline,mode);
       if(!candidate||!validPartyOwners(candidate))continue;
-      var score=candidateScore(candidate,target,avgs);
+      var score=candidateScore(candidate,target,avgs,mode);
       if(!requested){
         var distance=Math.min(Math.abs(k-6),Math.abs(k-7));
         score+=distance*150;
@@ -542,6 +576,92 @@ function balance(chars,partySize,targetRate,partyCount){
   });
   if(!best||!validPartyOwners(best))return [];
   return best;
+}
+function comparisonStats(parties,chars,target){
+  var price=crystalPrice(),ownerTotals={},ownerNames={};
+  chars.forEach(function(c){ownerNames[ownerKey(c)]=c.ownerName});
+  parties.forEach(function(p){
+    var share=price/p.members.length;
+    p.members.forEach(function(c){
+      var key=ownerKey(c);
+      ownerTotals[key]=(ownerTotals[key]||0)+share;
+    });
+  });
+  var keys=Object.keys(ownerTotals).sort(function(a,b){
+    return ownerTotals[b]-ownerTotals[a]||a.localeCompare(b,"ko");
+  });
+  var clear=parties.filter(function(p){return p.total+0.000001>=target}).length;
+  return {
+    clear:clear,
+    count:parties.length,
+    topOwner:keys.length?ownerNames[keys[0]]:"-",
+    topMeso:keys.length?ownerTotals[keys[0]]:0,
+    spread:parties.length?Math.max.apply(null,parties.map(function(p){return p.total}))-
+      Math.min.apply(null,parties.map(function(p){return p.total})):0
+  };
+}
+function invalidateComparison(){
+  COMPARE_RESULTS=[];
+  COMPARE_PROGRESS="";
+}
+function compareAllModes(){
+  if(BUILDING||COMPARING)return;
+  var chars=selectedChars();
+  if(chars.length<2){notify("비교할 캐릭터를 2명 이상 선택해 주세요.");return}
+  var requestedCount=Math.max(0,Math.floor(Number(SETTINGS.partyCount)||0));
+  var cap=SETTINGS.partySize==="any"?6:Math.max(2,Math.min(6,Number(SETTINGS.partySize)||3));
+  var ownerMin=ownerMaxCount(chars);
+  if((requestedCount&&requestedCount<ownerMin)||
+     ownerMin>Math.floor(chars.length/2)||
+     (requestedCount&&(chars.length<requestedCount*2||chars.length>requestedCount*cap))){
+    notify("파티 수·인원 또는 주인당 1캐릭터 조건을 확인해 주세요.");
+    return;
+  }
+  COMPARING=true;
+  COMPARE_RESULTS=[];
+  var modes=MODES.slice(),index=0;
+  function next(){
+    if(index>=modes.length){
+      COMPARING=false;
+      COMPARE_PROGRESS="";
+      render();
+      if(!COMPARE_RESULTS.some(function(row){return row.parties.length})){
+        notify("현재 설정으로 편성 가능한 결과가 없어요.");
+      }
+      return;
+    }
+    var mode=modes[index++];
+    COMPARE_PROGRESS=index+" / "+modes.length+" · "+mode.name+" 계산 중";
+    render();
+    setTimeout(function(){
+      try{
+        var parties=balance(chars,SETTINGS.partySize,SETTINGS.targetRate,SETTINGS.partyCount,mode.id);
+        COMPARE_RESULTS.push({
+          mode:mode.id,
+          parties:parties,
+          stats:comparisonStats(parties,chars,SETTINGS.targetRate)
+        });
+      }catch(e){
+        COMPARE_RESULTS.push({mode:mode.id,parties:[],stats:comparisonStats([],chars,SETTINGS.targetRate)});
+      }
+      setTimeout(next,25);
+    },30);
+  }
+  next();
+}
+function applyComparedMode(mode){
+  if(COMPARING||BUILDING)return;
+  var found=COMPARE_RESULTS.find(function(row){return row.mode===mode});
+  if(!found||!found.parties.length)return;
+  if(!validPartyOwners(found.parties)){
+    notify("주인 중복이 발견되어 적용할 수 없어요.");
+    return;
+  }
+  SETTINGS.mode=normalizeMode(mode);
+  RESULT=found.parties;
+  markDirty();
+  render();
+  notify(modeName(mode)+" 편성을 적용했어요. 공용 반영은 저장 버튼을 눌러 주세요.");
 }
 function fetchBoard(restoreResult){
   if(loading)return Promise.resolve();
@@ -561,6 +681,7 @@ function fetchBoard(restoreResult){
   }).finally(function(){loading=false});
 }
 function performBuild(){
+  invalidateComparison();
   var chars=selectedChars();
   if(chars.length<2){
     RESULT=[];
@@ -594,7 +715,7 @@ function performBuild(){
     notify("한 주인 캐릭터가 "+ownerMin+"명이라 최소 "+ownerMin+"파티가 필요해요. 현재 조건으로는 주인 중복 없이 편성할 수 없어요.");
     return;
   }
-  RESULT=balance(chars,SETTINGS.partySize,SETTINGS.targetRate,SETTINGS.partyCount);
+  RESULT=balance(chars,SETTINGS.partySize,SETTINGS.targetRate,SETTINGS.partyCount,SETTINGS.mode);
   if(RESULT.length&&!validPartyOwners(RESULT)){
     RESULT=[];markDirty();render();
     notify("주인 중복 검증에 실패해 편성을 중단했어요.");
@@ -628,6 +749,7 @@ function notify(msg){
   setTimeout(function(){toast.classList.remove("show")},1900);
 }
 function toggleOwner(ownerId){
+  invalidateComparison();
   var chars=allChars().filter(function(c){return c.ownerId===ownerId});
   var all=chars.length&&chars.every(function(c){return SELECTED.indexOf(c.key)>=0});
   chars.forEach(function(c){
@@ -702,6 +824,26 @@ function renderNow(){
   html+='<button class="party-boss-build" type="button" data-pb-build="1" '+(BUILDING?"disabled":"")+'>'+(BUILDING?"편성 계산 중…":"자동 균형 맞추기")+'</button>';
   html+='</section>';
 
+  html+='<section class="party-boss-mode-panel" aria-label="자동 편성 모드">';
+  html+='<div class="party-boss-mode-heading"><div><span>편성 전략</span><strong>원하는 파티 편성 방식 선택</strong></div><small>모든 모드 · 주인당 1캐릭터 / 목표 '+formatRate(SETTINGS.targetRate)+'</small></div>';
+  html+='<div class="party-boss-mode-grid">';
+  MODES.forEach(function(mode){
+    var active=normalizeMode(SETTINGS.mode)===mode.id;
+    html+='<button type="button" class="party-boss-mode-option '+(active?"active":"")+'" data-pb-mode="'+mode.id+'" aria-pressed="'+(active?"true":"false")+'" '+(COMPARING||BUILDING?"disabled":"")+'><b>'+mode.name+'</b><small>'+mode.desc+'</small></button>';
+  });
+  html+='</div>';
+  html+='<div class="party-boss-compare-actions"><span>선택한 모드로 자동 편성하거나 5가지 결과를 한 번에 비교할 수 있어요.</span><button type="button" data-pb-compare="1" '+(COMPARING||BUILDING?"disabled":"")+'>'+(COMPARING?"비교 계산 중…":"5가지 모드 비교하기")+'</button></div>';
+  if(COMPARING)html+='<div class="party-boss-compare-progress" role="status">'+esc(COMPARE_PROGRESS)+'</div>';
+  if(COMPARE_RESULTS.length&&!COMPARING){
+    html+='<div class="party-boss-compare-results"><div class="party-boss-compare-title"><strong>5가지 편성 결과 비교</strong><span>메소는 현재 결정석 가격 기준 · 적용 후 저장해야 공용 반영</span></div><div class="party-boss-compare-table-wrap"><table class="party-boss-compare-table"><thead><tr><th>모드</th><th>파티</th><th>목표 충족</th><th>최고 수익 주인</th><th>파티 배율 차이</th><th>선택</th></tr></thead><tbody>';
+    COMPARE_RESULTS.forEach(function(row){
+      var stat=row.stats,ok=row.parties.length>0,allClear=ok&&stat.clear===stat.count;
+      html+='<tr><th>'+esc(modeName(row.mode))+'</th><td>'+(ok?stat.count+'개':'편성 불가')+'</td><td class="'+(allClear?"pb-clear":"pb-fail")+'">'+(ok?stat.clear+'/'+stat.count:'-')+'</td><td>'+esc(ok?stat.topOwner:"-")+(ok?'<small>'+formatMeso(stat.topMeso)+'</small>':'')+'</td><td>'+(ok?formatRate(stat.spread):'-')+'</td><td><button type="button" data-pb-apply-mode="'+row.mode+'" '+(!ok?"disabled":"")+'>이 편성 적용</button></td></tr>';
+    });
+    html+='</tbody></table></div></div>';
+  }
+  html+='</section>';
+
   html+='<section class="party-boss-owner-groups">';
   (DATA.owners||[]).forEach(function(o){
     var own=chars.filter(function(c){return c.ownerId===o.id});
@@ -734,7 +876,7 @@ function renderNow(){
     var sizeLabel=String(SETTINGS.partySize)==="any"?"인원 상관없음":SETTINGS.partySize+"인 기준";
     var countLabel=Math.max(0,Number(SETTINGS.partyCount)||0)>0?" · "+Math.floor(Number(SETTINGS.partyCount))+"파티":"";
     var target=Number(SETTINGS.targetRate)||0;
-    var targetLabel=" · 목표 "+formatRate(target)+" ~ "+formatRate(target*1.1);
+    var targetLabel=" · "+modeName(SETTINGS.mode)+" · 목표 "+formatRate(target)+" ~ "+formatRate(target*1.1);
     html+='<header><div><span>자동 편성 결과</span><strong>'+esc(SETTINGS.boss)+' · '+esc(SETTINGS.difficulty)+' · '+sizeLabel+countLabel+targetLabel+'</strong></div>';
     html+='<div class="party-boss-gap"><span>파티간 차이</span><b>'+formatRate(max-min)+'</b></div></header>';
     var missingParties=RESULT.filter(function(p){return p.total+0.000001<target});
@@ -774,29 +916,32 @@ function renderNow(){
     }
     html+='</section>';
   }else{
-    html+='<div class="party-boss-empty"><strong>캐릭터를 선택하고 배율을 입력해 주세요.</strong><span>자동 균형 맞추기를 누르면 파티별 총 배율 차이가 가장 작도록 나눕니다.</span></div>';
+    html+='<div class="party-boss-empty"><strong>캐릭터를 선택하고 배율을 입력해 주세요.</strong><span>편성 전략을 선택한 다음 자동 균형 맞추기 또는 5가지 모드 비교하기를 눌러 주세요.</span></div>';
   }
 
   html+='</section>';
   panel.innerHTML=html;
 
   var boss=panel.querySelector("[data-pb-boss]");
-  if(boss)boss.onchange=function(){SETTINGS.boss=boss.value;SETTINGS.difficulty=defaultDifficulty(SETTINGS.boss);RESULT=[];markDirty();render()};
+  if(boss)boss.onchange=function(){invalidateComparison();SETTINGS.boss=boss.value;SETTINGS.difficulty=defaultDifficulty(SETTINGS.boss);RESULT=[];markDirty();render()};
   var difficulty=panel.querySelector("[data-pb-difficulty]");
-  if(difficulty)difficulty.onchange=function(){SETTINGS.difficulty=difficulty.value;markDirty();render()};
+  if(difficulty)difficulty.onchange=function(){invalidateComparison();SETTINGS.difficulty=difficulty.value;markDirty();render()};
   var size=panel.querySelector("[data-pb-size]");
   if(size)size.onchange=function(){
     var n=Math.floor(Number(size.value)||0);
+    invalidateComparison();
     SETTINGS.partySize=n<=0?"any":Math.max(2,Math.min(6,n));
     RESULT=[];markDirty();render();
   };
   var countInput=panel.querySelector("[data-pb-count]");
   if(countInput)countInput.onchange=function(){
+    invalidateComparison();
     SETTINGS.partyCount=Math.max(0,Math.min(50,Math.floor(Number(countInput.value)||0)));
     RESULT=[];markDirty();render();
   };
   var targetInput=panel.querySelector("[data-pb-target]");
   if(targetInput)targetInput.onchange=function(){
+    invalidateComparison();
     SETTINGS.targetRate=Math.max(1,Number(targetInput.value)||130);
     RESULT=[];
     markDirty();
@@ -804,18 +949,32 @@ function renderNow(){
   };
   var mesoSort=panel.querySelector("[data-pb-meso-sort]");
   if(mesoSort)mesoSort.onchange=function(){MESO_SORT=mesoSort.value==="meso"?"meso":"original";render()};
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-mode]"),function(btn){
+    btn.onclick=function(){
+      SETTINGS.mode=normalizeMode(btn.dataset.pbMode);
+      RESULT=[];
+      markDirty();
+      render();
+    };
+  });
+  var compareBtn=panel.querySelector("[data-pb-compare]");
+  if(compareBtn)compareBtn.onclick=compareAllModes;
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-apply-mode]"),function(btn){
+    btn.onclick=function(){applyComparedMode(btn.dataset.pbApplyMode)};
+  });
   var buildBtn=panel.querySelector("[data-pb-build]");
   if(buildBtn)buildBtn.onclick=build;
   var saveBtn=panel.querySelector("[data-pb-save]");
   if(saveBtn)saveBtn.onclick=savePrefs;
   var resetBtn=panel.querySelector("[data-pb-reset]");
-  if(resetBtn)resetBtn.onclick=function(){SELECTED=[];RESULT=[];markDirty();render()};
+  if(resetBtn)resetBtn.onclick=function(){invalidateComparison();SELECTED=[];RESULT=[];markDirty();render()};
 
   Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-owner]"),function(btn){
     btn.onclick=function(){toggleOwner(btn.dataset.pbOwner)};
   });
   Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-char]"),function(btn){
     btn.onclick=function(){
+      invalidateComparison();
       var key=btn.dataset.pbChar;
       var i=SELECTED.indexOf(key);
       if(i>=0)SELECTED.splice(i,1);else SELECTED.push(key);
@@ -826,6 +985,7 @@ function renderNow(){
   });
   Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-mult]"),function(input){
     input.onchange=function(){
+      invalidateComparison();
       var key=input.dataset.pbMult;
       var v=Math.max(0,Number(input.value)||0);
       setBossMultiplier(SETTINGS.boss,key,v);

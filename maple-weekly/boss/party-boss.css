@@ -1776,3 +1776,157 @@ html[data-theme="dark"] .party-boss-target-warning strong,
 html[data-theme="dark"] .party-boss-party-card.out-target>header>div>em{
   color:#ff919a;
 }
+
+/* Five strategy modes and side-by-side comparison, scoped to Party Boss */
+.party-boss-mode-panel{
+  margin:14px 0 17px;
+  padding:15px;
+  border:1px solid var(--pb-line);
+  border-radius:15px;
+  background:var(--pb-soft);
+}
+.party-boss-mode-heading,.party-boss-compare-actions,.party-boss-compare-title{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+.party-boss-mode-heading>div>span{
+  display:block;
+  margin-bottom:3px;
+  color:var(--pb-muted);
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.party-boss-mode-heading>div>strong{
+  color:var(--text);
+  font-size:15px;
+  font-weight:950;
+}
+.party-boss-mode-heading>small,.party-boss-compare-actions>span,.party-boss-compare-title>span{
+  color:var(--pb-muted);
+  font-size:10px;
+  font-weight:750;
+  line-height:1.5;
+}
+.party-boss-mode-grid{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:8px;
+  margin-top:13px;
+}
+.party-boss-mode-option{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:6px;
+  min-height:80px;
+  padding:12px 10px;
+  border:1px solid var(--pb-line);
+  border-radius:11px;
+  background:var(--surface);
+  color:var(--text);
+  text-align:left;
+  cursor:pointer;
+  transition:border-color .15s ease,background .15s ease;
+}
+.party-boss-mode-option b{font-size:12px;font-weight:950}
+.party-boss-mode-option small{
+  font-size:9px;
+  font-weight:750;
+  line-height:1.5;
+  color:var(--pb-muted);
+}
+.party-boss-mode-option.active{
+  border:2px solid var(--accent,#008cc0);
+  padding:11px 9px;
+  background:color-mix(in srgb,var(--accent,#008cc0) 8%,var(--surface));
+}
+.party-boss-mode-option:disabled,.party-boss-compare-actions button:disabled{
+  opacity:.65;
+  cursor:wait;
+}
+.party-boss-compare-actions{
+  margin-top:12px;
+  padding-top:11px;
+  border-top:1px solid var(--pb-line);
+}
+.party-boss-compare-actions button,.party-boss-compare-table button{
+  flex:none;
+  padding:10px 13px;
+  border:1px solid var(--pb-line);
+  border-radius:9px;
+  background:var(--text);
+  color:var(--surface);
+  font-size:11px;
+  font-weight:900;
+  cursor:pointer;
+}
+.party-boss-compare-table button{
+  padding:7px 10px;
+  white-space:nowrap;
+  font-size:10px;
+}
+.party-boss-compare-table button:disabled{opacity:.45;cursor:not-allowed}
+.party-boss-compare-progress{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:9px;
+  background:var(--surface);
+  color:var(--text);
+  font-size:11px;
+  font-weight:850;
+}
+.party-boss-compare-results{
+  margin-top:14px;
+  padding-top:12px;
+  border-top:1px solid var(--pb-line);
+}
+.party-boss-compare-title{margin-bottom:9px}
+.party-boss-compare-title strong{color:var(--text);font-size:12px;font-weight:950}
+.party-boss-compare-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.party-boss-compare-table{
+  width:100%;
+  min-width:570px;
+  border-collapse:collapse;
+  font-size:11px;
+  color:var(--text);
+}
+.party-boss-compare-table th,.party-boss-compare-table td{
+  padding:11px 9px;
+  border-bottom:1px solid var(--pb-line);
+  text-align:left;
+  vertical-align:middle;
+}
+.party-boss-compare-table thead th{
+  font-size:9px;
+  font-weight:900;
+  color:var(--pb-muted);
+  white-space:nowrap;
+}
+.party-boss-compare-table tbody th{font-weight:950;white-space:nowrap}
+.party-boss-compare-table td small{
+  display:block;
+  margin-top:3px;
+  color:var(--pb-muted);
+  font-size:9px;
+  font-weight:750;
+}
+.party-boss-compare-table .pb-clear{color:#448764;font-weight:900}
+.party-boss-compare-table .pb-fail{color:#c14956;font-weight:900}
+@media(max-width:1050px){
+  .party-boss-mode-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:680px){
+  .party-boss-mode-panel{padding:12px;margin:11px 0 14px}
+  .party-boss-mode-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .party-boss-mode-option{min-height:68px;padding:10px}
+  .party-boss-mode-option.active{padding:9px}
+  .party-boss-mode-option b{font-size:11px}
+  .party-boss-mode-heading,.party-boss-compare-actions,.party-boss-compare-title{
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+  .party-boss-compare-actions button{width:100%}
+}
