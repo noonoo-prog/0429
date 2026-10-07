@@ -660,6 +660,11 @@ function renderNow(){
   var panel=document.getElementById("partyBossPanel");
   if(!panel)return;
   var chars=allChars();
+  if(RESULT.length&&!validPartyOwners(RESULT)){
+    RESULT=[];
+    markDirty();
+    notify("이전 파티에 같은 주인의 캐릭터가 중복되어 결과를 숨겼어요. 자동 균형 맞추기를 다시 눌러 주세요.");
+  }
   if(!chars.length){
     panel.innerHTML='<div class="party-boss-empty"><strong>캐릭터 정보를 불러오는 중…</strong><span>잠시만 기다려 주세요.</span></div>';
     return;
