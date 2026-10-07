@@ -69,7 +69,7 @@ let THEME_MODE=localStorage.getItem(THEME_KEY)==="dark"?"dark":"light";
 const CHECKLIST_START="2026-09-24";
 const PAGE_VIEW_KEY="boss-board-page-view-v1",ROUTE_SELECTION_PREFIX="boss-board-route-selection-v1-";
 const ROUTE_SAVED_SLOTS_KEY="boss-board-route-saved-slots-v1";
-let PAGE_VIEW=(function(){var v=localStorage.getItem(PAGE_VIEW_KEY);return v==="checklist"||v==="route"?v:"board"})();
+let PAGE_VIEW=(function(){var v=localStorage.getItem(PAGE_VIEW_KEY);return v==="checklist"||v==="route"||v==="party"?v:"board"})();
 let CHECKLIST_MONTH=(function(){
   var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1;
   if(y<2026||(y===2026&&m<9))return "2026-09";
@@ -1638,12 +1638,13 @@ function renderPartyRoute(){
   bindRouteSelection(panel,focus,allRuns,selectedIds);
 }
 function updatePageView(){
-  var checklist=PAGE_VIEW==="checklist",route=PAGE_VIEW==="route",board=PAGE_VIEW==="board";
+  var checklist=PAGE_VIEW==="checklist",route=PAGE_VIEW==="route",party=PAGE_VIEW==="party",board=PAGE_VIEW==="board";
   var desktop=document.querySelector(".desktop-board");
   var mobile=document.getElementById("mobileBoard");
   var hint=document.getElementById("boardHint");
   var panel=document.getElementById("checklistPanel");
   var routePanel=document.getElementById("routePanel");
+  var partyBossPanel=document.getElementById("partyBossPanel");
   var partyFilter=document.getElementById("partyFilterRow");
   var ownerbar=document.querySelector(".ownerbar");
   var save=document.querySelector(".save-controls");
@@ -1652,13 +1653,14 @@ function updatePageView(){
   if(hint)hint.hidden=!board;
   if(panel)panel.hidden=!checklist;
   if(routePanel)routePanel.hidden=!route;
+  if(partyBossPanel)partyBossPanel.hidden=!party;
   if(save)save.hidden=!board;
   if(partyFilter)partyFilter.hidden=!board;
-  if(ownerbar)ownerbar.hidden=route;
+  if(ownerbar)ownerbar.hidden=route||party;
 
   var pageTitle=document.getElementById("pageTitle"),pageSub=document.getElementById("pageSub");
-  if(pageTitle)pageTitle.textContent=checklist?"보스 체크리스트":(route?"도핑 최소 루트":"보스 현황판");
-  if(pageSub)pageSub.textContent=checklist?"달력은 일~토 · 보스 초기화는 목요일~수요일":(route?"2인 이상 파티 선택 · 루트 만들기":"주간 최대 12개 · 검은 마법사는 월간");
+  if(pageTitle)pageTitle.textContent=checklist?"보스 체크리스트":(route?"도핑 최소 루트":(party?"파티보스":"보스 현황판"));
+  if(pageSub)pageSub.textContent=checklist?"달력은 일~토 · 보스 초기화는 목요일~수요일":(route?"2인 이상 파티 선택 · 루트 만들기":(party?"총 배율을 비슷하게 맞춰 자동 파티 편성":"주간 최대 12개 · 검은 마법사는 월간"));
 
   Array.prototype.forEach.call(document.querySelectorAll("[data-page-view]"),function(btn){
     btn.classList.toggle("active",btn.dataset.pageView===PAGE_VIEW);
@@ -1668,7 +1670,7 @@ function updatePageView(){
   boardOnlyIds.forEach(function(id){var el=document.getElementById(id);if(el)el.hidden=!board});
 }
 function setPageView(view){
-  PAGE_VIEW=view==="checklist"?"checklist":(view==="route"?"route":"board");
+  PAGE_VIEW=view==="checklist"?"checklist":(view==="route"?"route":(view==="party"?"party":"board"));
   localStorage.setItem(PAGE_VIEW_KEY,PAGE_VIEW);
   updatePageView();
   render();
@@ -2498,6 +2500,8 @@ function render(){
     renderChecklist();
   }else if(PAGE_VIEW==="route"){
     renderPartyRoute();
+  }else if(PAGE_VIEW==="party"){
+    if(window.renderPartyBossPage)window.renderPartyBossPage();
   }else{
     renderDesktop();renderMobile();updatePartyFilterUI();
   }
