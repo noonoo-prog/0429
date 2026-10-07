@@ -41,11 +41,13 @@ function currentWeek(){const k=new Date(Date.now()+9*3600000),utc=Date.UTC(k.get
 function format(n){n=Math.floor(Number(n)||0);const neg=n<0;n=Math.abs(n);if(!n)return"0 메소";const e=Math.floor(n/1e8),m=Math.floor(n%1e8/1e4),rest=n%1e4;const bits=[];if(e)bits.push(e.toLocaleString("ko-KR")+"억");if(m)bits.push(m.toLocaleString("ko-KR")+"만");if(rest)bits.push(rest.toLocaleString("ko-KR"));return (neg?"−":"")+bits.join(" ")+" 메소"}
 function compact(n){return format(n).replace(" 메소","")}
 function previewBossEok(n){
-  const amount=Math.round(Math.max(0,Number(n)||0)/10000)*10000;
+  const raw=Number(n)||0;
+  const amount=Math.round(Math.abs(raw)/10000)*10000;
   if(!amount)return "0 메소";
   const e=Math.floor(amount/100000000);
   const m=Math.floor((amount%100000000)/10000);
-  return [e?e.toLocaleString("ko-KR")+"억":"",m?m.toLocaleString("ko-KR")+"만":""].filter(Boolean).join(" ");
+  const formatted=[e?e.toLocaleString("ko-KR")+"억":"",m?m.toLocaleString("ko-KR")+"만":""].filter(Boolean).join(" ");
+  return (raw<0?"마이너스 ":"")+formatted;
 }
 function amountFromInput(raw){
   const value=String(raw||"").trim().replace(/[\s,]/g,"").replace(/메소|원/g,"");
