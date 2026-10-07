@@ -2741,9 +2741,14 @@ function startPolling(){
     }else if(PAGE_VIEW==="board"){
       loadRemote(false);
       loadChecklist(false);
-    }else{
+    }else if(PAGE_VIEW==="route"){
       loadRemote(false);
       loadRouteSlots(false);
+    }else if(PAGE_VIEW==="party"){
+      loadRemote(false);
+      if(window.refreshPartyBossShared)window.refreshPartyBossShared();
+    }else{
+      loadRemote(false);
     }
   },4000);
 }
