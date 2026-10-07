@@ -613,3 +613,57 @@ html[data-theme="dark"] .party-boss-result{
     gap:4px;
   }
 }
+
+/* Custom party size / party count inputs */
+.party-boss-controls{
+  grid-template-columns:minmax(125px,.95fr) minmax(95px,.65fr) minmax(115px,.7fr) minmax(105px,.65fr) minmax(145px,.85fr) 95px minmax(150px,.95fr);
+}
+.party-boss-number>div{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:3px;
+}
+.party-boss-number input{
+  width:100%;
+  min-width:0;
+  min-height:38px;
+  box-sizing:border-box;
+  padding:0 10px;
+  border:1px solid var(--line-strong);
+  border-radius:9px;
+  background:var(--surface);
+  color:var(--text);
+  font:inherit;
+  font-size:11px;
+  font-weight:900;
+  text-align:right;
+}
+.party-boss-number em{
+  color:var(--pb-muted);
+  font-size:8px;
+  font-style:normal;
+  font-weight:850;
+  text-align:right;
+  white-space:nowrap;
+}
+@media(max-width:1100px){
+  .party-boss-controls{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+  .party-boss-build{
+    grid-column:auto;
+  }
+}
+@media(max-width:959px){
+  .party-boss-controls{
+    grid-template-columns:1fr 1fr;
+  }
+  .party-boss-build{
+    grid-column:1/-1;
+  }
+}
+@media(max-width:560px){
+  .party-boss-number em{
+    white-space:normal;
+  }
+}
