@@ -940,3 +940,570 @@ html[data-theme="dark"] .party-boss-result{
     min-height:42px;
   }
 }
+
+
+/* Final responsive polish: tablet + mobile */
+.party-boss-controls select:focus-visible,
+.party-boss-controls input:focus-visible,
+.party-boss-char input:focus-visible,
+.party-boss-save:focus-visible,
+.party-boss-reset:focus-visible,
+.party-boss-build:focus-visible,
+.party-boss-owner>header button:focus-visible,
+.party-boss-char-toggle:focus-visible{
+  outline:2px solid color-mix(in srgb,var(--owner-accent,#6f7b88) 68%,transparent);
+  outline-offset:2px;
+}
+
+@media(min-width:960px) and (max-width:1199px){
+  .party-boss-panel{
+    width:auto;
+    max-width:1100px;
+    margin:0 auto;
+    padding:0 14px 24px;
+  }
+  .party-boss-head{
+    align-items:center;
+    gap:18px;
+    margin-bottom:16px;
+  }
+  .party-boss-head strong{
+    font-size:25px;
+  }
+  .party-boss-head p{
+    max-width:620px;
+    line-height:1.45;
+  }
+  .party-boss-head-actions{
+    flex:none;
+    gap:7px;
+  }
+  .party-boss-shared-meta,
+  .party-boss-save,
+  .party-boss-reset{
+    min-height:36px;
+  }
+
+  .party-boss-controls{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:11px;
+    align-items:start;
+    padding:15px;
+  }
+  .party-boss-controls>label{
+    display:flex;
+    min-width:0;
+    min-height:78px;
+    flex-direction:column;
+  }
+  .party-boss-controls>label>span,
+  .party-boss-summary>span{
+    display:flex;
+    align-items:center;
+    height:15px;
+    margin:0 0 6px;
+    line-height:15px;
+  }
+  .party-boss-controls select,
+  .party-boss-number input,
+  .party-boss-target input{
+    min-height:42px;
+    height:42px;
+  }
+  .party-boss-number>div,
+  .party-boss-target>div{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:42px 14px;
+    gap:4px;
+  }
+  .party-boss-number em,
+  .party-boss-target em{
+    min-height:14px;
+    line-height:14px;
+    text-align:right;
+  }
+  .party-boss-target{
+    grid-column:span 2;
+  }
+  .party-boss-summary{
+    display:flex;
+    min-height:78px;
+    flex-direction:column;
+    padding:0;
+    border:0;
+    background:transparent;
+  }
+  .party-boss-summary b{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:42px;
+    box-sizing:border-box;
+    border:1px solid var(--pb-line);
+    border-radius:9px;
+    background:var(--pb-soft);
+  }
+  .party-boss-summary::after{
+    content:"현재 선택";
+    height:14px;
+    margin-top:4px;
+    color:var(--pb-muted);
+    font-size:8px;
+    font-weight:850;
+    line-height:14px;
+    text-align:right;
+  }
+  .party-boss-build{
+    align-self:start;
+    min-height:42px;
+    height:42px;
+    margin-top:21px;
+    grid-column:auto;
+  }
+
+  .party-boss-char-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:9px;
+  }
+  .party-boss-char{
+    min-height:64px;
+    grid-template-columns:minmax(0,1fr) 84px;
+  }
+  .party-boss-result-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+  .party-boss-meso-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+}
+
+@media(max-width:959px){
+  .party-boss-panel{
+    width:auto;
+    max-width:none;
+    margin:0;
+    padding:0 12px 22px;
+  }
+  .party-boss-shell{
+    width:100%;
+  }
+
+  .party-boss-head{
+    flex-direction:column;
+    align-items:stretch;
+    gap:13px;
+    margin-bottom:14px;
+  }
+  .party-boss-head>div:first-child{
+    min-width:0;
+  }
+  .party-boss-head>div>span{
+    font-size:9px;
+  }
+  .party-boss-head strong{
+    margin-top:3px;
+    font-size:23px;
+    line-height:1.15;
+  }
+  .party-boss-head p{
+    margin-top:6px;
+    max-width:680px;
+    font-size:10px;
+    line-height:1.5;
+  }
+  .party-boss-head-actions{
+    display:grid;
+    width:100%;
+    grid-template-columns:minmax(0,1fr) auto auto;
+    gap:7px;
+    align-items:center;
+  }
+  .party-boss-shared-meta{
+    min-width:0;
+    min-height:36px;
+    box-sizing:border-box;
+    justify-content:flex-start;
+    overflow:hidden;
+    padding:0 10px;
+    border:1px solid var(--line);
+    border-radius:9px;
+    background:var(--surface-soft);
+    font-size:8.5px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .party-boss-save,
+  .party-boss-reset{
+    min-height:36px;
+    padding:0 11px;
+    font-size:9px;
+  }
+
+  .party-boss-controls{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+    align-items:start;
+    padding:13px;
+    border-radius:13px;
+  }
+  .party-boss-controls>label{
+    display:flex;
+    min-width:0;
+    flex-direction:column;
+  }
+  .party-boss-controls>label>span,
+  .party-boss-summary>span{
+    display:flex;
+    align-items:center;
+    min-height:15px;
+    margin:0 0 6px;
+    line-height:15px;
+  }
+  .party-boss-controls select,
+  .party-boss-number input,
+  .party-boss-target input{
+    min-height:44px;
+    height:44px;
+    border-radius:10px;
+    padding:0 11px;
+    font-size:12px;
+  }
+  .party-boss-number>div,
+  .party-boss-target>div{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:44px 14px;
+    gap:4px;
+  }
+  .party-boss-number em,
+  .party-boss-target em{
+    min-height:14px;
+    margin:0;
+    font-size:8px;
+    line-height:14px;
+    text-align:right;
+  }
+  .party-boss-target{
+    grid-column:1/-1;
+  }
+  .party-boss-summary{
+    display:flex;
+    min-height:79px;
+    box-sizing:border-box;
+    flex-direction:column;
+    padding:0;
+    border:0;
+    background:transparent;
+  }
+  .party-boss-summary b{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:44px;
+    box-sizing:border-box;
+    border:1px solid var(--pb-line);
+    border-radius:10px;
+    background:var(--pb-soft);
+    font-size:15px;
+  }
+  .party-boss-summary::after{
+    content:"현재 선택";
+    min-height:14px;
+    margin-top:4px;
+    color:var(--pb-muted);
+    font-size:8px;
+    font-weight:850;
+    line-height:14px;
+    text-align:right;
+  }
+  .party-boss-build{
+    align-self:start;
+    min-height:44px;
+    height:44px;
+    margin-top:21px;
+    grid-column:auto;
+    border-radius:10px;
+    font-size:11px;
+  }
+
+  .party-boss-owner-groups{
+    margin-top:16px;
+  }
+  .party-boss-owner{
+    padding:14px 0;
+  }
+  .party-boss-owner>header{
+    margin-bottom:9px;
+  }
+  .party-boss-owner>header strong{
+    font-size:14px;
+  }
+  .party-boss-owner>header button{
+    min-height:32px;
+    padding:0 10px;
+  }
+  .party-boss-char-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+  .party-boss-char{
+    min-height:62px;
+    grid-template-columns:minmax(0,1fr) 82px;
+    gap:7px;
+    padding:8px;
+  }
+  .party-boss-avatar{
+    flex-basis:32px;
+    width:32px;
+    height:32px;
+  }
+  .party-boss-char-name b{
+    font-size:11px;
+  }
+  .party-boss-char input{
+    min-height:38px;
+  }
+
+  .party-boss-result{
+    margin-top:16px;
+    padding:13px;
+    border-radius:13px;
+  }
+  .party-boss-result>header{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+  }
+  .party-boss-result>header>div:first-child{
+    min-width:0;
+  }
+  .party-boss-result>header>div>strong{
+    display:block;
+    font-size:13px;
+    line-height:1.4;
+  }
+  .party-boss-gap{
+    flex:none;
+  }
+  .party-boss-gap b{
+    font-size:16px;
+  }
+  .party-boss-result-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:9px;
+    margin-top:12px;
+  }
+  .party-boss-party-card>header{
+    min-height:48px;
+    padding:9px;
+  }
+  .party-boss-party-card>header>div{
+    min-width:0;
+    gap:5px;
+  }
+  .party-boss-party-card>header>div>b{
+    font-size:10px;
+  }
+  .party-boss-party-card>header>div>em{
+    min-height:18px;
+    padding:0 5px;
+    font-size:7px;
+  }
+  .party-boss-party-totals>strong{
+    font-size:14px;
+  }
+  .party-boss-party-totals>small{
+    font-size:7.5px;
+  }
+  .party-boss-members{
+    padding:6px;
+  }
+  .party-boss-member{
+    gap:7px;
+    padding:8px 6px;
+  }
+  .party-boss-member b{
+    font-size:10px;
+  }
+  .party-boss-member>strong{
+    font-size:10px;
+  }
+
+  .party-boss-meso-summary{
+    margin-top:15px;
+    padding-top:13px;
+  }
+  .party-boss-meso-summary>header{
+    align-items:flex-start;
+    gap:8px;
+  }
+  .party-boss-meso-summary>header>div>strong{
+    font-size:13px;
+  }
+  .party-boss-meso-summary>header>small{
+    font-size:8px;
+    text-align:right;
+  }
+  .party-boss-meso-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+  .party-boss-meso-card{
+    min-height:50px;
+    padding:9px 10px;
+  }
+  .party-boss-meso-card b{
+    font-size:11px;
+  }
+  .party-boss-meso-card>strong{
+    font-size:13px;
+  }
+}
+
+@media(max-width:680px){
+  .party-boss-head-actions{
+    grid-template-columns:1fr 1fr;
+  }
+  .party-boss-shared-meta{
+    grid-column:1/-1;
+    order:0;
+    min-height:34px;
+    justify-content:center;
+    border:1px solid var(--line);
+    background:var(--surface-soft);
+    padding:0 9px;
+    text-align:center;
+  }
+  .party-boss-save,
+  .party-boss-reset{
+    width:100%;
+    min-height:38px;
+  }
+
+  .party-boss-result>header{
+    flex-direction:column;
+  }
+  .party-boss-gap{
+    display:flex;
+    width:100%;
+    align-items:center;
+    justify-content:space-between;
+    text-align:left;
+  }
+  .party-boss-gap span{
+    margin:0;
+  }
+  .party-boss-result-grid{
+    grid-template-columns:1fr;
+  }
+  .party-boss-meso-summary>header{
+    flex-direction:column;
+  }
+  .party-boss-meso-summary>header>small{
+    text-align:left;
+  }
+}
+
+@media(max-width:560px){
+  .party-boss-panel{
+    padding:0 9px 18px;
+  }
+  .party-boss-head{
+    gap:11px;
+    margin-bottom:12px;
+  }
+  .party-boss-head strong{
+    font-size:21px;
+  }
+  .party-boss-head p{
+    font-size:9.5px;
+  }
+
+  .party-boss-controls{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:9px;
+    padding:11px;
+  }
+  .party-boss-controls>label:nth-child(1),
+  .party-boss-controls>label:nth-child(2),
+  .party-boss-target{
+    grid-column:1/-1;
+  }
+  .party-boss-controls select,
+  .party-boss-number input,
+  .party-boss-target input{
+    min-height:45px;
+    height:45px;
+    font-size:12px;
+  }
+  .party-boss-number>div,
+  .party-boss-target>div{
+    grid-template-rows:45px 14px;
+  }
+  .party-boss-summary{
+    min-height:80px;
+  }
+  .party-boss-summary b{
+    height:45px;
+  }
+  .party-boss-build{
+    min-height:45px;
+    height:45px;
+    margin-top:21px;
+    padding:0 10px;
+    font-size:10px;
+  }
+
+  .party-boss-owner{
+    padding:12px 0;
+  }
+  .party-boss-char-grid{
+    grid-template-columns:1fr;
+  }
+  .party-boss-char{
+    min-height:64px;
+    grid-template-columns:minmax(0,1fr) 86px;
+    padding:9px;
+  }
+  .party-boss-char input{
+    min-height:40px;
+  }
+
+  .party-boss-result{
+    padding:11px;
+  }
+  .party-boss-party-card>header{
+    min-height:50px;
+  }
+  .party-boss-member{
+    padding:9px 6px;
+  }
+  .party-boss-meso-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:390px){
+  .party-boss-panel{
+    padding-left:7px;
+    padding-right:7px;
+  }
+  .party-boss-controls{
+    padding:10px;
+  }
+  .party-boss-summary,
+  .party-boss-build{
+    grid-column:1/-1;
+  }
+  .party-boss-build{
+    margin-top:0;
+  }
+  .party-boss-char{
+    grid-template-columns:minmax(0,1fr) 80px;
+  }
+  .party-boss-party-card>header{
+    align-items:flex-start;
+  }
+}
