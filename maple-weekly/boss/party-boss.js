@@ -51,6 +51,8 @@ var RENDER_PENDING=false;
 var RENDER_TIMER=null;
 var BUILDING=false;
 var MESO_SORT="original";
+var BUILDING=false;
+var MESO_SORT="original";
 
 function esc(s){
   return String(s==null?"":s).replace(/[&<>"']/g,function(m){
@@ -68,6 +70,7 @@ var LEGACY_MULT=readJSON(LEGACY_MULT_KEY,{});
 var SELECTED=readJSON(SELECT_KEY,[]);
 var SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:"any",partyCount:0,targetRate:130},readJSON(SETTINGS_KEY,{}));
 var SAVED_RESULT=readJSON(RESULT_KEY,[]);
+SETTINGS.targetRate=Math.max(1,Number(SETTINGS.targetRate)||130);
 
 function defaultDifficulty(boss){
   var list=BOSS_DIFFICULTIES[boss]||[];
@@ -104,6 +107,13 @@ function ownerMesoTotals(){
       totals[key].total+=each;
       totals[key].runs++;
     });
+  });
+  var avgs=ownerAverages(selectedChars());
+  Object.keys(totals).forEach(function(key){
+    var row=totals[key];
+    row.averageRate=avgs[key]||0;
+    row.grade=averageGrade(row.averageRate);
+    row.averageMeso=row.runs?row.total/row.runs:0;
   });
   return totals;
 }
@@ -357,7 +367,8 @@ function candidateScore(parties,target,ownerAvgs){
       seen[key]=true;
       var own=ownerAvgs[key]||0;
       // Character strength leads. Owner average is a small tie-breaker.
-      strongSizePenalty+=(c.multiplier+own*.12)*Math.pow(sz-2,1.1);
+      var gradeBonus=own>=36?4:(own>=33?2.5:(own>=30?1:0));
+      strongSizePenalty+=(c.multiplier+own*.12+gradeBonus)*Math.pow(sz-2,1.1);
       reward[key]=(reward[key]||0)+1/sz;
       runs[key]=(runs[key]||0)+1;
     });
@@ -527,7 +538,7 @@ function fetchBoard(restoreResult){
     });
   }).finally(function(){loading=false});
 }
-function build(){
+function performBuild(){
   var chars=selectedChars();
   if(chars.length<2){
     RESULT=[];
@@ -563,6 +574,17 @@ function build(){
   }
   markDirty();
   render();
+}
+// Paint the loading state before the bounded optimizer starts.
+function build(){
+  if(BUILDING)return;
+  BUILDING=true;
+  render();
+  setTimeout(function(){
+    try{performBuild()}
+    catch(e){notify("자동 편성 오류: "+(e.message||"다시 시도해 주세요."))}
+    finally{BUILDING=false;render()}
+  },40);
 }
 function notify(msg){
   var toast=document.getElementById("toast");
@@ -614,7 +636,7 @@ function renderNow(){
 
   html+='<section class="party-boss-shell">';
   html+='<header class="party-boss-head">';
-  html+='<div><span>PARTY BALANCER</span><strong>파티보스</strong><p>선택한 캐릭터들의 총 배율이 최대한 비슷하게 자동 편성됩니다.</p></div>';
+  html+='<div><span>PARTY BALANCER</span><strong>파티보스</strong><p>강한 캐릭터는 소수팟을 우선 검토하고, 목표 배율을 충족하도록 편성합니다.</p></div>';
   html+='<div class="party-boss-head-actions">';
   html+='<span class="party-boss-shared-meta">'+esc(sharedMetaText())+'</span>';
   html+='<button class="party-boss-save '+(DIRTY&&!SAVING?"needs-save":"")+'" type="button" data-pb-save="1" '+(SAVING?"disabled":"")+'>'+(SAVING?"저장 중…":(DIRTY?"저장":"공용 저장됨"))+'</button>';
@@ -636,9 +658,9 @@ function renderNow(){
   html+='</select></label>';
   html+='<label class="party-boss-number"><span>파티 인원</span><div><input type="number" min="0" max="6" step="1" inputmode="numeric" data-pb-size="1" value="'+(String(SETTINGS.partySize)==="any"?"0":String(SETTINGS.partySize||0))+'" placeholder="0"><em>0 = 상관없음</em></div></label>';
   html+='<label class="party-boss-number"><span>파티 수</span><div><input type="number" min="0" max="50" step="1" inputmode="numeric" data-pb-count="1" value="'+String(Math.max(0,Number(SETTINGS.partyCount)||0))+'" placeholder="0"><em>0 = 자동</em></div></label>';
-  html+='<label class="party-boss-target"><span>목표 배율</span><div><input type="number" min="0" step="1" inputmode="decimal" data-pb-target="1" value="'+(Number(SETTINGS.targetRate)>0?String(SETTINGS.targetRate):"")+'" placeholder="140"><em>입력값 ~ +10%</em></div></label>';
+  html+='<label class="party-boss-target"><span>목표 배율 (수정 가능)</span><div><input type="number" min="1" step="0.1" inputmode="decimal" data-pb-target="1" value="'+String(SETTINGS.targetRate)+'" placeholder="130" aria-label="최소 목표 배율 직접 입력"><em>권장 '+formatRate(SETTINGS.targetRate)+'~'+formatRate(SETTINGS.targetRate*1.1)+'</em></div></label>';
   html+='<div class="party-boss-summary"><span>선택 캐릭터</span><b>'+selected.length+'명</b></div>';
-  html+='<button class="party-boss-build" type="button" data-pb-build="1">자동 균형 맞추기</button>';
+  html+='<button class="party-boss-build" type="button" data-pb-build="1" '+(BUILDING?"disabled":"")+'>'+(BUILDING?"편성 계산 중…":"자동 균형 맞추기")+'</button>';
   html+='</section>';
 
   html+='<section class="party-boss-owner-groups">';
@@ -659,7 +681,7 @@ function renderNow(){
       html+='<button class="party-boss-char-toggle" type="button" data-pb-char="'+esc(c.key)+'" aria-pressed="'+(active?"true":"false")+'">';
       html+='<span class="party-boss-char-name"><b>'+esc(c.name)+'</b></span>';
       html+='</button>';
-      html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(c.key)+'" value="'+String(c.multiplier||0)+'" placeholder="0"></label>';
+      html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(c.key)+'" value="'+String(c.multiplier||0)+'" placeholder="0" aria-label="'+esc(c.name)+' 배율 직접 수정" title="배율 직접 수정 가능"></label>';
       html+='</article>';
     });
     html+='</div></section>';
@@ -673,13 +695,19 @@ function renderNow(){
     var sizeLabel=String(SETTINGS.partySize)==="any"?"인원 상관없음":SETTINGS.partySize+"인 기준";
     var countLabel=Math.max(0,Number(SETTINGS.partyCount)||0)>0?" · "+Math.floor(Number(SETTINGS.partyCount))+"파티":"";
     var target=Number(SETTINGS.targetRate)||0;
-    var targetLabel=target>0?" · 목표 "+formatRate(target)+" ~ "+formatRate(target+10):"";
+    var targetLabel=" · 목표 "+formatRate(target)+" ~ "+formatRate(target*1.1);
     html+='<header><div><span>자동 편성 결과</span><strong>'+esc(SETTINGS.boss)+' · '+esc(SETTINGS.difficulty)+' · '+sizeLabel+countLabel+targetLabel+'</strong></div>';
     html+='<div class="party-boss-gap"><span>파티간 차이</span><b>'+formatRate(max-min)+'</b></div></header>';
+    var missingParties=RESULT.filter(function(p){return p.total+0.000001<target});
+    if(missingParties.length){
+      html+='<div class="party-boss-target-warning" role="status"><strong>목표 미달 '+missingParties.length+'파티</strong><span>'+missingParties.map(function(p){return p.id+'파티 '+formatRate(target-p.total)+' 부족'}).join(' · ')+' · 목표 미달 파티는 클리어 가능으로 표시하지 않습니다.</span></div>';
+    }else{
+      html+='<div class="party-boss-target-success" role="status">모든 파티가 최소 목표 '+formatRate(target)+'를 충족했습니다.</div>';
+    }
     html+='<div class="party-boss-result-grid">';
     RESULT.forEach(function(p){
-      html+='<article class="party-boss-party-card '+(target>0?(p.total>=target&&p.total<=target+10?"in-target":"out-target"):"")+'">';
-      var status=target>0?(p.total<target?"목표보다 낮음":(p.total>target+10?"목표보다 높음":"목표 범위")):"";
+      html+='<article class="party-boss-party-card '+(p.total<target?"out-target":(p.total<=target*1.1?"in-target":"above-target"))+'">';
+      var status=p.total<target?"미달 "+formatRate(target-p.total):(p.total>target*1.1?"권장 범위 초과":"목표 충족");
       var partyMesoEach=crystalPrice()/Math.max(1,p.members.length);
       html+='<header><div><span>'+p.id+'</span><b>'+p.id+'파티 · '+p.members.length+'명</b>'+(status?'<em>'+status+'</em>':'')+'</div><div class="party-boss-party-totals"><strong>'+formatRate(p.total)+'</strong><small>인당 '+formatMeso(partyMesoEach)+'</small></div></header>';
       html+='<div class="party-boss-members">';
@@ -695,12 +723,13 @@ function renderNow(){
     html+='</div>';
     var mesoTotals=ownerMesoTotals();
     var mesoRows=(DATA.owners||[]).map(function(o){return mesoTotals[String(o.id)]}).filter(Boolean);
+    if(MESO_SORT==="meso")mesoRows.sort(function(a,b){return b.total-a.total||a.ownerName.localeCompare(b.ownerName,"ko")});
     if(mesoRows.length){
       html+='<section class="party-boss-meso-summary">';
-      html+='<header><div><span>OWNER MESO</span><strong>주인별 예상 메소 총합</strong></div><small>'+esc(SETTINGS.boss)+' · '+esc(SETTINGS.difficulty)+' 결정석 기준</small></header>';
+        html+='<header><div><span>OWNER MESO</span><strong>주인별 예상 메소 총합</strong></div><div class="party-boss-meso-tools"><small>'+esc(SETTINGS.boss)+' · '+esc(SETTINGS.difficulty)+' 결정석 기준</small><label>정렬 <select data-pb-meso-sort="1"><option value="original" '+(MESO_SORT==="original"?"selected":"")+'>기존 순서</option><option value="meso" '+(MESO_SORT==="meso"?"selected":"")+'>총 메소 높은 순</option></select></label></div></header>';
       html+='<div class="party-boss-meso-grid">';
       mesoRows.forEach(function(row){
-        html+='<article class="party-boss-meso-card owner-themed" data-theme="'+esc(row.theme)+'"><div><b>'+esc(row.ownerName)+'</b><small>'+row.runs+'캐릭터</small></div><strong>'+formatMeso(row.total)+'</strong></article>';
+        html+='<article class="party-boss-meso-card owner-themed" data-theme="'+esc(row.theme)+'"><div><b>'+esc(row.ownerName)+'</b><small>'+row.runs+'캐릭터 · 평균 '+formatRate(row.averageRate)+'</small><small>'+esc(row.grade.label)+'</small></div><div class="party-boss-meso-amount"><strong>'+formatMeso(row.total)+'</strong><small>캐릭터당 '+formatMeso(row.averageMeso)+'</small></div></article>';
       });
       html+='</div></section>';
     }
@@ -729,11 +758,13 @@ function renderNow(){
   };
   var targetInput=panel.querySelector("[data-pb-target]");
   if(targetInput)targetInput.onchange=function(){
-    SETTINGS.targetRate=Math.max(0,Number(targetInput.value)||0);
+    SETTINGS.targetRate=Math.max(1,Number(targetInput.value)||130);
     RESULT=[];
     markDirty();
     render();
   };
+  var mesoSort=panel.querySelector("[data-pb-meso-sort]");
+  if(mesoSort)mesoSort.onchange=function(){MESO_SORT=mesoSort.value==="meso"?"meso":"original";render()};
   var buildBtn=panel.querySelector("[data-pb-build]");
   if(buildBtn)buildBtn.onclick=build;
   var saveBtn=panel.querySelector("[data-pb-save]");

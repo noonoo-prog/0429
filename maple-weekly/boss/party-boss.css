@@ -1630,3 +1630,149 @@ html[data-theme="dark"] .party-boss-result{
     font-size:13.5px;
   }
 }
+
+
+/* Strength-priority balancer: validation, rewards and manual multiplier input */
+.party-boss-target-warning,
+.party-boss-target-success{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:11px;
+  line-height:1.5;
+  font-weight:800;
+}
+.party-boss-target-warning{
+  border:1px solid color-mix(in srgb,#cb4c5a 45%,var(--pb-line));
+  background:color-mix(in srgb,#cb4c5a 8%,var(--surface));
+  color:var(--text);
+}
+.party-boss-target-warning strong{
+  flex:none;
+  color:#c14956;
+  font-weight:950;
+}
+.party-boss-target-warning span{
+  min-width:0;
+}
+.party-boss-target-success{
+  border:1px solid color-mix(in srgb,#478b70 25%,var(--pb-line));
+  background:color-mix(in srgb,#478b70 5%,var(--surface));
+  color:var(--muted);
+}
+.party-boss-party-card.out-target{
+  border:2px solid #c14956;
+}
+.party-boss-party-card.out-target>header>div>em{
+  color:#c14956;
+  background:color-mix(in srgb,#c14956 12%,var(--surface));
+}
+.party-boss-party-card.above-target>header>div>em{
+  color:var(--muted);
+}
+.party-boss-build:disabled{
+  opacity:.65;
+  cursor:progress;
+}
+.party-boss-meso-tools{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  gap:9px;
+}
+.party-boss-meso-tools>small{
+  color:var(--muted);
+  font-size:9px;
+  font-weight:800;
+}
+.party-boss-meso-tools>label{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  color:var(--pb-muted);
+  font-size:9px;
+  font-weight:850;
+}
+.party-boss-meso-tools select{
+  min-height:32px;
+  max-width:155px;
+  padding:0 8px;
+  border:1px solid var(--pb-line);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--text);
+  font:inherit;
+  font-size:10px;
+  font-weight:850;
+}
+.party-boss-meso-card{
+  align-items:center;
+  min-width:0;
+}
+.party-boss-meso-card>div:first-child{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+}
+.party-boss-meso-card>div:first-child small{
+  margin:0;
+  line-height:1.3;
+}
+.party-boss-meso-amount{
+  display:flex;
+  flex:none;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:4px;
+  text-align:right;
+}
+.party-boss-meso-amount>strong{
+  color:var(--text);
+  font-size:15px;
+  font-weight:950;
+  white-space:nowrap;
+}
+.party-boss-meso-amount>small{
+  color:var(--muted);
+  font-size:9px;
+  font-weight:850;
+  white-space:nowrap;
+}
+.party-boss-target input,
+.party-boss-char input{
+  font-variant-numeric:tabular-nums;
+}
+@media(max-width:959px){
+  .party-boss-meso-tools{
+    gap:7px;
+  }
+  .party-boss-meso-amount>strong{
+    font-size:13px;
+  }
+  .party-boss-target-warning,
+  .party-boss-target-success{
+    flex-wrap:wrap;
+    font-size:10px;
+  }
+}
+@media(max-width:560px){
+  .party-boss-meso-summary>header{
+    align-items:flex-start;
+  }
+  .party-boss-meso-tools{
+    width:100%;
+    justify-content:space-between;
+  }
+  .party-boss-meso-card{
+    padding:12px;
+  }
+}
+html[data-theme="dark"] .party-boss-target-warning strong,
+html[data-theme="dark"] .party-boss-party-card.out-target>header>div>em{
+  color:#ff919a;
+}
