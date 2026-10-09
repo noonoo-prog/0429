@@ -429,6 +429,7 @@ function loadChecklist(show){
       );
     });
     CHECKLIST_LOADED=true;
+    if(typeof data.checklistVersion==="string")CHECKLIST_VERSION=data.checklistVersion;
     if(wasLoaded&&PAGE_VIEW==="board"){
       var currentOwner=owner(),changed=0;
       if(currentOwner){
@@ -1772,7 +1773,7 @@ function normalizeBoard(board,name){
 function callApi(action,payload){
   payload=payload||{};
   var body=JSON.stringify(Object.assign({action:action},payload));
-  var readOnly=action==="bootstrap"||action==="checklist_bootstrap"||action==="route_slots";
+  var readOnly=action==="bootstrap"||action==="checklist_bootstrap"||action==="poll_status"||action==="route_slots";
   var idempotentPartyWrite=action==="save_party_run_atomic"||action==="save_monthly_party_run_atomic";
   function attempt(n){
     return fetch(API_URL,{
@@ -1799,6 +1800,7 @@ function callApi(action,payload){
 }
 
 function applyPayload(data){
+  if(typeof data.boardVersion==="string")BOARD_VERSION=data.boardVersion;
   APP.owners=(data.owners||[]).map(function(o){return Object.assign({},o,{board:normalizeBoard(o.board,o.name)})});
   BASE_BOARDS={};
   APP.owners.forEach(function(o){BASE_BOARDS[o.id]=JSON.parse(JSON.stringify(o.board))});
