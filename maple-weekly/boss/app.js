@@ -80,6 +80,7 @@ let BOSS_MONTHLY_CHECKS={};
 let CHECKLIST_SELECTED_DATE="";
 let CHECKLIST_LOADED=false;
 let CHECKLIST_LOADING=false;
+let CHECKLIST_REVISION=0;
 let CHECKLIST_SAVING="";
 let CHECKLIST_DRAFTS={};
 let LAST_KST_MONTH="";
@@ -380,8 +381,11 @@ function dayRunData(ownerId,weekStart,runDate){
 function loadChecklist(show){
   if(CHECKLIST_LOADING)return Promise.resolve();
   CHECKLIST_LOADING=true;
+  var requestRevision=CHECKLIST_REVISION;
   if(show!==false)renderChecklist();
   return callApi("checklist_bootstrap").then(function(data){
+    // A response started before a local edit/save must not undo newer checkbox states.
+    if(requestRevision!==CHECKLIST_REVISION||CHECKLIST_SAVING)return;
     BOSS_RUN_CHECKS={};
     BOSS_MONTHLY_CHECKS={};
     (data.bossRunChecklists||[]).forEach(function(x){
@@ -436,6 +440,7 @@ function effectiveMonthlyBossRunItem(ownerId,monthStart,characterName,bossName){
 }
 function stageChecklistBossRun(weekStart,runDate,characterName,bossName,pi,completed){
   var o=owner(),st=state();if(!o||!st||CHECKLIST_SAVING)return;
+  CHECKLIST_REVISION++;
   var c=st.cells[bossName]&&st.cells[bossName][pi];
   if(!planned(c))return;
 
@@ -479,6 +484,7 @@ function stageChecklistBossRun(weekStart,runDate,characterName,bossName,pi,compl
 }
 function stageChecklistMonthlyBossRun(runDate,characterName,bossName,pi,completed){
   var o=owner(),st=state();if(!o||!st||CHECKLIST_SAVING)return;
+  CHECKLIST_REVISION++;
   var c=st.cells[bossName]&&st.cells[bossName][pi];
   if(!planned(c))return;
   var monthStart=monthStartForDate(runDate);
@@ -555,6 +561,7 @@ function saveChecklistDrafts(){
     groups[groupKey].keys.push(x.key);
   });
 
+  CHECKLIST_REVISION++;
   CHECKLIST_SAVING="manual";
   renderChecklist();
 
@@ -632,7 +639,9 @@ function saveChecklistDrafts(){
     else toast(saved+"개 체크리스트 저장 완료");
   }).finally(function(){
     CHECKLIST_SAVING="";
+    CHECKLIST_REVISION++;
     renderChecklist();
+    loadChecklist(false);
   });
 }
 
@@ -649,6 +658,7 @@ function saveBossRunCheck(weekStart,runDate,characterName,bossName,pi,completed)
       meso:payout,
       runDate:completed?runDate:(before.runDate||weekStart)
     });
+    CHECKLIST_REVISION++;
     CHECKLIST_SAVING=saveKey;
     renderBossCheckState();
 
@@ -692,6 +702,7 @@ function saveMonthlyBossRunCheck(runDate,characterName,bossName,pi,completed){
     meso:payout,
     runDate:completed?runDate:(before.runDate||"")
   });
+  CHECKLIST_REVISION++;
   CHECKLIST_SAVING="monthly|"+o.id+"|"+monthStart+"|"+characterName+"|"+bossName;
   renderBossCheckState();
 
@@ -919,10 +930,6 @@ function renderChecklist(){
       if(!o)return;
       if(input.dataset.monthly==="1"){
         var monthStart=input.dataset.monthStart||monthStartForDate(input.dataset.runDate);
-        var current=effectiveMonthlyBossRunItem(o.id,monthStart,input.dataset.character,input.dataset.boss);
-        if(!desired&&current.completed&&String(current.runDate||"")!==String(input.dataset.runDate)){
-          desired=true;input.checked=true;
-        }
         stageChecklistMonthlyBossRun(
           input.dataset.runDate,
           input.dataset.character,
@@ -931,10 +938,6 @@ function renderChecklist(){
           desired
         );
       }else{
-        var currentWeekly=effectiveBossRunItem(o.id,input.dataset.week,input.dataset.character,input.dataset.boss);
-        if(!desired&&currentWeekly.completed&&String(currentWeekly.runDate||"")!==String(input.dataset.runDate)){
-          desired=true;input.checked=true;
-        }
         stageChecklistBossRun(
           input.dataset.week,
           input.dataset.runDate,
@@ -2117,6 +2120,7 @@ function saveSharedPartyMonthlyBossCheck(bossName,pi,completed){
     };
   });
 
+  CHECKLIST_REVISION++;
   CHECKLIST_SAVING="monthlyparty|"+monthStart+"|"+bossName+"|"+targets.map(function(t){return t.characterName}).join(",");
   renderBossCheckState();
 
@@ -2193,6 +2197,7 @@ function saveSharedPartyBossCheck(bossName,pi,completed){
     };
   });
 
+  CHECKLIST_REVISION++;
   CHECKLIST_SAVING="party|"+weekStart+"|"+bossName+"|"+targets.map(function(t){return t.characterName}).join(",");
   renderBossCheckState();
 
@@ -2727,7 +2732,7 @@ applyTheme(THEME_MODE);
 function startPolling(){
   clearInterval(pollTimer);
   pollTimer=setInterval(function(){
-    if(document.hidden||dirty||saving||SELECT_ACTIVE)return;
+    if(document.hidden||dirty||saving||SELECT_ACTIVE||CHECKLIST_SAVING)return;
     if(handleKstMonthRollover()){
       loadChecklist(false).then(function(){
         renderBossCheckState();
