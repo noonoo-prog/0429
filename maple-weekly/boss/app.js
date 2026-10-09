@@ -2785,18 +2785,17 @@ function startPolling(){
       return;
     }
     if(PAGE_VIEW==="checklist"){
-      if(!checklistHasDrafts())loadChecklist(false);
+      if(!checklistHasDrafts())pollStatus();
     }else if(PAGE_VIEW==="board"){
-      loadRemote(false);
-      loadChecklist(false);
+      pollStatus();
     }else if(PAGE_VIEW==="route"){
-      loadRemote(false);
+      pollStatus();
       loadRouteSlots(false);
     }else if(PAGE_VIEW==="party"){
-      loadRemote(false);
+      pollStatus();
       if(window.refreshPartyBossShared)window.refreshPartyBossShared();
     }else{
-      loadRemote(false);
+      pollStatus();
     }
   },12000+Math.floor(Math.random()*3000));
 }
