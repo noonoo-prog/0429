@@ -532,8 +532,20 @@ async function persistSynced(rows:any[]){
   }
   return rows;
 }
+function boardVersion(rows:any[]){
+  return JSON.stringify(rows.map((r:any)=>[
+    r.owner.id,r.owner.updated_at||"",r.boardUpdatedAt||""
+  ]).sort((a:any,b:any)=>String(a[0]).localeCompare(String(b[0]))));
+}
+function checklistVersion(weekly:any[],monthly:any[]){
+  return JSON.stringify([
+    ...weekly.map((r:any)=>["w",r.owner_id,r.week_start,String(r.revision)]),
+    ...monthly.map((r:any)=>["m",r.owner_id,r.month_start,String(r.revision)])
+  ].sort((a:any,b:any)=>JSON.stringify(a).localeCompare(JSON.stringify(b))));
+}
 function publicPayload(rows:any[]){
   return {
+    boardVersion:boardVersion(rows),
     owners:rows.map(r=>({id:r.owner.id,name:r.owner.name,created_at:r.owner.created_at,updated_at:r.owner.updated_at,board:r.board}))
   };
 }
