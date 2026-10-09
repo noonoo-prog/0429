@@ -2750,6 +2750,28 @@ var themeToggle=document.getElementById("themeToggle");
 if(themeToggle)themeToggle.onclick=toggleTheme;
 applyTheme(THEME_MODE);
 
+function pollStatus(){
+  if(POLL_STATUS_LOADING||document.hidden||!APP.owners.length||
+     dirty||saving||SELECT_ACTIVE||CHECKLIST_SAVING)return Promise.resolve();
+  POLL_STATUS_LOADING=true;
+  var includeChecklist=PAGE_VIEW==="checklist"||PAGE_VIEW==="board";
+  return callApi("poll_status",{includeChecklist:includeChecklist}).then(function(data){
+    if(!data||data.ok!==true)throw new Error("동기화 상태 응답 오류");
+    if(dirty||saving||SELECT_ACTIVE||CHECKLIST_SAVING)return;
+    var tasks=[];
+    if(!BOARD_VERSION||String(data.boardVersion)!==BOARD_VERSION){
+      tasks.push(loadRemote(false));
+    }
+    if(includeChecklist&&!checklistHasDrafts()&&
+       (!CHECKLIST_LOADED||!CHECKLIST_VERSION||
+        String(data.checklistVersion)!==CHECKLIST_VERSION)){
+      tasks.push(loadChecklist(false));
+    }
+    return Promise.all(tasks);
+  }).catch(function(){
+    // Keep the last confirmed state. Retry automatically next interval.
+  }).finally(function(){POLL_STATUS_LOADING=false});
+}
 function startPolling(){
   clearInterval(pollTimer);
   pollTimer=setInterval(function(){
