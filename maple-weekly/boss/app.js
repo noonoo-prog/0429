@@ -80,6 +80,8 @@ let BOSS_MONTHLY_CHECKS={};
 let CHECKLIST_SELECTED_DATE="";
 let CHECKLIST_LOADED=false;
 let CHECKLIST_LOADING=false;
+let CHECKLIST_LOAD_QUEUED=false;
+let CHECKLIST_ERROR="";
 let CHECKLIST_REVISION=0;
 let CHECKLIST_SAVING="";
 let BOARD_SAVE_STATE={};
@@ -380,13 +382,21 @@ function dayRunData(ownerId,weekStart,runDate){
   return{entries:entries,total:total};
 }
 function loadChecklist(show){
-  if(CHECKLIST_LOADING)return Promise.resolve();
+  if(CHECKLIST_LOADING){CHECKLIST_LOAD_QUEUED=true;return Promise.resolve();}
   CHECKLIST_LOADING=true;
+  CHECKLIST_LOAD_QUEUED=false;
+  CHECKLIST_ERROR="";
   var requestRevision=CHECKLIST_REVISION;
   if(show!==false)renderChecklist();
   return callApi("checklist_bootstrap").then(function(data){
-    // A response started before a local edit/save must not undo newer checkbox states.
-    if(requestRevision!==CHECKLIST_REVISION||CHECKLIST_SAVING)return;
+    if(!data||data.ok!==true||!Array.isArray(data.bossRunChecklists)||!Array.isArray(data.monthlyBossRunChecklists)){
+      throw new Error("서버 체크 기록이 올바르게 도착하지 않았어요.");
+    }
+    // Discard stale data, then fetch again so a busy reload cannot be lost.
+    if(requestRevision!==CHECKLIST_REVISION||CHECKLIST_SAVING){
+      CHECKLIST_LOAD_QUEUED=true;
+      return;
+    }
     var previousWeekly=BOSS_RUN_CHECKS,previousMonthly=BOSS_MONTHLY_CHECKS;
     var wasLoaded=CHECKLIST_LOADED;
     BOSS_RUN_CHECKS={};
@@ -448,8 +458,16 @@ function loadChecklist(show){
     if(PAGE_VIEW==="checklist")renderChecklist();
     else if(PAGE_VIEW==="board"){updateBoardTitle();renderDesktop();renderMobile()}
   }).catch(function(e){
-    if(show!==false)toast(e.message||"체크리스트를 불러오지 못했습니다.");
-  }).finally(function(){CHECKLIST_LOADING=false});
+    CHECKLIST_ERROR=e.message||"체크리스트를 불러오지 못했습니다.";
+    if(show!==false)toast(CHECKLIST_ERROR);
+    if(REMAINING_ONLY&&PAGE_VIEW==="board"&&!CHECKLIST_LOADED)renderBossCheckState();
+  }).finally(function(){
+    CHECKLIST_LOADING=false;
+    if(CHECKLIST_LOAD_QUEUED&&!CHECKLIST_SAVING){
+      CHECKLIST_LOAD_QUEUED=false;
+      loadChecklist(false);
+    }
+  });
 }
 function renderBossCheckState(){
   if(PAGE_VIEW==="checklist")renderChecklist();
@@ -2355,13 +2373,17 @@ function desktopRowColumns(total){
 function renderDesktop(){
   var st=state(),root=document.getElementById("desktopBoard");
   if(!st){root.innerHTML="";return}
+  if(REMAINING_ONLY&&!CHECKLIST_LOADED){
+    root.innerHTML='<div class="remaining-empty">'+(CHECKLIST_ERROR?"체크 기록 연결 실패 · 다시 시도 중…":"남은 보스 확인 중…")+'</div>';
+    return;
+  }
   var o=owner(),unlocked=isUnlocked(o.id),theme=ownerTheme(o.name),filterMode=PARTY_FILTER;
   var visible=[];
   st.players.forEach(function(p,pi){
     var full=weekly(pi)>=LIMIT;
     var bosses=BOSSES.filter(function(b){
       var c=st.cells[b][pi]||emptyCell();
-      if(REMAINING_ONLY&&(!planned(c)||boardBossChecked(b,pi)))return false;
+      if(REMAINING_ONLY&&(MONTHLY.has(b)||!planned(c)||boardBossChecked(b,pi)))return false;
       if(filterMode!=="all")return matchesPartyFilter(c,filterMode);
       if(full && !MONTHLY.has(b) && !planned(c))return false;
       return true;
@@ -2423,6 +2445,10 @@ function renderDesktop(){
 function renderMobile(){
   var box=document.getElementById("mobileBoard"),st=state(),o=owner();
   if(!st||!o){box.innerHTML='<div class="mobile-loading">보스판이 없습니다.</div>';return}
+  if(REMAINING_ONLY&&!CHECKLIST_LOADED){
+    box.innerHTML='<div class="mobile-loading">'+(CHECKLIST_ERROR?"체크 기록 연결 실패 · 다시 시도 중…":"남은 보스 확인 중…")+'</div>';
+    return;
+  }
   var unlocked=isUnlocked(o.id),theme=ownerTheme(o.name),filterMode=PARTY_FILTER;
 
   var pi=activeChar(),w=weekly(pi),m=monthly(pi);
@@ -2458,8 +2484,7 @@ function renderMobile(){
     return true;
   });
   var monthlyList=BOSSES.filter(function(b){
-    if(!MONTHLY.has(b))return false;
-    if(REMAINING_ONLY&&(!planned(st.cells[b][pi])||boardBossChecked(b,pi)))return false;
+    if(!MONTHLY.has(b)||REMAINING_ONLY)return false;
     if(filterMode==="all")return true;
     return matchesPartyFilter(st.cells[b][pi]||emptyCell(),filterMode);
   });
