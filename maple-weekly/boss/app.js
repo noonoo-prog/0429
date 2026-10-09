@@ -2773,7 +2773,7 @@ function startPolling(){
     }else{
       loadRemote(false);
     }
-  },4000);
+  },12000+Math.floor(Math.random()*3000));
 }
 LAST_KST_MONTH=currentKstMonthStart();
 loadRemote(true).then(function(){
