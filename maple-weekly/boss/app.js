@@ -673,7 +673,8 @@ function saveBossRunCheck(weekStart,runDate,characterName,bossName,pi,completed)
       completed:completed,
       mesoEarned:payout
     }).then(function(data){
-      var item=data.item||{};
+      var item=data.item;
+      if(!item||!!item.completed!==!!completed)throw new Error("저장된 체크 상태가 요청과 달라요.");
       setBossRunItem(o.id,weekStart,characterName,bossName,{
         completed:!!item.completed,
         meso:Math.max(0,Number(item.meso_earned)||0),
@@ -685,7 +686,9 @@ function saveBossRunCheck(weekStart,runDate,characterName,bossName,pi,completed)
       toast(e.message||"보스 체크를 저장하지 못했습니다.");
     }).finally(function(){
       CHECKLIST_SAVING="";
+      CHECKLIST_REVISION++;
       renderBossCheckState();
+      loadChecklist(false);
     });
   }
 
@@ -715,7 +718,8 @@ function saveMonthlyBossRunCheck(runDate,characterName,bossName,pi,completed){
     completed:completed,
     mesoEarned:payout
   }).then(function(data){
-    var item=data.item||{};
+    var item=data.item;
+    if(!item||!!item.completed!==!!completed)throw new Error("월간 보스 체크 저장 상태가 요청과 달라요.");
     setMonthlyBossRunItem(o.id,String(item.month_start||monthStart),characterName,bossName,{
       completed:!!item.completed,
       meso:Math.max(0,Number(item.meso_earned)||0),
@@ -2222,7 +2226,8 @@ function saveSharedPartyBossCheck(bossName,pi,completed){
         }
       );
     });
-    if(data.locked)toast((data.lockedByCharacterName||"먼저 체크한 파티원")+"가 "+(data.lockedRunDate?formatShortDate(parseDateUTC(data.lockedRunDate)):"먼저")+"에 체크한 기록이라 유지했어요.");
+    if(data.locked)toast((data.lockedByCharacterName||"먼저 체크한 파티원")+"가 "+(data.lockedRunDate?formatShortDate(parseDateUTC(data.lockedRunDate)):"먼저")+"에 체크한 파티라 해제가 제한돼요.");
+    else if(data.joinedExistingParty)toast(bossName+" · 기존 파티 체크에 합류해 저장됐어요. 날짜는 "+formatShortDate(parseDateUTC(data.lockedRunDate))+"로 유지돼요.");
     else toast(bossName+" · 공용 파티 "+targets.length+"명 "+(completed?"같이 체크했어요.":"같이 해제했어요."));
   }).catch(function(e){
     before.forEach(function(x){
@@ -2232,7 +2237,9 @@ function saveSharedPartyBossCheck(bossName,pi,completed){
     loadChecklist(false);
   }).finally(function(){
     CHECKLIST_SAVING="";
+    CHECKLIST_REVISION++;
     renderBossCheckState();
+    loadChecklist(false);
   });
 }
 function toggleBoardBossCheck(bi,pi){
