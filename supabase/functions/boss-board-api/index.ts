@@ -608,7 +608,8 @@ Deno.serve(async(req)=>{
     }
 
     if(action==="bootstrap"){
-      const rows=await rebuild();
+      // All writes already call rebuild(); polling should never rewrite boards.
+      const rows=await getRows();
       return json({ok:true,...publicPayload(rows)});
     }
 
