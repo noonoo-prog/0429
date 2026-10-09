@@ -664,12 +664,12 @@ Deno.serve(async(req)=>{
           .select("owner_id,week_start,character_name,completed,meso_earned,updated_at")
           .gte("week_start","2026-09-24").order("week_start",{ascending:true}),
         db.from("boss_owner_weekly_snapshots")
-          .select("owner_id,week_start,checks")
+          .select("owner_id,week_start,revision,checks")
           .gte("week_start","2026-09-24")
           .order("week_start",{ascending:true}).order("owner_id",{ascending:true})
           .range(0,499),
         db.from("boss_owner_monthly_snapshots")
-          .select("owner_id,month_start,checks")
+          .select("owner_id,month_start,revision,checks")
           .gte("month_start","2026-09-01")
           .order("month_start",{ascending:true}).order("owner_id",{ascending:true})
           .range(0,499)
@@ -683,7 +683,7 @@ Deno.serve(async(req)=>{
       const snapshots=[...(weeklySnapshots||[])];
       for(let offset=500;snapshots.length===offset&&offset<50000;offset+=500){
         const {data:page,error:pageError}=await db.from("boss_owner_weekly_snapshots")
-          .select("owner_id,week_start,checks")
+          .select("owner_id,week_start,revision,checks")
           .gte("week_start","2026-09-24")
           .order("week_start",{ascending:true}).order("owner_id",{ascending:true})
           .range(offset,offset+499);
@@ -715,7 +715,7 @@ Deno.serve(async(req)=>{
       const allMonthlySnapshots=[...(monthlySnapshots||[])];
       for(let offset=500;allMonthlySnapshots.length===offset&&offset<50000;offset+=500){
         const {data:page,error:pageError}=await db.from("boss_owner_monthly_snapshots")
-          .select("owner_id,month_start,checks")
+          .select("owner_id,month_start,revision,checks")
           .gte("month_start","2026-09-01")
           .order("month_start",{ascending:true}).order("owner_id",{ascending:true})
           .range(offset,offset+499);
@@ -746,7 +746,8 @@ Deno.serve(async(req)=>{
         checklists:data||[],
         characterChecklists:characterData||[],
         bossRunChecklists:allBossRuns,
-        monthlyBossRunChecklists:allMonthlyRuns
+        monthlyBossRunChecklists:allMonthlyRuns,
+        checklistVersion:checklistVersion(snapshots,allMonthlySnapshots)
       });
     }
 
