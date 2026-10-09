@@ -625,6 +625,26 @@ Deno.serve(async(req)=>{
       return json({ok:true,...publicPayload(rows)});
     }
 
+    // Poll changes using only compact metadata; never rebuild or send board JSON.
+    if(action==="poll_status"){
+      const includeChecklist=body.includeChecklist===true;
+      const queries:any[]=[
+        db.from("boss_owners").select("id,updated_at"),
+        db.from("boss_boards").select("owner_id,updated_at")
+      ];
+      if(includeChecklist){
+        queries.push(db.from("boss_owner_weekly_snapshots").select("owner_id,week_start,revision"));
+        queries.push(db.from("boss_owner_monthly_snapshots").select("owner_id,month_start,revision"));
+      }
+      const results=await Promise.all(queries);
+      for(const r of results){if(r.error)throw r.error;}
+      const owners=results[0].data||[];
+      const times=new Map((results[1].data||[]).map((x:any)=>[x.owner_id,x.updated_at]));
+      const rows=owners.map((o:any)=>({owner:o,boardUpdatedAt:times.get(o.id)||""}));
+      return json({ok:true,boardVersion:boardVersion(rows),
+        checklistVersion:includeChecklist?checklistVersion(results[2].data||[],results[3].data||[]):null});
+    }
+
     if(action==="verify"){
       const owner=await verifyOwner(String(body.ownerId||""),String(body.pin||""));
       return owner?json({ok:true,name:owner.name}):json({ok:false,error:"비밀번호가 맞지 않습니다."},401);
