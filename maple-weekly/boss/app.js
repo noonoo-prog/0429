@@ -2738,7 +2738,10 @@ window.addEventListener("pageshow",function(e){
     loadChecklist(false).then(function(){renderBossCheckState();if(PAGE_VIEW==="checklist")renderChecklist()});
     return;
   }
-  if(e.persisted)loadRemote(false);
+  if(e.persisted)pollStatus();
+});
+document.addEventListener("visibilitychange",function(){
+  if(!document.hidden)pollStatus();
 });
 window.addEventListener("beforeunload",function(e){
   if(!dirty&&!checklistHasDrafts())return;
