@@ -82,6 +82,7 @@ let CHECKLIST_LOADED=false;
 let CHECKLIST_LOADING=false;
 let CHECKLIST_REVISION=0;
 let CHECKLIST_SAVING="";
+let BOARD_SAVE_STATE={};
 let CHECKLIST_DRAFTS={};
 let LAST_KST_MONTH="";
 let ROUTE_RESULT_READY=false;
@@ -386,6 +387,8 @@ function loadChecklist(show){
   return callApi("checklist_bootstrap").then(function(data){
     // A response started before a local edit/save must not undo newer checkbox states.
     if(requestRevision!==CHECKLIST_REVISION||CHECKLIST_SAVING)return;
+    var previousWeekly=BOSS_RUN_CHECKS,previousMonthly=BOSS_MONTHLY_CHECKS;
+    var wasLoaded=CHECKLIST_LOADED;
     BOSS_RUN_CHECKS={};
     BOSS_MONTHLY_CHECKS={};
     (data.bossRunChecklists||[]).forEach(function(x){
@@ -415,6 +418,33 @@ function loadChecklist(show){
       );
     });
     CHECKLIST_LOADED=true;
+    if(wasLoaded&&PAGE_VIEW==="board"){
+      var currentOwner=owner(),changed=0;
+      if(currentOwner){
+        var id=currentOwner.id,week=currentBossWeekStart(),month=currentKstMonthStart();
+        var oldWeekly=previousWeekly[id]&&previousWeekly[id][week]||{};
+        var newWeekly=BOSS_RUN_CHECKS[id]&&BOSS_RUN_CHECKS[id][week]||{};
+        var oldMonthly=previousMonthly[id]&&previousMonthly[id][month]||{};
+        var newMonthly=BOSS_MONTHLY_CHECKS[id]&&BOSS_MONTHLY_CHECKS[id][month]||{};
+        function trackChanges(oldGroup,newGroup,period){
+          Object.keys(oldGroup).forEach(function(characterName){
+            Object.keys(oldGroup[characterName]||{}).forEach(function(bossName){
+              var before=oldGroup[characterName][bossName];
+              var after=newGroup[characterName]&&newGroup[characterName][bossName];
+              if(!after||!!before.completed===!!after.completed)return;
+              var key=boardSaveKey(id,period,characterName,bossName);
+              var status=BOARD_SAVE_STATE[key];
+              if(status&&status.status==="pending")return;
+              BOARD_SAVE_STATE[key]={status:"changed",message:"다른 기기에서 체크 상태가 변경됐어요."};
+              changed++;
+            });
+          });
+        }
+        trackChanges(oldWeekly,newWeekly,week);
+        trackChanges(oldMonthly,newMonthly,month);
+      }
+      if(changed)toast("다른 기기에서 "+changed+"개 보스 체크가 변경됐어요.");
+    }
     if(PAGE_VIEW==="checklist")renderChecklist();
     else if(PAGE_VIEW==="board"){updateBoardTitle();renderDesktop();renderMobile()}
   }).catch(function(e){
@@ -645,96 +675,98 @@ function saveChecklistDrafts(){
   });
 }
 
+function boardSaveKey(ownerId,period,characterName,bossName){
+  return [ownerId,period,characterName,bossName].join("|");
+}
+function markBoardSave(targets,period,bossName,status,message){
+  targets.forEach(function(t){
+    BOARD_SAVE_STATE[boardSaveKey(t.ownerId,period,t.characterName,bossName)]={
+      status:status,message:message||""
+    };
+  });
+}
+function boardSaveBadge(bossName,pi){
+  var o=owner(),st=state();
+  if(!o||!st)return "";
+  var period=MONTHLY.has(bossName)?currentKstMonthStart():currentBossWeekStart();
+  var key=boardSaveKey(o.id,period,String(st.players[pi]||""),bossName);
+  var record=BOARD_SAVE_STATE[key];
+  if(!record)return "";
+  var labels={pending:"저장 중…",saved:"✓ 저장 완료",failed:"⚠ 저장 실패",locked:"🔒 파티 기록 유지",changed:"↔ 다른 기기에서 변경됨"};
+  return '<span class="board-check-save-status status-'+record.status+'" role="status" title="'+esc(record.message||labels[record.status])+'">'+labels[record.status]+'</span>';
+}
+function checkPartyResponse(data,targets,completed){
+  if(!Array.isArray(data.items))throw new Error("서버에서 저장 결과를 받지 못했어요.");
+  var keys=new Set(data.items.filter(function(row){
+    return !!row.completed===!!completed;
+  }).map(function(row){return String(row.owner_id)+"|"+String(row.character_name)}));
+  return targets.every(function(t){return keys.has(t.ownerId+"|"+t.characterName)});
+}
+
 function saveBossRunCheck(weekStart,runDate,characterName,bossName,pi,completed){
-  var o=owner(),st=state();if(!o||!st)return;
+  var o=owner(),st=state();if(!o||!st||CHECKLIST_SAVING)return;
   var c=st.cells[bossName]&&st.cells[bossName][pi];
   var payout=completed?Math.round(bossWeeklyIncome(bossName,c)):0;
-  var saveKey=o.id+"|"+weekStart+"|"+characterName+"|"+bossName;
-
-  function doSave(){
-    var before=JSON.parse(JSON.stringify(bossRunItem(o.id,weekStart,characterName,bossName)));
+  var target={ownerId:o.id,characterName:characterName};
+  CHECKLIST_REVISION++;
+  CHECKLIST_SAVING="single|"+o.id+"|"+weekStart+"|"+characterName+"|"+bossName;
+  markBoardSave([target],weekStart,bossName,"pending");
+  renderBossCheckState();
+  callApi("save_boss_run_check",{
+    ownerId:o.id,pin:getPin(o.id),adminCode:ADMIN_UNLOCKED?ADMIN_CODE:"",
+    weekStart:weekStart,runDate:runDate,characterName:characterName,
+    bossName:bossName,completed:completed,mesoEarned:payout
+  }).then(function(data){
+    var item=data.item;
+    if(!item||!!item.completed!==!!completed)throw new Error("저장된 체크 상태가 요청과 달라요.");
     setBossRunItem(o.id,weekStart,characterName,bossName,{
-      completed:completed,
-      meso:payout,
-      runDate:completed?runDate:(before.runDate||weekStart)
+      completed:!!item.completed,meso:Math.max(0,Number(item.meso_earned)||0),
+      runDate:String(item.run_date||runDate)
     });
+    markBoardSave([target],weekStart,bossName,"saved");
+    toast(bossName+" · ✓ 저장 완료");
+  }).catch(function(e){
+    markBoardSave([target],weekStart,bossName,"failed",e.message);
+    toast(bossName+" · 저장 실패: "+(e.message||"다시 눌러 주세요."));
+  }).finally(function(){
+    CHECKLIST_SAVING="";
     CHECKLIST_REVISION++;
-    CHECKLIST_SAVING=saveKey;
     renderBossCheckState();
-
-    callApi("save_boss_run_check",{
-      ownerId:o.id,
-      pin:getPin(o.id),
-      adminCode:ADMIN_UNLOCKED?ADMIN_CODE:"",
-      weekStart:weekStart,
-      runDate:runDate,
-      characterName:characterName,
-      bossName:bossName,
-      completed:completed,
-      mesoEarned:payout
-    }).then(function(data){
-      var item=data.item;
-      if(!item||!!item.completed!==!!completed)throw new Error("저장된 체크 상태가 요청과 달라요.");
-      setBossRunItem(o.id,weekStart,characterName,bossName,{
-        completed:!!item.completed,
-        meso:Math.max(0,Number(item.meso_earned)||0),
-        runDate:String(item.run_date||runDate)
-      });
-      toast(completed?formatShortDate(parseDateUTC(runDate))+" · "+bossName+" "+formatEok(payout):bossName+" 체크를 해제했어요.");
-    }).catch(function(e){
-      setBossRunItem(o.id,weekStart,characterName,bossName,before);
-      toast(e.message||"보스 체크를 저장하지 못했습니다.");
-    }).finally(function(){
-      CHECKLIST_SAVING="";
-      CHECKLIST_REVISION++;
-      renderBossCheckState();
-      loadChecklist(false);
-    });
-  }
-
-  doSave();
+    loadChecklist(false);
+  });
 }
 function saveMonthlyBossRunCheck(runDate,characterName,bossName,pi,completed){
-  var o=owner(),st=state();if(!o||!st)return;
+  var o=owner(),st=state();if(!o||!st||CHECKLIST_SAVING)return;
   var c=st.cells[bossName]&&st.cells[bossName][pi];
   var payout=completed?Math.round(bossWeeklyIncome(bossName,c)):0;
   var monthStart=monthStartForDate(runDate);
-  var before=JSON.parse(JSON.stringify(monthlyBossRunItem(o.id,monthStart,characterName,bossName)));
-  setMonthlyBossRunItem(o.id,monthStart,characterName,bossName,{
-    completed:completed,
-    meso:payout,
-    runDate:completed?runDate:(before.runDate||"")
-  });
+  var target={ownerId:o.id,characterName:characterName};
   CHECKLIST_REVISION++;
   CHECKLIST_SAVING="monthly|"+o.id+"|"+monthStart+"|"+characterName+"|"+bossName;
+  markBoardSave([target],monthStart,bossName,"pending");
   renderBossCheckState();
-
   callApi("save_monthly_boss_run_check",{
-    ownerId:o.id,
-    monthStart:monthStart,
-    runDate:runDate,
-    characterName:characterName,
-    bossName:bossName,
-    completed:completed,
-    mesoEarned:payout
+    ownerId:o.id,monthStart:monthStart,runDate:runDate,characterName:characterName,
+    bossName:bossName,completed:completed,mesoEarned:payout
   }).then(function(data){
     var item=data.item;
-    if(!item||!!item.completed!==!!completed)throw new Error("월간 보스 체크 저장 상태가 요청과 달라요.");
+    if(!item||!!item.completed!==!!completed)throw new Error("월간 보스 저장 상태가 요청과 달라요.");
     setMonthlyBossRunItem(o.id,String(item.month_start||monthStart),characterName,bossName,{
-      completed:!!item.completed,
-      meso:Math.max(0,Number(item.meso_earned)||0),
+      completed:!!item.completed,meso:Math.max(0,Number(item.meso_earned)||0),
       runDate:String(item.run_date||"")
     });
-    toast(completed?formatShortDate(parseDateUTC(runDate))+" · "+bossName+" 월간 체크":bossName+" 월간 체크를 해제했어요.");
+    markBoardSave([target],monthStart,bossName,"saved");
+    toast(bossName+" · ✓ 저장 완료");
   }).catch(function(e){
-    setMonthlyBossRunItem(o.id,monthStart,characterName,bossName,before);
-    toast(e.message||"월간 보스 체크를 저장하지 못했습니다.");
+    markBoardSave([target],monthStart,bossName,"failed",e.message);
+    toast(bossName+" · 저장 실패: "+(e.message||"다시 눌러 주세요."));
   }).finally(function(){
     CHECKLIST_SAVING="";
+    CHECKLIST_REVISION++;
     renderBossCheckState();
+    loadChecklist(false);
   });
 }
-
 function plannedWeeklyBossesForCharacter(pi){
   var st=state();if(!st)return[];
   return BOSSES.filter(function(b){
@@ -2102,64 +2134,44 @@ function saveSharedPartyMonthlyBossCheck(bossName,pi,completed){
     saveMonthlyBossRunCheck(runDate,String(st.players[pi]||""),bossName,pi,completed);
     return;
   }
-
-  var before=targets.map(function(t){
-    return {target:t,item:JSON.parse(JSON.stringify(monthlyBossRunItem(t.ownerId,monthStart,t.characterName,bossName)))};
-  });
-  before.forEach(function(x){
-    setMonthlyBossRunItem(x.target.ownerId,monthStart,x.target.characterName,bossName,{
-      completed:completed,
-      meso:completed?x.target.payout:0,
-      runDate:completed?runDate:(x.item.runDate||"")
-    });
-  });
-
+  if(CHECKLIST_SAVING)return;
   var items=targets.map(function(t){
-    return {
-      ownerId:t.ownerId,
-      characterName:t.characterName,
-      bossName:bossName,
-      completed:completed,
-      mesoEarned:completed?t.payout:0
-    };
+    return {ownerId:t.ownerId,characterName:t.characterName,bossName:bossName,
+      completed:completed,mesoEarned:completed?t.payout:0};
   });
-
-  CHECKLIST_REVISION++;
-  CHECKLIST_SAVING="monthlyparty|"+monthStart+"|"+bossName+"|"+targets.map(function(t){return t.characterName}).join(",");
-  renderBossCheckState();
-
   var currentOwner=owner(),currentState=state(),sourceCharacterName=String(currentState&&currentState.players[pi]||"");
+  CHECKLIST_REVISION++;
+  CHECKLIST_SAVING="monthlyparty|"+monthStart+"|"+bossName;
+  markBoardSave(targets,monthStart,bossName,"pending");
+  renderBossCheckState();
   callApi("save_monthly_party_run_atomic",{
-    monthStart:monthStart,
-    runDate:runDate,
+    monthStart:monthStart,runDate:runDate,
     sourceOwnerId:currentOwner?currentOwner.id:"",
-    sourceCharacterName:sourceCharacterName,
-    items:items
+    sourceCharacterName:sourceCharacterName,items:items
   }).then(function(data){
     (data.items||[]).forEach(function(item){
-      setMonthlyBossRunItem(
-        item.owner_id,
-        String(item.month_start||monthStart),
-        String(item.character_name||""),
-        String(item.boss_name||""),
-        {
-          completed:!!item.completed,
-          meso:Math.max(0,Number(item.meso_earned)||0),
+      setMonthlyBossRunItem(item.owner_id,String(item.month_start||monthStart),
+        String(item.character_name||""),String(item.boss_name||""),{
+          completed:!!item.completed,meso:Math.max(0,Number(item.meso_earned)||0),
           runDate:String(item.run_date||"")
-        }
-      );
+        });
     });
-    if(data.locked)toast((data.lockedByCharacterName||"먼저 체크한 파티원")+"가 "+(data.lockedRunDate?formatShortDate(parseDateUTC(data.lockedRunDate)):"먼저")+"에 체크한 기록이라 유지했어요.");
-    else toast(bossName+" · 공용 파티 "+targets.length+"명 "+(completed?"월간 체크했어요.":"월간 체크를 해제했어요."));
+    if(!checkPartyResponse(data,targets,completed)){
+      var reason=data.locked?"기존 파티원의 체크 기록이 우선이에요.":"서버에서 일부 파티원의 체크 상태를 확인하지 못했어요.";
+      markBoardSave(targets,monthStart,bossName,data.locked?"locked":"failed",reason);
+      toast(bossName+" · "+reason);
+      return;
+    }
+    markBoardSave(targets,monthStart,bossName,"saved");
+    toast(bossName+" · 공용 파티 "+targets.length+"명 ✓ 저장 완료");
   }).catch(function(e){
-    before.forEach(function(x){
-      setMonthlyBossRunItem(x.target.ownerId,monthStart,x.target.characterName,bossName,x.item);
-    });
-    toast(e.message||"공용 월간 보스 체크를 저장하지 못했습니다.");
-    loadChecklist(false);
+    markBoardSave(targets,monthStart,bossName,"failed",e.message);
+    toast(bossName+" · 저장 실패: "+(e.message||"다시 눌러 주세요."));
   }).finally(function(){
     CHECKLIST_SAVING="";
+    CHECKLIST_REVISION++;
     renderBossCheckState();
+    loadChecklist(false);
   });
 }
 function saveSharedPartyBossCheck(bossName,pi,completed){
@@ -2175,66 +2187,39 @@ function saveSharedPartyBossCheck(bossName,pi,completed){
     saveBossRunCheck(weekStart,runDate,String(st.players[pi]||""),bossName,pi,completed);
     return;
   }
-
-  var before=targets.map(function(t){
-    return {
-      target:t,
-      item:JSON.parse(JSON.stringify(bossRunItem(t.ownerId,weekStart,t.characterName,bossName)))
-    };
-  });
-
-  before.forEach(function(x){
-    setBossRunItem(x.target.ownerId,weekStart,x.target.characterName,bossName,{
-      completed:completed,
-      meso:completed?x.target.payout:0,
-      runDate:completed?runDate:(x.item.runDate||weekStart)
-    });
-  });
-
+  if(CHECKLIST_SAVING)return;
   var items=targets.map(function(t){
-    return {
-      ownerId:t.ownerId,
-      characterName:t.characterName,
-      bossName:bossName,
-      completed:completed,
-      mesoEarned:completed?t.payout:0
-    };
+    return {ownerId:t.ownerId,characterName:t.characterName,bossName:bossName,
+      completed:completed,mesoEarned:completed?t.payout:0};
   });
-
-  CHECKLIST_REVISION++;
-  CHECKLIST_SAVING="party|"+weekStart+"|"+bossName+"|"+targets.map(function(t){return t.characterName}).join(",");
-  renderBossCheckState();
-
   var currentOwner=owner(),currentState=state(),sourceCharacterName=String(currentState&&currentState.players[pi]||"");
+  CHECKLIST_REVISION++;
+  CHECKLIST_SAVING="party|"+weekStart+"|"+bossName;
+  markBoardSave(targets,weekStart,bossName,"pending");
+  renderBossCheckState();
   callApi("save_party_run_atomic",{
-    weekStart:weekStart,
-    runDate:runDate,
+    weekStart:weekStart,runDate:runDate,
     sourceOwnerId:currentOwner?currentOwner.id:"",
-    sourceCharacterName:sourceCharacterName,
-    items:items
+    sourceCharacterName:sourceCharacterName,items:items
   }).then(function(data){
     (data.items||[]).forEach(function(item){
-      setBossRunItem(
-        item.owner_id,
-        item.week_start,
-        String(item.character_name||""),
-        String(item.boss_name||""),
-        {
-          completed:!!item.completed,
-          meso:Math.max(0,Number(item.meso_earned)||0),
+      setBossRunItem(item.owner_id,String(item.week_start||weekStart),
+        String(item.character_name||""),String(item.boss_name||""),{
+          completed:!!item.completed,meso:Math.max(0,Number(item.meso_earned)||0),
           runDate:String(item.run_date||runDate)
-        }
-      );
+        });
     });
-    if(data.locked)toast((data.lockedByCharacterName||"먼저 체크한 파티원")+"가 "+(data.lockedRunDate?formatShortDate(parseDateUTC(data.lockedRunDate)):"먼저")+"에 체크한 파티라 해제가 제한돼요.");
-    else if(data.joinedExistingParty)toast(bossName+" · 기존 파티 체크에 합류해 저장됐어요. 날짜는 "+formatShortDate(parseDateUTC(data.lockedRunDate))+"로 유지돼요.");
-    else toast(bossName+" · 공용 파티 "+targets.length+"명 "+(completed?"같이 체크했어요.":"같이 해제했어요."));
+    if(!checkPartyResponse(data,targets,completed)){
+      var reason=data.locked?"기존 파티원의 체크 기록이 우선이에요.":"서버에서 일부 파티원의 체크 상태를 확인하지 못했어요.";
+      markBoardSave(targets,weekStart,bossName,data.locked?"locked":"failed",reason);
+      toast(bossName+" · "+reason);
+      return;
+    }
+    markBoardSave(targets,weekStart,bossName,"saved");
+    toast(bossName+" · 공용 파티 "+targets.length+"명 ✓ 저장 완료");
   }).catch(function(e){
-    before.forEach(function(x){
-      setBossRunItem(x.target.ownerId,weekStart,x.target.characterName,bossName,x.item);
-    });
-    toast(e.message||"공용 파티 체크를 저장하지 못했습니다.");
-    loadChecklist(false);
+    markBoardSave(targets,weekStart,bossName,"failed",e.message);
+    toast(bossName+" · 저장 실패: "+(e.message||"다시 눌러 주세요."));
   }).finally(function(){
     CHECKLIST_SAVING="";
     CHECKLIST_REVISION++;
@@ -2275,6 +2260,7 @@ function remainingBossesHtml(pi){
 function compactBossCard(b,bi,c,pi,unlocked){
   var auto=!!c._sync,editable=unlocked&&!auto,mon=MONTHLY.has(b);
   var checkable=!unlocked&&planned(c),checked=planned(c)&&boardBossChecked(b,pi);
+  var saveBadge=checkable?boardSaveBadge(b,pi):"";
   var sync="";
   if(auto&&unlocked){
     var so=c._sync.sourceOwnerName||"";
@@ -2291,7 +2277,7 @@ function compactBossCard(b,bi,c,pi,unlocked){
   return '<article class="compact-boss-card '+(planned(c)?"is-set ":"is-empty ")+(auto?"is-sync ":"")+(mon?"is-monthly ":"")+(checkable?"is-checkable ":"")+(checked?"is-cleared":"")+'" '+(checkable?'data-board-check-bi="'+bi+'" data-board-check-pi="'+pi+'" aria-pressed="'+(checked?"true":"false")+'" title="클릭해서 이번 주 보스 체크"':"")+'>'+
     '<div class="compact-main">'+
       compactDifficultySelect(c,editable,bi,pi)+
-      '<div class="compact-name-wrap"><div class="compact-title-line"><strong class="compact-boss-name">'+esc(b)+'</strong>'+compactCountSelect(c,editable,bi,pi)+'</div>'+sync+'</div>'+
+      '<div class="compact-name-wrap"><div class="compact-title-line"><strong class="compact-boss-name">'+esc(b)+'</strong>'+compactCountSelect(c,editable,bi,pi)+'</div>'+sync+saveBadge+'</div>'+
       income+
     '</div>'+
     compactPartyMembers(c,bi,pi,editable)+

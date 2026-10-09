@@ -4766,3 +4766,45 @@ html[data-theme="dark"] .compact-boss-card.is-cleared .compact-boss-name{
 @media(max-width:959px){
   .checklist-save-btn{min-height:34px;padding:0 10px;font-size:9px}
 }
+
+/* Board check confirmation: only the server-confirmed result changes the check. */
+.board-check-save-status{
+  display:inline-flex;
+  align-items:center;
+  width:max-content;
+  max-width:100%;
+  margin-top:4px;
+  padding:3px 7px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  font-size:10px;
+  font-weight:900;
+  line-height:1.4;
+  white-space:normal;
+}
+.board-check-save-status.status-pending{
+  color:var(--muted);
+  background:var(--surface-soft);
+}
+.board-check-save-status.status-saved{
+  color:#28794f;
+  background:color-mix(in srgb,#28794f 8%,var(--surface));
+  border-color:color-mix(in srgb,#28794f 28%,var(--line));
+}
+.board-check-save-status.status-failed,
+.board-check-save-status.status-locked{
+  color:#ba4353;
+  background:color-mix(in srgb,#ba4353 7%,var(--surface));
+  border-color:color-mix(in srgb,#ba4353 28%,var(--line));
+}
+html[data-theme="dark"] .board-check-save-status.status-saved{color:#87d8a9}
+html[data-theme="dark"] .board-check-save-status.status-failed,
+html[data-theme="dark"] .board-check-save-status.status-locked{color:#ff9ba6}
+@media(max-width:959px){.board-check-save-status{font-size:9px}}
+
+.board-check-save-status.status-changed{
+  color:#956b26;
+  background:color-mix(in srgb,#c89a48 8%,var(--surface));
+  border-color:color-mix(in srgb,#c89a48 30%,var(--line));
+}
+html[data-theme="dark"] .board-check-save-status.status-changed{color:#e6be78}
