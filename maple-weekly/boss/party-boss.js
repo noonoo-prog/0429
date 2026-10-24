@@ -1142,7 +1142,11 @@ function organizePartyPanels(panel,selectedCount){
   var waiting=panel.querySelector('[data-pb-fold="unassigned"]');
   if(result&&waiting)result.before(waiting);
   var slots=panel.querySelector('[data-pb-fold="slots"]');
-  if(slots)shell.appendChild(slots);
+  // Saved formations belong directly above the auto-generated party result.
+  // When no result has been built yet, place the slots above its empty state.
+  var resultAnchor=result||panel.querySelector(".party-boss-empty");
+  if(slots&&resultAnchor)resultAnchor.before(slots);
+  else if(slots)shell.appendChild(slots);
   var meso=panel.querySelector(".party-boss-meso-summary");
   if(meso){
     var fold=document.createElement("details");
