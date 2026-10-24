@@ -532,7 +532,7 @@ function allChars(){
     out.push({
       key:key,
       ownerId:guestOwnerKey(g),
-      ownerName:g.owner?(g.owner+" (용병)"):(g.name+" (용병)"),
+      ownerName:g.owner?g.owner:g.name,
       theme:"guest",
       name:g.name,
       pi:-1,
