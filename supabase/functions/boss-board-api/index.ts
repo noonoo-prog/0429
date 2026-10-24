@@ -1398,8 +1398,21 @@ Deno.serve(async(req)=>{
           })).filter((p:any)=>p.memberKeys.length)
         :[];
 
+      // External party members belong only to the Party Balancer, never to the main boss board.
+      const guests:any[]=[];
+      const guestIds=new Set<string>();
+      for(const item of (Array.isArray(raw.guests)?raw.guests:[]).slice(0,100)){
+        if(!item||typeof item!=="object"||Array.isArray(item))continue;
+        const id=String(item.id||"").trim().slice(0,80);
+        const name=cleanName(item.name);
+        const owner=cleanName(item.owner);
+        if(!/^ext-[a-z0-9-]{1,70}$/.test(id)||!name||guestIds.has(id))continue;
+        guestIds.add(id);
+        guests.push({id,name,owner});
+      }
+
       const mode=["balanced","strong","equal","small","safe"].includes(String(settingsRaw.mode||""))?String(settingsRaw.mode):"strong";
-      const payload={settings:{boss,difficulty,partySize,partyCount,targetRate,mode},selected,multipliers,result};
+      const payload={settings:{boss,difficulty,partySize,partyCount,targetRate,mode},selected,multipliers,guests,result};
       const updatedBy=cleanName(body.updatedBy||"");
 
       const {data,error}=await db.from("boss_party_balancer_state")
