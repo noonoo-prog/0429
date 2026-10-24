@@ -1071,6 +1071,24 @@ function renderNow(){
   });
   html+='</section>';
 
+
+  var unassigned=unassignedChars();
+  if(unassigned.length){
+    html+='<section class="party-boss-unassigned" aria-label="미배정 캐릭터">';
+    html+='<header><div><strong>미배정 캐릭터</strong><span>파티에서 빼도 캐릭터 정보는 유지됩니다. 아래 캐릭터를 선택하면 다른 파티에 다시 넣을 수 있어요.</span></div><b>'+unassigned.length+'명</b></header>';
+    html+='<div class="party-boss-unassigned-list">';
+    unassigned.forEach(function(c){
+      var picking=MANUAL_ADD===c.key;
+      html+='<div class="party-boss-unassigned-person owner-themed" data-theme="'+c.theme+'"><div><b>'+esc(c.name)+'</b><small>'+esc(c.ownerName)+'</small></div><strong>'+formatRate(c.multiplier)+'</strong><button type="button" data-pb-unassigned="'+esc(c.key)+'" aria-pressed="'+(picking?"true":"false")+'" '+(!RESULT.length?"disabled":"")+'>'+(picking?"취소":"파티에 넣기")+'</button></div>';
+    });
+    html+='</div>';
+    if(MANUAL_ADD){
+      var assignChar=unassigned.find(function(c){return c.key===MANUAL_ADD});
+      if(assignChar)html+='<p class="party-boss-unassigned-tip"><b>'+esc(assignChar.name)+'</b>을(를) 배정할 파티의 <b>여기에 추가</b> 버튼을 선택하세요.</p>';
+    }
+    if(MANUAL_UNDO&&!RESULT.length)html+='<button type="button" class="party-boss-empty-undo" data-pb-undo="1">직전 편집 취소</button>';
+    html+='</section>';
+  }
   if(RESULT.length){
     var totals=RESULT.map(function(p){return p.total});
     var max=Math.max.apply(null,totals),min=Math.min.apply(null,totals);
@@ -1087,7 +1105,7 @@ function renderNow(){
     }else{
       html+='<div class="party-boss-target-success" role="status">모든 파티가 최소 목표 '+formatRate(target)+'를 충족했습니다.</div>';
     }
-    html+='<div class="party-boss-manual-help" role="status"><span><b>직접 편집</b> 캐릭터의 <b>이동</b> → 대상 파티의 <b>여기로 이동</b> 또는 다른 캐릭터의 <b>교환</b>을 누르세요. PC에서는 드래그도 가능합니다.</span>'+(MANUAL_UNDO?'<button type="button" data-pb-undo="1">직전 편집 취소</button>':'')+'</div>';
+    html+='<div class="party-boss-manual-help" role="status"><span><b>직접 편집</b> 캐릭터의 <b>이동</b>으로 파티를 옮기거나 <b>빼기</b>로 미배정할 수 있어요. 미배정 캐릭터는 다시 넣을 수 있고 PC에서는 드래그도 가능합니다.</span>'+(MANUAL_UNDO?'<button type="button" data-pb-undo="1">직전 편집 취소</button>':'')+'</div>';
     if(MANUAL_PICK){
       var selectedMember=findResultMember(MANUAL_PICK);
       if(selectedMember)html+='<div class="party-boss-manual-pick"><span><b>'+esc(selectedMember.member.name)+'</b> 선택됨 · 대상 파티나 교환할 캐릭터를 골라 주세요.</span><button type="button" data-pb-cancel-pick="1">취소</button></div>';
@@ -1101,6 +1119,14 @@ function renderNow(){
       if(MANUAL_PICK&&findResultMember(MANUAL_PICK).partyIndex!==RESULT.indexOf(p)){
         html+='<div class="party-boss-drop-actions"><button type="button" data-pb-move-target="'+p.id+'">여기로 이동</button></div>';
       }
+      if(MANUAL_ADD){
+        var addChar=unassigned.find(function(c){return c.key===MANUAL_ADD});
+        if(addChar){
+          var maxSize=SETTINGS.partySize==="any"?6:Math.max(2,Math.min(6,Number(SETTINGS.partySize)||3));
+          var canAdd=p.members.length<maxSize&&!partyHasOwner(p,ownerKey(addChar),-1);
+          html+='<div class="party-boss-drop-actions"><button type="button" data-pb-add-target="'+p.id+'" '+(!canAdd?'disabled title="같은 주인 또는 인원 제한"':'')+'>여기에 추가</button></div>';
+        }
+      }
       html+='<div class="party-boss-members">';
       p.members.forEach(function(c){
         var picked=MANUAL_PICK===c.key;
@@ -1110,6 +1136,7 @@ function renderNow(){
         html+='<div><b>'+esc(c.name)+'</b>'+(c.external?'<small>'+esc(c.ownerName)+'</small>':'')+'</div>';
         html+='<strong>'+formatRate(c.multiplier)+'</strong>';
         html+='<button type="button" class="party-boss-member-action'+(picked?" selected":"")+(other?" swap":"")+'" data-pb-member-action="'+esc(c.key)+'" data-pb-member-party="'+p.id+'" aria-pressed="'+(picked?"true":"false")+'">'+(picked?"취소":(other?"교환":"이동"))+'</button>';
+        html+='<button type="button" class="party-boss-member-remove" data-pb-remove-member="'+esc(c.key)+'" title="'+esc(c.name)+' 파티에서 빼기 (캐릭터 정보 유지)" aria-label="'+esc(c.name)+' 파티에서 빼기">빼기</button>';
         html+='</div>';
       });
       html+='</div></article>';
@@ -1186,10 +1213,18 @@ function renderNow(){
   if(buildBtn)buildBtn.onclick=build;
   var saveBtn=panel.querySelector("[data-pb-save]");
   if(saveBtn)saveBtn.onclick=savePrefs;
-  var undoBtn=panel.querySelector("[data-pb-undo]");
-  if(undoBtn)undoBtn.onclick=undoPartyResult;
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-undo]"),function(btn){btn.onclick=undoPartyResult});
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-remove-member]"),function(btn){
+    btn.onclick=function(){removePartyMember(btn.dataset.pbRemoveMember)};
+  });
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-unassigned]"),function(btn){
+    btn.onclick=function(){selectUnassigned(btn.dataset.pbUnassigned)};
+  });
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-add-target]"),function(btn){
+    btn.onclick=function(){if(MANUAL_ADD)addUnassignedToParty(MANUAL_ADD,btn.dataset.pbAddTarget)};
+  });
   var cancelPick=panel.querySelector("[data-pb-cancel-pick]");
-  if(cancelPick)cancelPick.onclick=function(){MANUAL_PICK="";render()};
+  if(cancelPick)cancelPick.onclick=function(){MANUAL_PICK="";MANUAL_ADD="";render()};
   Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-move-target]"),function(btn){
     btn.onclick=function(){if(MANUAL_PICK)modifyPartyResult(MANUAL_PICK,btn.dataset.pbMoveTarget,"")};
   });
