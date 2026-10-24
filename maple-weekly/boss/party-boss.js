@@ -95,10 +95,10 @@ var SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:"any",pa
 var SAVED_RESULT=readJSON(RESULT_KEY,[]);
 var GUESTS=readJSON(GUEST_KEY,[]);
 if(!Array.isArray(GUESTS))GUESTS=[];
-var SAVED_SLOTS=readJSON(SLOT_KEY,[null,null,null]);
-if(!Array.isArray(SAVED_SLOTS))SAVED_SLOTS=[null,null,null];
-SAVED_SLOTS=[0,1,2].map(function(i){return SAVED_SLOTS[i]||null});
-var SLOT_NAME_DRAFTS=[null,null,null];
+var SAVED_SLOTS=readJSON(SLOT_KEY,[null,null,null,null,null]);
+if(!Array.isArray(SAVED_SLOTS))SAVED_SLOTS=[null,null,null,null,null];
+SAVED_SLOTS=[0,1,2,3,4].map(function(i){return SAVED_SLOTS[i]||null});
+var SLOT_NAME_DRAFTS=[null,null,null,null,null];
 SETTINGS.targetRate=Math.max(1,Number(SETTINGS.targetRate)||130);
 SETTINGS.mode=normalizeMode(SETTINGS.mode);
 
@@ -259,7 +259,7 @@ function applySharedState(state,updatedBy,updatedAt){
     return g&&typeof g.id==="string"&&/^ext-[a-z0-9-]{1,70}$/.test(g.id)&&String(g.name||"").trim();
   }).map(function(g){return {id:g.id,name:String(g.name).trim(),owner:String(g.owner||"").trim()}}):[];
   SAVED_RESULT=Array.isArray(state.result)?JSON.parse(JSON.stringify(state.result)):[];
-  SAVED_SLOTS=[0,1,2].map(function(i){
+  SAVED_SLOTS=[0,1,2,3,4].map(function(i){
     var slot=Array.isArray(state.savedSlots)?state.savedSlots[i]:null;
     return slot&&typeof slot==="object"&&!Array.isArray(slot)?JSON.parse(JSON.stringify(slot)):null;
   });
@@ -336,7 +336,7 @@ function formatSlotTime(value){
 }
 function slotNameValue(index){
   index=Number(index);
-  if(!Number.isInteger(index)||index<0||index>2)return "";
+  if(!Number.isInteger(index)||index<0||index>4)return "";
   var panel=document.getElementById("partyBossPanel");
   var input=panel&&panel.querySelector('[data-pb-slot-name="'+index+'"]');
   var value=input?input.value:(SLOT_NAME_DRAFTS[index]!==null?SLOT_NAME_DRAFTS[index]:(SAVED_SLOTS[index]&&SAVED_SLOTS[index].name)||"");
@@ -345,7 +345,7 @@ function slotNameValue(index){
 function renameResultSlot(index){
   if(SAVING||BUILDING||COMPARING)return;
   index=Number(index);
-  if(!Number.isInteger(index)||index<0||index>2||!SAVED_SLOTS[index])return;
+  if(!Number.isInteger(index)||index<0||index>4||!SAVED_SLOTS[index])return;
   var newName=slotNameValue(index);
   if(String(SAVED_SLOTS[index].name||"").trim()===newName){
     SLOT_NAME_DRAFTS[index]=null;
@@ -362,7 +362,7 @@ function renameResultSlot(index){
 function saveResultSlot(index){
   if(SAVING||BUILDING||COMPARING)return;
   index=Number(index);
-  if(!Number.isInteger(index)||index<0||index>2)return;
+  if(!Number.isInteger(index)||index<0||index>4)return;
   if(!RESULT.length){notify("저장할 편성 결과가 없어요. 먼저 자동 편성하거나 저장된 결과를 불러오세요.");return}
   if(SAVED_SLOTS[index]&&!window.confirm((index+1)+"번 슬롯에 현재 결과를 덮어쓸까요?"))return;
   var snapshot=currentResultSnapshot();
@@ -425,7 +425,7 @@ function loadResultSlot(index){
 function deleteResultSlot(index){
   if(SAVING||BUILDING||COMPARING)return;
   index=Number(index);
-  if(!Number.isInteger(index)||index<0||index>2||!SAVED_SLOTS[index])return;
+  if(!Number.isInteger(index)||index<0||index>4||!SAVED_SLOTS[index])return;
   if(!window.confirm((index+1)+"번 저장 슬롯을 삭제할까요? 현재 표시된 파티는 유지됩니다."))return;
   SAVED_SLOTS[index]=null;
   markDirty();
@@ -1112,7 +1112,7 @@ function organizePartyPanels(panel,selectedCount){
     [settings,"settings","편성 설정",SETTINGS.boss+" · "+SETTINGS.difficulty+" · 목표 "+formatRate(SETTINGS.targetRate),!RESULT.length],
     [roster,"roster","참여 인원",selectedCount+"명 선택 · 용병 "+GUESTS.length+"명 등록",true],
     [panel.querySelector(".party-boss-unassigned"),"unassigned","대기 인원",unassignedChars().length+"명",!!MANUAL_ADD],
-    [panel.querySelector(".party-boss-slots"),"slots","저장한 편성",SAVED_SLOTS.filter(Boolean).length+" / 3",false]
+    [panel.querySelector(".party-boss-slots"),"slots","저장한 편성",SAVED_SLOTS.filter(Boolean).length+" / 5",false]
   ];
   groups.forEach(function(group){
     var content=group[0];
@@ -1284,9 +1284,9 @@ function renderNow(){
 
 
   html+='<section class="party-boss-slots" aria-label="자동 편성 결과 저장 슬롯">';
-  html+='<header class="party-boss-slots-heading"><div><span>SAVED PARTIES</span><strong>자동 편성 결과 저장</strong><p>서로 다른 파티 편성을 최대 3개까지 보관합니다. 저장과 삭제는 공용으로 바로 반영되며, 불러온 결과는 상단 저장을 눌러야 현재 편성에 반영됩니다.</p></div></header>';
+  html+='<header class="party-boss-slots-heading"><div><span>SAVED PARTIES</span><strong>자동 편성 결과 저장</strong><p>서로 다른 파티 편성을 최대 5개까지 보관합니다. 저장과 삭제는 공용으로 바로 반영되며, 불러온 결과는 상단 저장을 눌러야 현재 편성에 반영됩니다.</p></div></header>';
   html+='<div class="party-boss-slot-grid">';
-  for(var si=0;si<3;si++){
+  for(var si=0;si<5;si++){
     var slot=SAVED_SLOTS[si];
     var exists=!!slot;
     html+='<article class="party-boss-slot '+(exists?"filled":"empty")+'">';
