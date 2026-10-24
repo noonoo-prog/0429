@@ -2887,3 +2887,73 @@ html[data-theme="dark"] #partyBossPanel .owner-themed[data-theme="guest"]{
   margin-top:0;
   align-self:start;
 }
+
+/* Named saved party slots */
+#partyBossPanel .party-boss-slot-name-row{
+  display:flex;
+  align-items:flex-end;
+  gap:6px;
+  min-width:0;
+  margin:4px 0 7px;
+}
+#partyBossPanel .party-boss-slot-name-row>label{
+  display:flex;
+  flex:1 1 auto;
+  flex-direction:column;
+  gap:5px;
+  min-width:0;
+}
+#partyBossPanel .party-boss-slot-name-row>label>span{
+  color:var(--muted);
+  font-size:10px;
+  font-weight:800;
+}
+#partyBossPanel .party-boss-slot-name-row input{
+  width:100%;
+  min-width:0;
+  height:36px;
+  box-sizing:border-box;
+  padding:0 9px;
+  border:1px solid var(--line-strong);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--text);
+  font:inherit;
+  font-size:12px;
+  font-weight:800;
+}
+#partyBossPanel .party-boss-slot-name-row input::placeholder{
+  color:var(--muted);
+  font-size:11px;
+  font-weight:500;
+}
+#partyBossPanel .party-boss-slot-name-row input:focus-visible,
+#partyBossPanel .party-boss-slot-rename:focus-visible{
+  outline:2px solid var(--accent,#008cc0);
+  outline-offset:2px;
+}
+#partyBossPanel .party-boss-slot-rename{
+  flex:0 0 auto;
+  height:36px;
+  min-width:58px;
+  box-sizing:border-box;
+  padding:0 8px;
+  border:1px solid var(--line-strong);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--text);
+  font:inherit;
+  font-size:11px;
+  font-weight:850;
+  cursor:pointer;
+  white-space:nowrap;
+}
+#partyBossPanel .party-boss-slot-rename:disabled,
+#partyBossPanel .party-boss-slot-name-row input:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+@media(max-width:390px){
+  #partyBossPanel .party-boss-slot-name-row{gap:4px}
+  #partyBossPanel .party-boss-slot-rename{min-width:54px;padding:0 5px;font-size:10px}
+}
