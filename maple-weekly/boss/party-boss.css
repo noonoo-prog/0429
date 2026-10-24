@@ -2964,3 +2964,70 @@ html[data-theme="dark"] #partyBossPanel .owner-themed[data-theme="guest"]{
     grid-template-columns:repeat(5,minmax(0,1fr));
   }
 }
+
+/* Owner meso: six vertical rows per column */
+#partyBossPanel .party-boss-meso-grid{
+  display:grid;
+  grid-template-columns:repeat(var(--pb-meso-columns,1),minmax(0,1fr));
+  gap:12px;
+  align-items:start;
+}
+#partyBossPanel .party-boss-meso-column{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width:0;
+}
+#partyBossPanel .party-boss-meso-column .party-boss-meso-card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  min-width:0;
+  min-height:46px;
+  box-sizing:border-box;
+  padding:7px 9px;
+  gap:9px;
+  border:0;
+  border-bottom:1px solid var(--pb-line);
+  border-radius:5px;
+  background:color-mix(in srgb,var(--owner-accent,#6f8194) 11%,var(--surface));
+}
+#partyBossPanel .party-boss-meso-column .party-boss-meso-card>div:first-child{
+  flex:1 1 auto;
+  min-width:0;
+  gap:2px;
+}
+#partyBossPanel .party-boss-meso-column .party-boss-meso-card b{
+  font-size:12px;
+  line-height:1.25;
+}
+#partyBossPanel .party-boss-meso-column .party-boss-meso-card small{
+  font-size:10px;
+  line-height:1.25;
+}
+#partyBossPanel .party-boss-meso-column .party-boss-meso-amount{
+  min-width:0;
+  gap:2px;
+}
+#partyBossPanel .party-boss-meso-column .party-boss-meso-amount>strong{
+  font-size:13px;
+  font-variant-numeric:tabular-nums;
+}
+#partyBossPanel .party-boss-meso-column .party-boss-meso-amount>small{
+  font-size:10px;
+}
+@media(max-width:1000px){
+  #partyBossPanel .party-boss-meso-grid{
+    grid-template-columns:repeat(min(2,var(--pb-meso-columns,1)),minmax(0,1fr));
+    gap:9px;
+  }
+}
+@media(max-width:680px){
+  #partyBossPanel .party-boss-meso-grid{
+    grid-template-columns:minmax(0,1fr);
+  }
+  #partyBossPanel .party-boss-meso-column .party-boss-meso-card{
+    min-height:44px;
+    padding:8px 9px;
+  }
+}
