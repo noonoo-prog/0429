@@ -2525,3 +2525,89 @@ html[data-theme="dark"] .party-boss-party-card.out-target>header>div>em{
 .party-boss-controls .party-boss-summary::after{display:none}
 .party-boss-controls .party-boss-build{margin-top:0;align-self:center;min-height:42px}
 .party-boss-fold>.party-boss-unassigned{margin:0;border:0;border-radius:0}
+
+/* Result-first view. Editing controls appear only in the explicit edit mode. */
+.party-boss-shell [hidden]{display:none!important}
+.party-boss-edit-toggle{min-height:38px;padding:0 16px;border:1px solid var(--line-strong);border-radius:9px;background:var(--text);color:var(--surface);font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.party-boss-edit-toggle[aria-pressed="true"]{background:var(--surface);color:var(--text);border-color:var(--accent,#008cc0)}
+.party-boss-edit-toggle:disabled{opacity:.5;cursor:default}
+.party-boss-edit-toggle:focus-visible{outline:2px solid var(--accent,#008cc0);outline-offset:3px}
+.party-boss-shell:not(.is-editing) .party-boss-member{grid-template-columns:8px minmax(0,1fr) auto;grid-template-rows:auto;cursor:default;padding:12px 10px;gap:10px}
+.party-boss-shell:not(.is-editing) .party-boss-member-dot{grid-column:1;grid-row:1}
+.party-boss-shell:not(.is-editing) .party-boss-member>div{grid-column:2;grid-row:1}
+.party-boss-shell:not(.is-editing) .party-boss-member>strong{grid-column:3;grid-row:1;font-size:12px}
+.party-boss-shell:not(.is-editing) .party-boss-member>div>b{font-size:13px}
+.party-boss-settings{padding:14px}
+.party-boss-settings .party-boss-controls{border:0;padding:0}
+.party-boss-settings .party-boss-mode-panel{margin:14px 0 0;padding:14px 0 0;border:0;border-top:1px solid var(--pb-line);border-radius:0;background:transparent}
+.party-boss-fold[data-pb-fold="roster"]>.party-boss-owner-groups{display:block}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-external{margin:16px 0 0;border:0;border-top:1px solid var(--pb-line);border-radius:0;padding:16px 0 0}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-external-heading{display:flex}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-external-heading span{display:none}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-external-heading strong{font-size:14px}
+.party-boss-fold[data-pb-fold="unassigned"] .party-boss-unassigned>header{display:none}
+.party-boss-fold[data-pb-fold="meso"]>.party-boss-meso-summary{margin:0;padding:14px;border:0}
+.party-boss-fold[data-pb-fold="meso"] .party-boss-meso-summary>header>div{display:none}
+.party-boss-shell:not(.is-editing) .party-boss-result{margin-top:12px}
+@media(max-width:760px){
+ .party-boss-settings{padding:12px}
+ .party-boss-head-actions{gap:8px}
+ .party-boss-shared-meta{flex-basis:100%}
+ .party-boss-shell:not(.is-editing) .party-boss-member{padding:11px 8px}
+}
+
+/* Dense vertical rosters: one container per owner, simple rows per character. */
+.party-boss-fold[data-pb-fold="roster"]>.party-boss-owner-groups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:start;gap:16px;padding:14px}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-owner{min-width:0;margin:0;padding:0;border:0;background:transparent;box-shadow:none}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-owner>header{margin:0 0 6px;padding:0 0 6px;border-bottom:2px solid var(--owner-accent);gap:4px;align-items:center}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-owner-title{min-width:0;gap:2px;align-items:flex-start;flex-direction:column}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-owner-title>span{font-size:10px;padding:0;border:0;background:none}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-owner>header button{padding:0 5px;min-height:28px;white-space:nowrap}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-char-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-char{grid-template-columns:minmax(0,1fr) 65px;gap:5px;min-height:36px;padding:3px 0;border:0;border-bottom:1px solid var(--pb-line);border-radius:0;box-shadow:none;background:transparent}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-char.active{background:color-mix(in srgb,var(--owner-accent) 5%,var(--surface));box-shadow:none}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-char-toggle{gap:5px;min-height:32px;padding:0 3px}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-char-toggle::before{content:"";width:11px;height:11px;flex:0 0 11px;border:1px solid var(--line-strong);border-radius:3px}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-char.active .party-boss-char-toggle::before{content:"✓";font-size:10px;line-height:11px;text-align:center;color:var(--text);background:var(--owner-accent);border-color:var(--owner-accent)}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-char-name b{font-size:11px;font-weight:700}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-char label>span{display:none}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-char input{height:30px;min-height:30px;padding:0 4px;font-size:11px;border-radius:5px}
+.party-boss-fold[data-pb-fold="roster"] .party-boss-external{grid-column:1/-1;margin:0}
+@media(max-width:1000px){.party-boss-fold[data-pb-fold="roster"]>.party-boss-owner-groups{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}}
+@media(max-width:760px){.party-boss-fold[data-pb-fold="roster"]>.party-boss-owner-groups{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}
+@media(max-width:460px){.party-boss-fold[data-pb-fold="roster"]>.party-boss-owner-groups{grid-template-columns:1fr}.party-boss-fold[data-pb-fold="roster"] .party-boss-char{grid-template-columns:minmax(0,1fr) 80px}}
+
+/* Remove inherited oversized spacing while keeping readable type and tap targets. */
+.party-boss-panel{max-width:1320px}
+.party-boss-head{margin:0 0 8px;gap:8px;align-items:center}
+.party-boss-head>div:first-child{display:none}
+.party-boss-head-actions{width:100%;justify-content:flex-end}
+.party-boss-head-actions .party-boss-shared-meta{margin-right:auto}
+.party-boss-fold{margin:6px 0;border-radius:8px}
+.party-boss-fold>summary{min-height:38px;padding:8px 10px;gap:8px}
+.party-boss-settings{padding:10px}
+.party-boss-settings .party-boss-controls{gap:8px;align-items:start}
+.party-boss-settings .party-boss-controls>label{min-height:0}
+.party-boss-settings .party-boss-controls>label>span{height:auto;margin:0 0 4px}
+.party-boss-settings .party-boss-controls input,.party-boss-settings .party-boss-controls select{height:34px;min-height:34px}
+.party-boss-settings .party-boss-number>div,.party-boss-settings .party-boss-target>div{grid-template-rows:34px auto;gap:2px}
+.party-boss-settings .party-boss-mode-panel{margin-top:8px;padding-top:8px}
+.party-boss-settings .party-boss-mode-option{min-height:48px;padding:7px 9px;gap:3px}
+.party-boss-settings .party-boss-mode-option.active{padding:6px 8px}
+.party-boss-settings .party-boss-compare-actions{margin-top:7px;padding-top:7px}
+.party-boss-shell .party-boss-result{margin-top:8px;padding:10px;border-radius:10px}
+.party-boss-result>header{gap:8px}
+.party-boss-result>header>div>strong{font-size:13px;line-height:1.5}
+.party-boss-result-grid{gap:8px;margin-top:8px;align-items:start}
+.party-boss-party-card>header{min-height:0;padding:8px 10px}
+.party-boss-members{padding:3px 6px}
+.party-boss-shell:not(.is-editing) .party-boss-member{padding:7px 4px}
+.party-boss-shell.is-editing .party-boss-member{padding:5px 4px}
+.party-boss-target-success,.party-boss-target-warning,.party-boss-manual-help{margin-top:7px;padding:7px 10px}
+@media(min-width:1100px){.party-boss-result-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){
+ .party-boss-head{flex-direction:row}
+ .party-boss-head-actions .party-boss-shared-meta{flex-basis:auto;font-size:10px}
+ .party-boss-result-grid{grid-template-columns:1fr}
+ .party-boss-shell:not(.is-editing) .party-boss-member{padding:8px 4px}
+}
