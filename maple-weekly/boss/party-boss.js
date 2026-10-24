@@ -38,6 +38,7 @@ var LEGACY_MULT_KEY="boss-board-party-boss-multipliers-v1";
 var SELECT_KEY="boss-board-party-boss-selection-v1";
 var SETTINGS_KEY="boss-board-party-boss-settings-v1";
 var RESULT_KEY="boss-board-party-boss-result-v1";
+var GUEST_KEY="boss-board-party-boss-external-v1";
 var DATA={owners:[]};
 var RESULT=[];
 var loading=false;
@@ -85,6 +86,8 @@ var LEGACY_MULT=readJSON(LEGACY_MULT_KEY,{});
 var SELECTED=readJSON(SELECT_KEY,[]);
 var SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:"any",partyCount:0,targetRate:130,mode:"strong"},readJSON(SETTINGS_KEY,{}));
 var SAVED_RESULT=readJSON(RESULT_KEY,[]);
+var GUESTS=readJSON(GUEST_KEY,[]);
+if(!Array.isArray(GUESTS))GUESTS=[];
 SETTINGS.targetRate=Math.max(1,Number(SETTINGS.targetRate)||130);
 SETTINGS.mode=normalizeMode(SETTINGS.mode);
 
@@ -161,6 +164,7 @@ function persistLocalCache(){
   localStorage.setItem(SELECT_KEY,JSON.stringify(SELECTED));
   localStorage.setItem(SETTINGS_KEY,JSON.stringify(SETTINGS));
   localStorage.setItem(RESULT_KEY,JSON.stringify(serializeResult()));
+  localStorage.setItem(GUEST_KEY,JSON.stringify(GUESTS));
 }
 function currentSaverName(){
   var activeId=localStorage.getItem("boss-board-active-owner-v6")||"";
@@ -221,13 +225,14 @@ function sharedPayload(){
       mode:normalizeMode(SETTINGS.mode)
     },
     selected:SELECTED.slice(),
+    guests:GUESTS.map(function(g){return {id:g.id,name:g.name,owner:g.owner||""}}),
     multipliers:JSON.parse(JSON.stringify(MULT||{})),
     result:serializeResult()
   };
 }
 function applySharedState(state,updatedBy,updatedAt){
   if(!state||typeof state!=="object"||Array.isArray(state))return false;
-  if(!state.settings&&!state.multipliers&&!state.selected&&!state.result)return false;
+  if(!state.settings&&!state.multipliers&&!state.selected&&!state.result&&!state.guests)return false;
   SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:"any",partyCount:0,targetRate:130,mode:"strong"},state.settings||{});
   normalizeDifficulty();
   SETTINGS.targetRate=Math.max(1,Number(SETTINGS.targetRate)||130);
@@ -237,6 +242,9 @@ function applySharedState(state,updatedBy,updatedAt){
   MULT=(state.multipliers&&typeof state.multipliers==="object"&&!Array.isArray(state.multipliers))
     ?JSON.parse(JSON.stringify(state.multipliers))
     :{};
+  GUESTS=Array.isArray(state.guests)?state.guests.filter(function(g){
+    return g&&typeof g.id==="string"&&/^ext-[a-z0-9-]{1,70}$/.test(g.id)&&String(g.name||"").trim();
+  }).map(function(g){return {id:g.id,name:String(g.name).trim(),owner:String(g.owner||"").trim()}}):[];
   SAVED_RESULT=Array.isArray(state.result)?JSON.parse(JSON.stringify(state.result)):[];
   SHARED_UPDATED_BY=String(updatedBy||"");
   SHARED_UPDATED_AT=String(updatedAt||"");
@@ -315,6 +323,46 @@ function setBossMultiplier(boss,key,value){
 function materializeCurrentBossMultipliers(){
   bossMultiplierMap(String(SETTINGS.boss||""),true);
 }
+function guestKey(g){return "guest|"+String(g.id||"")}
+function guestOwnerKey(g){
+  return "guest-owner:"+(String(g.owner||"").trim().toLowerCase()||g.id);
+}
+function addGuest(name,owner,rate){
+  name=String(name||"").trim().slice(0,30);
+  owner=String(owner||"").trim().slice(0,30);
+  if(!name){notify("외부 캐릭터 이름을 입력해 주세요.");return}
+  if(GUESTS.length>=100){notify("외부 인력은 최대 100명까지 등록할 수 있어요.");return}
+  if(GUESTS.some(function(g){return g.name===name&&g.owner===owner})){
+    notify("같은 이름과 소속의 외부 인력이 이미 등록되어 있어요.");return;
+  }
+  var g={id:"ext-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8),name:name,owner:owner};
+  GUESTS.push(g);
+  var key=guestKey(g);
+  var value=Math.max(0,Number(rate)||0);
+  if(value>0)setBossMultiplier(SETTINGS.boss,key,value);
+  SELECTED.push(key);
+  RESULT=[];
+  invalidateComparison();
+  markDirty();
+  render();
+  notify("외부 인력을 추가했어요. 공용 반영은 저장을 눌러 주세요.");
+}
+function removeGuest(id){
+  var index=GUESTS.findIndex(function(g){return g.id===id});
+  if(index<0)return;
+  var g=GUESTS[index];
+  if(!window.confirm(g.name+" 외부 인력을 삭제할까요?"))return;
+  var key=guestKey(g);
+  GUESTS.splice(index,1);
+  SELECTED=SELECTED.filter(function(k){return k!==key});
+  Object.keys(MULT).forEach(function(b){
+    if(MULT[b]&&typeof MULT[b]==="object")delete MULT[b][key];
+  });
+  RESULT=[];
+  invalidateComparison();
+  markDirty();
+  render();
+}
 function allChars(){
   var out=[];
   (DATA.owners||[]).forEach(function(o){
@@ -332,6 +380,20 @@ function allChars(){
         pi:pi,
         multiplier:getBossMultiplier(SETTINGS.boss,key)
       });
+    });
+  });
+  GUESTS.forEach(function(g){
+    if(!g||!g.id||!String(g.name||"").trim())return;
+    var key=guestKey(g);
+    out.push({
+      key:key,
+      ownerId:guestOwnerKey(g),
+      ownerName:g.owner?(g.owner+" (외부)"):(g.name+" (외부)"),
+      theme:"guest",
+      name:g.name,
+      pi:-1,
+      external:true,
+      multiplier:getBossMultiplier(SETTINGS.boss,key)
     });
   });
   return out;
@@ -844,6 +906,31 @@ function renderNow(){
   }
   html+='</section>';
 
+  html+='<section class="party-boss-external" aria-label="외부 인력 관리">';
+  html+='<div class="party-boss-external-heading"><div><span>GUEST MEMBERS</span><strong>외부 인력</strong><p>기존 보스 현황판에는 등록하지 않고, 파티보스에서만 사용합니다. 추가 시 자동으로 선택됩니다.</p></div><b>'+GUESTS.length+'명 등록</b></div>';
+  html+='<form class="party-boss-external-form" data-pb-guest-form="1">';
+  html+='<label><span>캐릭터 이름</span><input data-pb-guest-name="1" type="text" maxlength="30" placeholder="외부 캐릭터 닉네임" required autocomplete="off"></label>';
+  html+='<label><span>주인 / 소속 (선택)</span><input data-pb-guest-owner="1" type="text" maxlength="30" placeholder="같은 주인은 동일하게 입력" autocomplete="off"></label>';
+  html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input data-pb-guest-rate="1" type="number" min="0" step="0.01" inputmode="decimal" value="0" aria-label="외부 캐릭터 배율"></label>';
+  html+='<button type="submit">+ 외부 인력 추가</button>';
+  html+='</form>';
+  if(GUESTS.length){
+    html+='<div class="party-boss-external-grid">';
+    GUESTS.forEach(function(g){
+      var key=guestKey(g);
+      var chosen=selectedSet.has(key);
+      var rate=getBossMultiplier(SETTINGS.boss,key);
+      html+='<article class="party-boss-external-person '+(chosen?"active":"")+'">';
+      html+='<button type="button" class="party-boss-external-select" data-pb-char="'+esc(key)+'" aria-pressed="'+(chosen?"true":"false")+'"><b>'+esc(g.name)+'</b><small>'+esc(g.owner||"소속 미지정")+' · '+(chosen?"선택됨":"미선택")+'</small></button>';
+      html+='<label><span>배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(key)+'" value="'+String(rate)+'" aria-label="'+esc(g.name)+' 배율"></label>';
+      html+='<button type="button" class="party-boss-external-remove" data-pb-guest-remove="'+esc(g.id)+'" aria-label="'+esc(g.name)+' 외부 인력 삭제" title="외부 인력 삭제">삭제</button>';
+      html+='</article>';
+    });
+    html+='</div>';
+  }
+  html+='<p class="party-boss-external-note">소속이 같으면 같은 파티에 2명을 배정하지 않습니다. 소속을 비우면 각각 별도 주인으로 취급합니다. 등록·삭제·배율 변경 후 상단의 저장 버튼을 눌러 주세요.</p>';
+  html+='</section>';
+
   html+='<section class="party-boss-owner-groups">';
   (DATA.owners||[]).forEach(function(o){
     var own=chars.filter(function(c){return c.ownerId===o.id});
@@ -895,7 +982,7 @@ function renderNow(){
       p.members.forEach(function(c){
         html+='<div class="party-boss-member owner-themed" data-theme="'+c.theme+'">';
         html+='<span class="party-boss-member-dot"></span>';
-        html+='<div><b>'+esc(c.name)+'</b></div>';
+        html+='<div><b>'+esc(c.name)+'</b>'+(c.external?'<small>'+esc(c.ownerName)+'</small>':'')+'</div>';
         html+='<strong>'+formatRate(c.multiplier)+'</strong>';
         html+='</div>';
       });
@@ -904,6 +991,13 @@ function renderNow(){
     html+='</div>';
     var mesoTotals=ownerMesoTotals();
     var mesoRows=(DATA.owners||[]).map(function(o){return mesoTotals[String(o.id)]}).filter(Boolean);
+    var seenGuestOwners=new Set();
+    GUESTS.forEach(function(g){
+      var id=guestOwnerKey(g);
+      if(seenGuestOwners.has(id))return;
+      seenGuestOwners.add(id);
+      if(mesoTotals[id])mesoRows.push(mesoTotals[id]);
+    });
     if(MESO_SORT==="meso")mesoRows.sort(function(a,b){return b.total-a.total||a.ownerName.localeCompare(b.ownerName,"ko")});
     if(mesoRows.length){
       html+='<section class="party-boss-meso-summary">';
@@ -969,6 +1063,18 @@ function renderNow(){
   var resetBtn=panel.querySelector("[data-pb-reset]");
   if(resetBtn)resetBtn.onclick=function(){invalidateComparison();SELECTED=[];RESULT=[];markDirty();render()};
 
+  var guestForm=panel.querySelector("[data-pb-guest-form]");
+  if(guestForm)guestForm.onsubmit=function(e){
+    e.preventDefault();
+    addGuest(
+      guestForm.querySelector("[data-pb-guest-name]").value,
+      guestForm.querySelector("[data-pb-guest-owner]").value,
+      guestForm.querySelector("[data-pb-guest-rate]").value
+    );
+  };
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-guest-remove]"),function(btn){
+    btn.onclick=function(){removeGuest(btn.dataset.pbGuestRemove)};
+  });
   Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-owner]"),function(btn){
     btn.onclick=function(){toggleOwner(btn.dataset.pbOwner)};
   });
