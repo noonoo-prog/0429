@@ -2096,3 +2096,103 @@ html[data-theme="dark"] .party-boss-party-card.out-target>header>div>em{
   .party-boss-external-form>button{grid-column:auto}
   .party-boss-external-remove{padding:0 6px}
 }
+
+/* Manual party adjustments: click/tap on all screens, drag-and-drop on desktop */
+.party-boss-manual-help,.party-boss-manual-pick{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:10px 12px;
+  margin-top:12px;
+  border:1px solid var(--line-strong);
+  border-radius:10px;
+  background:var(--surface);
+  color:var(--text);
+  font-size:11px;
+  line-height:1.5;
+}
+.party-boss-manual-help span,.party-boss-manual-pick span{flex:1;min-width:150px}
+.party-boss-manual-help b,.party-boss-manual-pick b{font-weight:950}
+.party-boss-manual-pick{
+  margin-top:7px;
+  background:var(--surface-soft);
+  border-color:var(--accent,#008cc0);
+}
+.party-boss-manual-help button,.party-boss-manual-pick button,
+.party-boss-drop-actions button{
+  min-height:31px;
+  padding:4px 10px;
+  border:1px solid var(--line-strong);
+  background:var(--surface);
+  color:var(--text);
+  border-radius:8px;
+  cursor:pointer;
+  font:inherit;
+  font-size:11px;
+  font-weight:850;
+}
+.party-boss-drop-actions{padding:8px 8px 0}
+.party-boss-drop-actions button{
+  width:100%;
+  border-color:var(--accent,#008cc0);
+  color:var(--text);
+  background:var(--surface);
+}
+.party-boss-party-card.manual-target{
+  border-style:dashed;
+}
+.party-boss-party-card.manual-drag-over,
+.party-boss-member.manual-drag-over{
+  outline:2px solid var(--accent,#008cc0);
+  outline-offset:-2px;
+  background:var(--surface);
+}
+.party-boss-member{
+  grid-template-columns:8px minmax(0,1fr) auto auto;
+  gap:6px;
+  cursor:grab;
+}
+.party-boss-member.manual-dragging{opacity:.48}
+.party-boss-member.manual-picked{
+  outline:1px solid var(--accent,#008cc0);
+  outline-offset:-1px;
+  border-radius:8px;
+  background:var(--surface);
+}
+.party-boss-member-action{
+  min-width:39px;
+  min-height:29px;
+  border:1px solid var(--line-strong);
+  border-radius:7px;
+  padding:0 5px;
+  background:var(--surface);
+  color:var(--text);
+  font:inherit;
+  font-size:10px;
+  font-weight:900;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.party-boss-member-action.selected,
+.party-boss-member-action.swap{
+  border-color:var(--accent,#008cc0);
+}
+.party-boss-member-action:focus-visible,
+.party-boss-manual-help button:focus-visible,
+.party-boss-manual-pick button:focus-visible,
+.party-boss-drop-actions button:focus-visible{
+  outline:2px solid var(--accent,#008cc0);
+  outline-offset:2px;
+}
+@media(max-width:600px){
+  .party-boss-manual-help,.party-boss-manual-pick{padding:10px;font-size:10px}
+  .party-boss-manual-help button,.party-boss-manual-pick button{font-size:10px}
+  .party-boss-member{grid-template-columns:7px minmax(0,1fr) auto auto;gap:5px;padding:7px 5px}
+  .party-boss-member-action{min-height:32px;min-width:37px;font-size:10px}
+  .party-boss-member>strong{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  .party-boss-member{transition:none}
+}
