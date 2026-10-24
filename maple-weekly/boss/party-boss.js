@@ -39,6 +39,7 @@ var SELECT_KEY="boss-board-party-boss-selection-v1";
 var SETTINGS_KEY="boss-board-party-boss-settings-v1";
 var RESULT_KEY="boss-board-party-boss-result-v1";
 var GUEST_KEY="boss-board-party-boss-external-v1";
+var SLOT_KEY="boss-board-party-boss-saved-slots-v1";
 var DATA={owners:[]};
 var RESULT=[];
 var loading=false;
@@ -92,6 +93,9 @@ var SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:"any",pa
 var SAVED_RESULT=readJSON(RESULT_KEY,[]);
 var GUESTS=readJSON(GUEST_KEY,[]);
 if(!Array.isArray(GUESTS))GUESTS=[];
+var SAVED_SLOTS=readJSON(SLOT_KEY,[null,null,null]);
+if(!Array.isArray(SAVED_SLOTS))SAVED_SLOTS=[null,null,null];
+SAVED_SLOTS=[0,1,2].map(function(i){return SAVED_SLOTS[i]||null});
 SETTINGS.targetRate=Math.max(1,Number(SETTINGS.targetRate)||130);
 SETTINGS.mode=normalizeMode(SETTINGS.mode);
 
@@ -169,6 +173,7 @@ function persistLocalCache(){
   localStorage.setItem(SETTINGS_KEY,JSON.stringify(SETTINGS));
   localStorage.setItem(RESULT_KEY,JSON.stringify(serializeResult()));
   localStorage.setItem(GUEST_KEY,JSON.stringify(GUESTS));
+  localStorage.setItem(SLOT_KEY,JSON.stringify(SAVED_SLOTS));
 }
 function currentSaverName(){
   var activeId=localStorage.getItem("boss-board-active-owner-v6")||"";
@@ -231,7 +236,8 @@ function sharedPayload(){
     selected:SELECTED.slice(),
     guests:GUESTS.map(function(g){return {id:g.id,name:g.name,owner:g.owner||""}}),
     multipliers:JSON.parse(JSON.stringify(MULT||{})),
-    result:serializeResult()
+    result:serializeResult(),
+    savedSlots:SAVED_SLOTS.map(function(slot){return slot?JSON.parse(JSON.stringify(slot)):null})
   };
 }
 function applySharedState(state,updatedBy,updatedAt){
@@ -250,6 +256,10 @@ function applySharedState(state,updatedBy,updatedAt){
     return g&&typeof g.id==="string"&&/^ext-[a-z0-9-]{1,70}$/.test(g.id)&&String(g.name||"").trim();
   }).map(function(g){return {id:g.id,name:String(g.name).trim(),owner:String(g.owner||"").trim()}}):[];
   SAVED_RESULT=Array.isArray(state.result)?JSON.parse(JSON.stringify(state.result)):[];
+  SAVED_SLOTS=[0,1,2].map(function(i){
+    var slot=Array.isArray(state.savedSlots)?state.savedSlots[i]:null;
+    return slot&&typeof slot==="object"&&!Array.isArray(slot)?JSON.parse(JSON.stringify(slot)):null;
+  });
   SHARED_UPDATED_BY=String(updatedBy||"");
   SHARED_UPDATED_AT=String(updatedAt||"");
   SHARED_LOADED=true;
@@ -293,6 +303,104 @@ function savePrefs(){
     SAVING=false;
     render();
   });
+}
+function currentResultSnapshot(){
+  var settings={
+    boss:SETTINGS.boss,
+    difficulty:SETTINGS.difficulty,
+    partySize:SETTINGS.partySize,
+    partyCount:Math.max(0,Math.floor(Number(SETTINGS.partyCount)||0)),
+    targetRate:Math.max(1,Number(SETTINGS.targetRate)||130),
+    mode:normalizeMode(SETTINGS.mode)
+  };
+  var result=serializeResult();
+  var keys=Array.from(new Set(SELECTED.concat(result.reduce(function(a,p){return a.concat(p.memberKeys)},[]))));
+  var rates={};
+  keys.forEach(function(key){rates[key]=getBossMultiplier(SETTINGS.boss,key)});
+  var guestIds=new Set(keys.filter(function(key){return key.indexOf("guest|")===0}).map(function(key){return key.slice(6)}));
+  var guests=GUESTS.filter(function(g){return guestIds.has(g.id)}).map(function(g){return {id:g.id,name:g.name,owner:g.owner||""}});
+  return {savedAt:new Date().toISOString(),settings:settings,selected:keys,guests:guests,multipliers:rates,result:result};
+}
+function formatSlotTime(value){
+  try{
+    var d=new Date(value);
+    if(!Number.isFinite(d.getTime()))return "";
+    return new Intl.DateTimeFormat("ko-KR",{
+      timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",
+      hour:"2-digit",minute:"2-digit",hour12:false
+    }).format(d);
+  }catch(e){return ""}
+}
+function saveResultSlot(index){
+  if(SAVING||BUILDING||COMPARING)return;
+  index=Number(index);
+  if(!Number.isInteger(index)||index<0||index>2)return;
+  if(!RESULT.length){notify("저장할 편성 결과가 없어요. 먼저 자동 편성하거나 저장된 결과를 불러오세요.");return}
+  if(SAVED_SLOTS[index]&&!window.confirm((index+1)+"번 슬롯에 현재 결과를 덮어쓸까요?"))return;
+  SAVED_SLOTS[index]=currentResultSnapshot();
+  markDirty();
+  persistLocalCache();
+  render();
+  savePrefs(); // A slot save commits the full shared state immediately.
+}
+function loadResultSlot(index){
+  if(SAVING||BUILDING||COMPARING)return;
+  index=Number(index);
+  var snapshot=SAVED_SLOTS[index];
+  if(!snapshot||!snapshot.result||!snapshot.result.length)return;
+  if(DIRTY&&!window.confirm("현재 저장하지 않은 수정 사항이 있어요. 저장된 "+(index+1)+"번 편성으로 교체할까요?"))return;
+  var old={
+    settings:SETTINGS,selected:SELECTED,guests:GUESTS,multipliers:MULT,
+    savedResult:SAVED_RESULT,result:RESULT
+  };
+  SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:"any",partyCount:0,targetRate:130,mode:"strong"},snapshot.settings||{});
+  normalizeDifficulty();
+  SETTINGS.targetRate=Math.max(1,Number(SETTINGS.targetRate)||130);
+  SETTINGS.mode=normalizeMode(SETTINGS.mode);
+  SELECTED=Array.isArray(snapshot.selected)?snapshot.selected.slice():[];
+  var snapshotGuests=Array.isArray(snapshot.guests)?snapshot.guests:[];
+  var snapshotGuestIds=new Set(snapshotGuests.map(function(g){return g.id}));
+  GUESTS=old.guests.filter(function(g){return !snapshotGuestIds.has(g.id)}).concat(snapshotGuests.map(function(g){
+    return {id:g.id,name:g.name,owner:g.owner||""};
+  }));
+  MULT=JSON.parse(JSON.stringify(old.multipliers||{}));
+  var bossMap=bossMultiplierMap(SETTINGS.boss,true);
+  (SELECTED||[]).forEach(function(key){
+    if(!Object.prototype.hasOwnProperty.call(snapshot.multipliers||{},key))return;
+    var rate=Math.max(0,Number(snapshot.multipliers[key])||0);
+    if(rate>0)bossMap[key]=rate;
+    else delete bossMap[key];
+  });
+  SAVED_RESULT=JSON.parse(JSON.stringify(snapshot.result));
+  restoreSavedResult();
+  var complete=RESULT.length===SAVED_RESULT.length&&RESULT.every(function(p,i){
+    var actual=p.members.map(function(c){return c.key});
+    var expected=SAVED_RESULT[i].memberKeys||[];
+    return actual.length===expected.length&&actual.every(function(key,j){return key===expected[j]});
+  });
+  if(!complete||!validPartyOwners(RESULT)){
+    SETTINGS=old.settings;SELECTED=old.selected;GUESTS=old.guests;
+    MULT=old.multipliers;SAVED_RESULT=old.savedResult;RESULT=old.result;
+    notify("저장 당시 캐릭터가 현재 목록에 없거나 주인이 겹쳐 불러오지 못했어요.");
+    return;
+  }
+  MANUAL_PICK="";MANUAL_ADD="";MANUAL_DRAG="";MANUAL_UNDO=null;
+  invalidateComparison();
+  markDirty();
+  persistLocalCache();
+  render();
+  notify((index+1)+"번 슬롯을 불러왔어요. 상단 저장을 누르면 현재 공용 편성에도 반영됩니다.");
+}
+function deleteResultSlot(index){
+  if(SAVING||BUILDING||COMPARING)return;
+  index=Number(index);
+  if(!Number.isInteger(index)||index<0||index>2||!SAVED_SLOTS[index])return;
+  if(!window.confirm((index+1)+"번 저장 슬롯을 삭제할까요? 현재 표시된 파티는 유지됩니다."))return;
+  SAVED_SLOTS[index]=null;
+  markDirty();
+  persistLocalCache();
+  render();
+  savePrefs();
 }
 function ownerTheme(name){
   if(name==="오똑")return"ottok";
@@ -1074,6 +1182,29 @@ function renderNow(){
   html+='</section>';
 
 
+  html+='<section class="party-boss-slots" aria-label="자동 편성 결과 저장 슬롯">';
+  html+='<header class="party-boss-slots-heading"><div><span>SAVED PARTIES</span><strong>자동 편성 결과 저장</strong><p>서로 다른 파티 편성을 최대 3개까지 보관합니다. 저장과 삭제는 공용으로 바로 반영되며, 불러온 결과는 상단 저장을 눌러야 현재 편성에 반영됩니다.</p></div></header>';
+  html+='<div class="party-boss-slot-grid">';
+  for(var si=0;si<3;si++){
+    var slot=SAVED_SLOTS[si];
+    var exists=!!slot;
+    html+='<article class="party-boss-slot '+(exists?"filled":"empty")+'">';
+    html+='<div class="party-boss-slot-top"><span>슬롯 '+(si+1)+'</span><b>'+(exists?"저장됨":"비어 있음")+'</b></div>';
+    if(exists){
+      html+='<strong>'+esc(slot.settings.boss)+' · '+esc(slot.settings.difficulty)+'</strong>';
+      html+='<p>'+slot.result.length+'개 파티 · '+modeName(slot.settings.mode)+' · 목표 '+formatRate(slot.settings.targetRate)+'</p>';
+      html+='<small>'+esc(formatSlotTime(slot.savedAt))+'</small>';
+    }else{
+      html+='<strong>편성을 저장해 두세요</strong><p>현재 파티 구성을 따로 보관할 수 있어요.</p><small>저장된 기록 없음</small>';
+    }
+    html+='<div class="party-boss-slot-actions">';
+    html+='<button type="button" class="party-boss-slot-save" data-pb-slot-save="'+si+'" '+(!RESULT.length||SAVING?"disabled":"")+'>'+(exists?"덮어쓰기":"저장")+'</button>';
+    html+='<button type="button" data-pb-slot-load="'+si+'" '+(!exists||SAVING?"disabled":"")+'>불러오기</button>';
+    html+='<button type="button" class="party-boss-slot-delete" data-pb-slot-delete="'+si+'" '+(!exists||SAVING?"disabled":"")+'>삭제</button>';
+    html+='</div></article>';
+  }
+  html+='</div></section>';
+
   var unassigned=unassignedChars();
   if(unassigned.length){
     html+='<section class="party-boss-unassigned" aria-label="미배정 캐릭터">';
@@ -1213,6 +1344,15 @@ function renderNow(){
   });
   var buildBtn=panel.querySelector("[data-pb-build]");
   if(buildBtn)buildBtn.onclick=build;
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-slot-save]"),function(btn){
+    btn.onclick=function(){saveResultSlot(Number(btn.dataset.pbSlotSave))};
+  });
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-slot-load]"),function(btn){
+    btn.onclick=function(){loadResultSlot(Number(btn.dataset.pbSlotLoad))};
+  });
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-slot-delete]"),function(btn){
+    btn.onclick=function(){deleteResultSlot(Number(btn.dataset.pbSlotDelete))};
+  });
   var saveBtn=panel.querySelector("[data-pb-save]");
   if(saveBtn)saveBtn.onclick=savePrefs;
   Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-undo]"),function(btn){btn.onclick=undoPartyResult});
