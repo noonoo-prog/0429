@@ -1066,8 +1066,9 @@ function render(){
 function organizePartyPanels(panel,selectedCount){
   var groups=[
     [".party-boss-mode-panel","strategy","편성 전략",modeName(SETTINGS.mode),false],
-    [".party-boss-owner-groups","roster","참여 캐릭터",selectedCount+"명 선택",!RESULT.length],
+    [".party-boss-owner-groups","roster","참여 캐릭터",selectedCount+"명 선택",selectedCount===0],
     [".party-boss-external","guests","외부 인력",GUESTS.length+"명 등록",false],
+    [".party-boss-unassigned","unassigned","미배정 캐릭터",unassignedChars().length+"명",!!MANUAL_ADD],
     [".party-boss-slots","slots","저장한 편성",SAVED_SLOTS.filter(Boolean).length+" / 3",false]
   ];
   groups.forEach(function(group){
