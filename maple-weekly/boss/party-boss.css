@@ -2471,3 +2471,49 @@ html[data-theme="dark"] .party-boss-party-card.out-target>header>div>em{
   .party-boss-slots{padding:11px}
   .party-boss-slot-actions button{flex:1 1 0;padding:7px 5px}
 }
+
+/* Compact disclosure layout: keep the current party result within reach. */
+.party-boss-fold{margin:10px 0;border:1px solid var(--pb-line);border-radius:12px;background:var(--surface);overflow:hidden}
+.party-boss-fold>summary{display:flex;align-items:center;gap:12px;padding:14px 16px;min-height:48px;box-sizing:border-box;cursor:pointer;list-style:none;color:var(--text)}
+.party-boss-fold>summary::-webkit-details-marker{display:none}
+.party-boss-fold>summary strong{font-size:13px;font-weight:800}
+.party-boss-fold>summary>span{margin-left:auto;color:var(--pb-muted);font-size:12px;text-align:right}
+.party-boss-fold>summary::after{content:"+";font-size:18px;color:var(--pb-muted)}
+.party-boss-fold[open]>summary::after{content:"−"}
+.party-boss-fold[open]>summary{border-bottom:1px solid var(--pb-line)}
+.party-boss-fold>summary:focus-visible{outline:2px solid var(--accent,#008cc0);outline-offset:-3px}
+.party-boss-fold>.party-boss-mode-panel,.party-boss-fold>.party-boss-external,.party-boss-fold>.party-boss-slots{margin:0;border:0;border-radius:0;padding:16px;background:transparent}
+.party-boss-fold>.party-boss-owner-groups{margin:0;padding:14px}
+.party-boss-fold .party-boss-mode-heading,.party-boss-fold .party-boss-external-heading,.party-boss-fold .party-boss-slots-heading span,.party-boss-fold .party-boss-slots-heading strong{display:none}
+.party-boss-fold .party-boss-mode-grid{margin-top:0}
+.party-boss-fold .party-boss-mode-option{min-height:64px}
+.party-boss-fold .party-boss-slots-heading p{margin-top:0}
+.party-boss-head>div:first-child>span{display:none}
+.party-boss-head strong{font-size:22px}
+.party-boss-head p{font-weight:400;line-height:1.5}
+.party-boss-controls{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;padding:16px}
+.party-boss-controls>label{min-width:0}
+.party-boss-controls .party-boss-summary{grid-column:1/3;display:flex;align-items:center;justify-content:space-between}
+.party-boss-controls .party-boss-build{grid-column:3/-1}
+.party-boss-controls label>span{font-size:11px;font-weight:700}
+.party-boss-result{margin-top:22px}
+.party-boss-result-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.party-boss-party-card{box-shadow:none}
+.party-boss-party-card>header>div>span{display:none}
+.party-boss-member{padding:10px 8px}
+.party-boss-member>div{min-width:0}
+.party-boss-member>div>b{overflow-wrap:anywhere}
+.party-boss-member-action,.party-boss-member-remove{font-weight:600;min-height:32px}
+.party-boss-member-remove{color:var(--muted)}
+.party-boss-slot{box-shadow:none}
+@media(max-width:760px){
+ .party-boss-controls{grid-template-columns:repeat(2,minmax(0,1fr));padding:12px}
+ .party-boss-controls .party-boss-summary{grid-column:auto}
+ .party-boss-controls .party-boss-build{grid-column:1/-1}
+ .party-boss-result-grid{grid-template-columns:1fr}
+ .party-boss-fold>summary{padding:13px 12px}
+ .party-boss-fold>.party-boss-owner-groups{padding:10px}
+ .party-boss-head{align-items:flex-start;flex-direction:column;gap:10px}
+ .party-boss-head-actions{width:100%;flex-wrap:wrap}
+ .party-boss-head p{font-size:11px}
+}
