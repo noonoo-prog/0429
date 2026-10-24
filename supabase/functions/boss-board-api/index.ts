@@ -1344,7 +1344,7 @@ Deno.serve(async(req)=>{
         return json({ok:false,error:"파티보스 저장 정보가 올바르지 않습니다."},400);
       }
       const rawText=JSON.stringify(raw);
-      if(rawText.length>180000){
+      if(rawText.length>360000){
         return json({ok:false,error:"파티보스 저장 정보가 너무 큽니다."},413);
       }
 
@@ -1411,8 +1411,82 @@ Deno.serve(async(req)=>{
         guests.push({id,name,owner});
       }
 
+      // Three independent, named-on-screen Party Balancer snapshots.
+      // Old clients without savedSlots must not erase slots created by newer clients.
+      let incomingSlots=raw.savedSlots;
+      if(!Array.isArray(incomingSlots)){
+        const {data:previousSlots,error:previousSlotsError}=await db.from("boss_party_balancer_state")
+          .select("payload").eq("id",1).maybeSingle();
+        if(previousSlotsError)throw previousSlotsError;
+        incomingSlots=previousSlots?.payload?.savedSlots;
+      }
+      const savedSlots:any[]=[null,null,null];
+      for(let i=0;i<3;i++){
+        const slot=Array.isArray(incomingSlots)?incomingSlots[i]:null;
+        if(!slot||typeof slot!=="object"||Array.isArray(slot))continue;
+        const rawSlotSettings=(slot.settings&&typeof slot.settings==="object"&&!Array.isArray(slot.settings))?slot.settings:{};
+        const slotBoss=cleanName(rawSlotSettings.boss);
+        if(!BOSSES.includes(slotBoss))continue;
+        const slotDifficultyOptions=BOSS_DIFFICULTIES[slotBoss]||[];
+        const slotDifficulty=slotDifficultyOptions.includes(cleanName(rawSlotSettings.difficulty))
+          ?cleanName(rawSlotSettings.difficulty)
+          :(slotBoss==="검은 마법사"&&slotDifficultyOptions.includes("익스트림")?"익스트림":
+            (slotDifficultyOptions.includes("하드")?"하드":String(slotDifficultyOptions[0]||"")));
+        const slotPartySizeRaw=rawSlotSettings.partySize;
+        const slotPartySize=(slotPartySizeRaw==="any"||Number(slotPartySizeRaw)===0)
+          ?"any":Math.max(2,Math.min(6,Number(slotPartySizeRaw)||3));
+        const slotSettings={
+          boss:slotBoss,
+          difficulty:slotDifficulty,
+          partySize:slotPartySize,
+          partyCount:Math.max(0,Math.min(50,Math.floor(Number(rawSlotSettings.partyCount)||0))),
+          targetRate:Math.max(1,Math.min(100000,Number(rawSlotSettings.targetRate)||130)),
+          mode:["balanced","strong","equal","small","safe"].includes(String(rawSlotSettings.mode||""))
+            ?String(rawSlotSettings.mode):"strong"
+        };
+        const slotSelected=Array.isArray(slot.selected)
+          ?Array.from(new Set(slot.selected.map((x:any)=>String(x||"").slice(0,120)).filter(Boolean))).slice(0,500)
+          :[];
+        const slotGuests:any[]=[];
+        const ids=new Set<string>();
+        for(const g of (Array.isArray(slot.guests)?slot.guests:[]).slice(0,100)){
+          if(!g||typeof g!=="object"||Array.isArray(g))continue;
+          const id=String(g.id||"").trim().slice(0,80);
+          const name=cleanName(g.name);
+          if(!/^ext-[a-z0-9-]{1,70}$/.test(id)||!name||ids.has(id))continue;
+          ids.add(id);
+          slotGuests.push({id,name,owner:cleanName(g.owner)});
+        }
+        const slotMultipliers:any={};
+        if(slot.multipliers&&typeof slot.multipliers==="object"&&!Array.isArray(slot.multipliers)){
+          for(const key of slotSelected){
+            if(!Object.prototype.hasOwnProperty.call(slot.multipliers,key))continue;
+            const rate=Number(slot.multipliers[key]);
+            slotMultipliers[key]=Number.isFinite(rate)?Math.max(0,Math.min(100000,rate)):0;
+          }
+        }
+        const slotResult=Array.isArray(slot.result)
+          ?slot.result.slice(0,100).map((p:any,j:number)=>({
+              id:Math.max(1,Math.min(100,Math.floor(Number(p?.id)||j+1))),
+              memberKeys:Array.isArray(p?.memberKeys)
+                ?p.memberKeys.map((k:any)=>String(k||"").slice(0,120)).filter(Boolean).slice(0,6)
+                :[]
+            })).filter((p:any)=>p.memberKeys.length>=2)
+          :[];
+        if(!slotResult.length)continue;
+        const savedTime=new Date(String(slot.savedAt||""));
+        savedSlots[i]={
+          savedAt:Number.isFinite(savedTime.getTime())?savedTime.toISOString():new Date().toISOString(),
+          settings:slotSettings,
+          selected:slotSelected,
+          guests:slotGuests,
+          multipliers:slotMultipliers,
+          result:slotResult
+        };
+      }
+
       const mode=["balanced","strong","equal","small","safe"].includes(String(settingsRaw.mode||""))?String(settingsRaw.mode):"strong";
-      const payload={settings:{boss,difficulty,partySize,partyCount,targetRate,mode},selected,multipliers,guests,result};
+      const payload={settings:{boss,difficulty,partySize,partyCount,targetRate,mode},selected,multipliers,guests,result,savedSlots};
       const updatedBy=cleanName(body.updatedBy||"");
 
       const {data,error}=await db.from("boss_party_balancer_state")
