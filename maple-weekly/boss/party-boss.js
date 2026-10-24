@@ -53,6 +53,7 @@ var RENDER_TIMER=null;
 var BUILDING=false;
 var MESO_SORT="original";
 var MANUAL_PICK="";
+var MANUAL_ADD="";
 var MANUAL_DRAG="";
 var MANUAL_UNDO=null;
 var COMPARING=false;
@@ -253,7 +254,7 @@ function applySharedState(state,updatedBy,updatedAt){
   SHARED_UPDATED_AT=String(updatedAt||"");
   SHARED_LOADED=true;
   restoreSavedResult();
-  MANUAL_PICK="";MANUAL_DRAG="";MANUAL_UNDO=null;
+  MANUAL_PICK="";MANUAL_ADD="";MANUAL_DRAG="";MANUAL_UNDO=null;
   DIRTY=false;
   return true;
 }
@@ -494,20 +495,67 @@ function modifyPartyResult(sourceKey,targetPartyId,swapKey){
   MANUAL_UNDO=RESULT.map(function(p){return {id:p.id,max:p.max,members:p.members.slice(),total:p.total}});
   RESULT=candidate;
   RESULT.forEach(function(p){p.total=partyTotal(p);p.max=cap});
-  MANUAL_PICK="";MANUAL_DRAG="";
+  MANUAL_PICK="";MANUAL_ADD="";MANUAL_DRAG="";
   invalidateComparison();markDirty();render();
   notify(srcInfo.member.name+(swapping?" ↔ "+dstInfo.member.name+" 교환":" → "+to.id+"파티 이동")+" 완료 · 저장을 누르면 공용 반영됩니다.");
   return true;
 }
 function undoPartyResult(){
   if(!MANUAL_UNDO||SAVING||BUILDING||COMPARING)return;
-  RESULT=MANUAL_UNDO;MANUAL_UNDO=null;MANUAL_PICK="";MANUAL_DRAG="";
+  RESULT=MANUAL_UNDO;MANUAL_UNDO=null;MANUAL_PICK="";MANUAL_ADD="";MANUAL_DRAG="";
   invalidateComparison();markDirty();render();
   notify("직전 이동·교환을 취소했어요. 저장하면 공용 반영됩니다.");
 }
 function selectManualMember(key){
   if(SAVING||BUILDING||COMPARING||!findResultMember(key))return;
-  MANUAL_PICK=MANUAL_PICK===key?"":key;render();
+  MANUAL_ADD="";MANUAL_PICK=MANUAL_PICK===key?"":key;render();
+}
+
+function unassignedChars(){
+  var assigned=new Set();
+  RESULT.forEach(function(p){p.members.forEach(function(c){assigned.add(c.key)})});
+  return selectedChars().filter(function(c){return !assigned.has(c.key)});
+}
+function removePartyMember(key){
+  if(BUILDING||COMPARING||SAVING){notify("계산·저장이 끝난 다음 수정해 주세요.");return false}
+  var source=findResultMember(key);
+  if(!source){notify("현재 파티에 없는 캐릭터예요.");return false}
+  var original=RESULT[source.partyIndex],disband=original.members.length<=2;
+  if(disband&&!window.confirm("이 파티는 2인 파티입니다. "+source.member.name+"을 빼면 파티가 해체되고 남은 캐릭터도 미배정으로 돌아갑니다. 계속할까요?"))return false;
+  var next=RESULT.map(function(p){return {id:p.id,max:p.max,members:p.members.slice(),total:p.total}});
+  if(disband)next.splice(source.partyIndex,1);
+  else next[source.partyIndex].members.splice(source.memberIndex,1);
+  MANUAL_UNDO=RESULT.map(function(p){return {id:p.id,max:p.max,members:p.members.slice(),total:p.total}});
+  RESULT=next;
+  RESULT.forEach(function(p){p.total=partyTotal(p)});
+  MANUAL_PICK="";MANUAL_ADD="";MANUAL_DRAG="";
+  invalidateComparison();markDirty();render();
+  notify(source.member.name+" 미배정 처리"+(disband?" · 2인 파티 해체":"")+" · 공용 반영은 저장을 눌러 주세요.");
+  return true;
+}
+function selectUnassigned(key){
+  if(BUILDING||COMPARING||SAVING)return;
+  if(!unassignedChars().some(function(c){return c.key===key}))return;
+  if(!RESULT.length){notify("배정할 파티가 없어요. 자동 균형 맞추기로 파티를 만들어 주세요.");return}
+  MANUAL_PICK="";
+  MANUAL_ADD=MANUAL_ADD===key?"":key;
+  render();
+}
+function addUnassignedToParty(key,partyId){
+  if(BUILDING||COMPARING||SAVING){notify("계산·저장이 끝난 다음 수정해 주세요.");return false}
+  var member=unassignedChars().find(function(c){return c.key===key});
+  var target=RESULT.findIndex(function(p){return String(p.id)===String(partyId)});
+  if(!member||target<0){notify("미배정 캐릭터 또는 대상 파티가 없어요.");return false}
+  var cap=SETTINGS.partySize==="any"?6:Math.max(2,Math.min(6,Number(SETTINGS.partySize)||3));
+  if(RESULT[target].members.length>=cap){notify("파티 인원 제한("+cap+"명)에 도달했어요.");return false}
+  if(partyHasOwner(RESULT[target],ownerKey(member),-1)){notify("같은 주인의 캐릭터는 한 파티에 한 명만 가능합니다.");return false}
+  MANUAL_UNDO=RESULT.map(function(p){return {id:p.id,max:p.max,members:p.members.slice(),total:p.total}});
+  RESULT[target].members.push(member);
+  RESULT[target].total=partyTotal(RESULT[target]);
+  MANUAL_ADD="";MANUAL_PICK="";MANUAL_DRAG="";
+  invalidateComparison();markDirty();render();
+  notify(member.name+" → "+partyId+"파티 배정 완료 · 공용 반영은 저장을 눌러 주세요.");
+  return true;
 }
 function candidateScore(parties,target,ownerAvgs,mode){
   mode=normalizeMode(mode);
@@ -775,7 +823,7 @@ function compareAllModes(){
 }
 function applyComparedMode(mode){
   if(COMPARING||BUILDING)return;
-  MANUAL_PICK="";MANUAL_UNDO=null;
+  MANUAL_PICK="";MANUAL_ADD="";MANUAL_UNDO=null;
   var found=COMPARE_RESULTS.find(function(row){return row.mode===mode});
   if(!found||!found.parties.length)return;
   if(!validPartyOwners(found.parties)){
@@ -806,7 +854,7 @@ function fetchBoard(restoreResult){
   }).finally(function(){loading=false});
 }
 function performBuild(){
-  MANUAL_PICK="";MANUAL_UNDO=null;
+  MANUAL_PICK="";MANUAL_ADD="";MANUAL_UNDO=null;
   invalidateComparison();
   var chars=selectedChars();
   if(chars.length<2){
@@ -908,8 +956,9 @@ function renderNow(){
   var panel=document.getElementById("partyBossPanel");
   if(!panel)return;
   var chars=allChars();
-  if(!RESULT.length){MANUAL_PICK="";MANUAL_UNDO=null}
+  if(!RESULT.length){MANUAL_PICK="";MANUAL_ADD=""}
   if(MANUAL_PICK&&!findResultMember(MANUAL_PICK))MANUAL_PICK="";
+  if(MANUAL_ADD&&!unassignedChars().some(function(c){return c.key===MANUAL_ADD}))MANUAL_ADD="";
   if(RESULT.length&&!validPartyOwners(RESULT)){
     RESULT=[];
     markDirty();
@@ -1203,7 +1252,7 @@ function renderNow(){
     };
   });
   var resetBtn=panel.querySelector("[data-pb-reset]");
-  if(resetBtn)resetBtn.onclick=function(){invalidateComparison();MANUAL_PICK="";MANUAL_UNDO=null;SELECTED=[];RESULT=[];markDirty();render()};
+  if(resetBtn)resetBtn.onclick=function(){invalidateComparison();MANUAL_PICK="";MANUAL_ADD="";MANUAL_UNDO=null;SELECTED=[];RESULT=[];markDirty();render()};
 
   var guestForm=panel.querySelector("[data-pb-guest-form]");
   if(guestForm)guestForm.onsubmit=function(e){
