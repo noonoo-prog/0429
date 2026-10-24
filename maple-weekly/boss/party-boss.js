@@ -53,6 +53,7 @@ var RENDER_PENDING=false;
 var RENDER_TIMER=null;
 var BUILDING=false;
 var MESO_SORT="original";
+var PANEL_OPEN={};
 var MANUAL_PICK="";
 var MANUAL_ADD="";
 var MANUAL_DRAG="";
@@ -646,7 +647,7 @@ function removePartyMember(key){
 function selectUnassigned(key){
   if(BUILDING||COMPARING||SAVING)return;
   if(!unassignedChars().some(function(c){return c.key===key}))return;
-  if(!RESULT.length){notify("배정할 파티가 없어요. 자동 균형 맞추기로 파티를 만들어 주세요.");return}
+  if(!RESULT.length){notify("배정할 파티가 없어요. 자동 편성로 파티를 만들어 주세요.");return}
   MANUAL_PICK="";
   MANUAL_ADD=MANUAL_ADD===key?"":key;
   render();
@@ -1062,6 +1063,34 @@ function render(){
     }
   }
 }
+function organizePartyPanels(panel,selectedCount){
+  var groups=[
+    [".party-boss-mode-panel","strategy","편성 전략",modeName(SETTINGS.mode),false],
+    [".party-boss-owner-groups","roster","참여 캐릭터",selectedCount+"명 선택",!RESULT.length],
+    [".party-boss-external","guests","외부 인력",GUESTS.length+"명 등록",false],
+    [".party-boss-slots","slots","저장한 편성",SAVED_SLOTS.filter(Boolean).length+" / 3",false]
+  ];
+  groups.forEach(function(group){
+    var content=panel.querySelector(group[0]);
+    if(!content)return;
+    var fold=document.createElement("details");
+    fold.className="party-boss-fold";
+    fold.dataset.pbFold=group[1];
+    fold.open=Object.prototype.hasOwnProperty.call(PANEL_OPEN,group[1])?PANEL_OPEN[group[1]]:group[4];
+    var summary=document.createElement("summary");
+    summary.innerHTML="<strong>"+group[2]+"</strong><span>"+esc(group[3])+"</span>";
+    content.before(fold);
+    fold.appendChild(summary);
+    fold.appendChild(content);
+    fold.addEventListener("toggle",function(){PANEL_OPEN[group[1]]=fold.open});
+  });
+  var roster=panel.querySelector('[data-pb-fold="roster"]');
+  var guests=panel.querySelector('[data-pb-fold="guests"]');
+  if(roster&&guests)roster.after(guests);
+  var slots=panel.querySelector('[data-pb-fold="slots"]');
+  var shell=panel.querySelector(".party-boss-shell");
+  if(slots&&shell)shell.appendChild(slots);
+}
 function renderNow(){
   var panel=document.getElementById("partyBossPanel");
   if(!panel)return;
@@ -1072,7 +1101,7 @@ function renderNow(){
   if(RESULT.length&&!validPartyOwners(RESULT)){
     RESULT=[];
     markDirty();
-    notify("이전 파티에 같은 주인의 캐릭터가 중복되어 결과를 숨겼어요. 자동 균형 맞추기를 다시 눌러 주세요.");
+    notify("이전 파티에 같은 주인의 캐릭터가 중복되어 결과를 숨겼어요. 자동 편성를 다시 눌러 주세요.");
   }
   if(!chars.length){
     panel.innerHTML='<div class="party-boss-empty"><strong>캐릭터 정보를 불러오는 중…</strong><span>잠시만 기다려 주세요.</span></div>';
@@ -1084,7 +1113,7 @@ function renderNow(){
 
   html+='<section class="party-boss-shell">';
   html+='<header class="party-boss-head">';
-  html+='<div><span>PARTY BALANCER</span><strong>파티보스</strong><p>강한 캐릭터는 소수팟을 우선 검토하고, 목표 배율을 충족하도록 편성합니다.</p></div>';
+  html+='<div><span>PARTY BALANCER</span><strong>파티보스</strong><p>참여 캐릭터를 고르고, 목표에 맞게 파티를 편성하세요.</p></div>';
   html+='<div class="party-boss-head-actions">';
   html+='<span class="party-boss-shared-meta">'+esc(sharedMetaText())+'</span>';
   html+='<button class="party-boss-save '+(DIRTY&&!SAVING?"needs-save":"")+'" type="button" data-pb-save="1" '+(SAVING?"disabled":"")+'>'+(SAVING?"저장 중…":(DIRTY?"저장":"공용 저장됨"))+'</button>';
@@ -1106,9 +1135,9 @@ function renderNow(){
   html+='</select></label>';
   html+='<label class="party-boss-number"><span>파티 인원</span><div><input type="number" min="0" max="6" step="1" inputmode="numeric" data-pb-size="1" value="'+(String(SETTINGS.partySize)==="any"?"0":String(SETTINGS.partySize||0))+'" placeholder="0"><em>0 = 상관없음</em></div></label>';
   html+='<label class="party-boss-number"><span>파티 수</span><div><input type="number" min="0" max="50" step="1" inputmode="numeric" data-pb-count="1" value="'+String(Math.max(0,Number(SETTINGS.partyCount)||0))+'" placeholder="0"><em>0 = 자동</em></div></label>';
-  html+='<label class="party-boss-target"><span>목표 배율 (수정 가능)</span><div><input type="number" min="1" step="0.1" inputmode="decimal" data-pb-target="1" value="'+String(SETTINGS.targetRate)+'" placeholder="130" aria-label="최소 목표 배율 직접 입력"><em>권장 '+formatRate(SETTINGS.targetRate)+'~'+formatRate(SETTINGS.targetRate*1.1)+'</em></div></label>';
+  html+='<label class="party-boss-target"><span>목표 배율</span><div><input type="number" min="1" step="0.1" inputmode="decimal" data-pb-target="1" value="'+String(SETTINGS.targetRate)+'" placeholder="130" aria-label="최소 목표 배율 직접 입력"><em>권장 '+formatRate(SETTINGS.targetRate)+'~'+formatRate(SETTINGS.targetRate*1.1)+'</em></div></label>';
   html+='<div class="party-boss-summary"><span>선택 캐릭터</span><b>'+selected.length+'명</b></div>';
-  html+='<button class="party-boss-build" type="button" data-pb-build="1" '+(BUILDING?"disabled":"")+'>'+(BUILDING?"편성 계산 중…":"자동 균형 맞추기")+'</button>';
+  html+='<button class="party-boss-build" type="button" data-pb-build="1" '+(BUILDING?"disabled":"")+'>'+(BUILDING?"편성 계산 중…":"자동 편성")+'</button>';
   html+='</section>';
 
   html+='<section class="party-boss-mode-panel" aria-label="자동 편성 모드">';
@@ -1238,7 +1267,7 @@ function renderNow(){
     }else{
       html+='<div class="party-boss-target-success" role="status">모든 파티가 최소 목표 '+formatRate(target)+'를 충족했습니다.</div>';
     }
-    html+='<div class="party-boss-manual-help" role="status"><span><b>직접 편집</b> 캐릭터의 <b>이동</b>으로 파티를 옮기거나 <b>빼기</b>로 미배정할 수 있어요. 미배정 캐릭터는 다시 넣을 수 있고 PC에서는 드래그도 가능합니다.</span>'+(MANUAL_UNDO?'<button type="button" data-pb-undo="1">직전 편집 취소</button>':'')+'</div>';
+    html+='<div class="party-boss-manual-help" role="status"><span><b>직접 편집</b> <b>이동</b> · <b>빼기</b>로 조정할 수 있어요. PC에서는 드래그도 가능합니다.</span>'+(MANUAL_UNDO?'<button type="button" data-pb-undo="1">직전 편집 취소</button>':'')+'</div>';
     if(MANUAL_PICK){
       var selectedMember=findResultMember(MANUAL_PICK);
       if(selectedMember)html+='<div class="party-boss-manual-pick"><span><b>'+esc(selectedMember.member.name)+'</b> 선택됨 · 대상 파티나 교환할 캐릭터를 골라 주세요.</span><button type="button" data-pb-cancel-pick="1">취소</button></div>';
@@ -1296,11 +1325,13 @@ function renderNow(){
     }
     html+='</section>';
   }else{
-    html+='<div class="party-boss-empty"><strong>캐릭터를 선택하고 배율을 입력해 주세요.</strong><span>편성 전략을 선택한 다음 자동 균형 맞추기 또는 5가지 모드 비교하기를 눌러 주세요.</span></div>';
+    html+='<div class="party-boss-empty"><strong>캐릭터를 선택하고 배율을 입력해 주세요.</strong><span>편성 전략을 선택한 다음 자동 편성 또는 5가지 모드 비교하기를 눌러 주세요.</span></div>';
   }
 
   html+='</section>';
+  panel.querySelectorAll("[data-pb-fold]").forEach(function(fold){PANEL_OPEN[fold.dataset.pbFold]=fold.open});
   panel.innerHTML=html;
+  organizePartyPanels(panel,selected.length);
 
   var boss=panel.querySelector("[data-pb-boss]");
   if(boss)boss.onchange=function(){invalidateComparison();SETTINGS.boss=boss.value;SETTINGS.difficulty=defaultDifficulty(SETTINGS.boss);RESULT=[];markDirty();render()};
