@@ -2833,3 +2833,57 @@ html[data-theme="dark"] #partyBossPanel .owner-themed[data-theme="guest"]{
     grid-template-columns:minmax(0,1fr) 80px 40px;
   }
 }
+
+/* Aligned owner and mercenary headings for all selection states */
+#partyBossPanel .party-boss-fold[data-pb-fold="roster"] .party-boss-owner>header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:6px;
+  min-height:49px;
+  box-sizing:border-box;
+  margin:0 0 6px;
+  padding:0 0 6px;
+  border-bottom:2px solid var(--owner-accent,#68707c);
+}
+#partyBossPanel .party-boss-fold[data-pb-fold="roster"] .party-boss-owner-title{
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  align-items:flex-start;
+  gap:2px;
+  flex:1 1 auto;
+  min-width:0;
+}
+#partyBossPanel .party-boss-fold[data-pb-fold="roster"] .party-boss-owner-title>strong{
+  display:block;
+  min-height:18px;
+  line-height:18px;
+  font-size:14px;
+  font-weight:850;
+  color:var(--text);
+}
+#partyBossPanel .party-boss-fold[data-pb-fold="roster"] .party-boss-owner-title>span{
+  display:block;
+  min-height:15px;
+  line-height:15px;
+  margin:0;
+  padding:0;
+  color:var(--muted);
+  font-size:10px;
+  font-weight:600;
+}
+#partyBossPanel .party-boss-fold[data-pb-fold="roster"] .party-boss-owner>header button{
+  flex:0 0 auto;
+  align-self:flex-start;
+}
+#partyBossPanel .party-boss-fold[data-pb-fold="roster"] .party-boss-external-heading{
+  min-height:49px;
+  margin:0 0 6px;
+  padding:0 0 6px;
+}
+#partyBossPanel .party-boss-fold[data-pb-fold="roster"] .party-boss-owner .party-boss-char-grid,
+#partyBossPanel .party-boss-fold[data-pb-fold="roster"] .party-boss-external-grid{
+  margin-top:0;
+  align-self:start;
+}
