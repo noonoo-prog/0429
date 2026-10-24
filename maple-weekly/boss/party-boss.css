@@ -2517,3 +2517,11 @@ html[data-theme="dark"] .party-boss-party-card.out-target>header>div>em{
  .party-boss-head-actions{width:100%;flex-wrap:wrap}
  .party-boss-head p{font-size:11px}
 }
+
+.party-boss-controls .party-boss-target{grid-column:auto}
+.party-boss-controls .party-boss-summary{flex-direction:row;min-height:42px;padding:0 12px;border:1px solid var(--pb-line);border-radius:9px;background:var(--pb-soft)}
+.party-boss-controls .party-boss-summary>b{height:auto;border:0;background:none;font-size:15px}
+.party-boss-controls .party-boss-summary>span{margin:0;font-size:11px}
+.party-boss-controls .party-boss-summary::after{display:none}
+.party-boss-controls .party-boss-build{margin-top:0;align-self:center;min-height:42px}
+.party-boss-fold>.party-boss-unassigned{margin:0;border:0;border-radius:0}
