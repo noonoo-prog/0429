@@ -98,6 +98,7 @@ if(!Array.isArray(GUESTS))GUESTS=[];
 var SAVED_SLOTS=readJSON(SLOT_KEY,[null,null,null]);
 if(!Array.isArray(SAVED_SLOTS))SAVED_SLOTS=[null,null,null];
 SAVED_SLOTS=[0,1,2].map(function(i){return SAVED_SLOTS[i]||null});
+var SLOT_NAME_DRAFTS=[null,null,null];
 SETTINGS.targetRate=Math.max(1,Number(SETTINGS.targetRate)||130);
 SETTINGS.mode=normalizeMode(SETTINGS.mode);
 
@@ -333,13 +334,41 @@ function formatSlotTime(value){
     }).format(d);
   }catch(e){return ""}
 }
+function slotNameValue(index){
+  index=Number(index);
+  if(!Number.isInteger(index)||index<0||index>2)return "";
+  var panel=document.getElementById("partyBossPanel");
+  var input=panel&&panel.querySelector('[data-pb-slot-name="'+index+'"]');
+  var value=input?input.value:(SLOT_NAME_DRAFTS[index]!==null?SLOT_NAME_DRAFTS[index]:(SAVED_SLOTS[index]&&SAVED_SLOTS[index].name)||"");
+  return String(value||"").trim().slice(0,30);
+}
+function renameResultSlot(index){
+  if(SAVING||BUILDING||COMPARING)return;
+  index=Number(index);
+  if(!Number.isInteger(index)||index<0||index>2||!SAVED_SLOTS[index])return;
+  var newName=slotNameValue(index);
+  if(String(SAVED_SLOTS[index].name||"").trim()===newName){
+    SLOT_NAME_DRAFTS[index]=null;
+    notify("이미 저장된 이름입니다.");
+    return;
+  }
+  SAVED_SLOTS[index].name=newName;
+  SLOT_NAME_DRAFTS[index]=null;
+  markDirty();
+  persistLocalCache();
+  render();
+  savePrefs();
+}
 function saveResultSlot(index){
   if(SAVING||BUILDING||COMPARING)return;
   index=Number(index);
   if(!Number.isInteger(index)||index<0||index>2)return;
   if(!RESULT.length){notify("저장할 편성 결과가 없어요. 먼저 자동 편성하거나 저장된 결과를 불러오세요.");return}
   if(SAVED_SLOTS[index]&&!window.confirm((index+1)+"번 슬롯에 현재 결과를 덮어쓸까요?"))return;
-  SAVED_SLOTS[index]=currentResultSnapshot();
+  var snapshot=currentResultSnapshot();
+  snapshot.name=slotNameValue(index);
+  SAVED_SLOTS[index]=snapshot;
+  SLOT_NAME_DRAFTS[index]=null;
   markDirty();
   persistLocalCache();
   render();
@@ -1262,6 +1291,10 @@ function renderNow(){
     var exists=!!slot;
     html+='<article class="party-boss-slot '+(exists?"filled":"empty")+'">';
     html+='<div class="party-boss-slot-top"><span>슬롯 '+(si+1)+'</span><b>'+(exists?"저장됨":"비어 있음")+'</b></div>';
+    var displaySlotName=SLOT_NAME_DRAFTS[si]!==null?SLOT_NAME_DRAFTS[si]:(exists?String(slot.name||""):"");
+    html+='<div class="party-boss-slot-name-row"><label for="party-boss-slot-name-'+si+'"><span>저장 파티 이름</span><input type="text" id="party-boss-slot-name-'+si+'" data-pb-slot-name="'+si+'" value="'+esc(displaySlotName)+'" maxlength="30" placeholder="예: 목요일 고정팟" autocomplete="off" aria-label="슬롯 '+(si+1)+' 편성 이름" '+(SAVING?"disabled":"")+'></label>';
+    if(exists)html+='<button type="button" class="party-boss-slot-rename" data-pb-slot-rename="'+si+'" '+(SAVING?"disabled":"")+'>이름 저장</button>';
+    html+='</div>';
     if(exists){
       html+='<strong>'+esc(slot.settings.boss)+' · '+esc(slot.settings.difficulty)+'</strong>';
       html+='<p>'+slot.result.length+'개 파티 · '+modeName(slot.settings.mode)+' · 목표 '+formatRate(slot.settings.targetRate)+'</p>';
@@ -1424,6 +1457,19 @@ function renderNow(){
   });
   var buildBtn=panel.querySelector("[data-pb-build]");
   if(buildBtn)buildBtn.onclick=build;
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-slot-name]"),function(input){
+    var slotIndex=Number(input.dataset.pbSlotName);
+    input.oninput=function(){SLOT_NAME_DRAFTS[slotIndex]=String(input.value||"").slice(0,30)};
+    input.onkeydown=function(e){
+      if(e.key!=="Enter")return;
+      e.preventDefault();
+      if(SAVED_SLOTS[slotIndex])renameResultSlot(slotIndex);
+      else saveResultSlot(slotIndex);
+    };
+  });
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-slot-rename]"),function(btn){
+    btn.onclick=function(){renameResultSlot(Number(btn.dataset.pbSlotRename))};
+  });
   Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-slot-save]"),function(btn){
     btn.onclick=function(){saveResultSlot(Number(btn.dataset.pbSlotSave))};
   });
