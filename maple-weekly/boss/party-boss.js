@@ -1393,10 +1393,16 @@ function renderNow(){
     if(mesoRows.length){
       html+='<section class="party-boss-meso-summary">';
         html+='<header><div><span>OWNER MESO</span><strong>주인별 예상 메소 총합</strong></div><div class="party-boss-meso-tools"><small>'+esc(SETTINGS.boss)+' · '+esc(SETTINGS.difficulty)+' 결정석 기준</small><label>정렬 <select data-pb-meso-sort="1"><option value="original" '+(MESO_SORT==="original"?"selected":"")+'>기존 순서</option><option value="meso" '+(MESO_SORT==="meso"?"selected":"")+'>총 메소 높은 순</option></select></label></div></header>';
-      html+='<div class="party-boss-meso-grid">';
-      mesoRows.forEach(function(row){
-        html+='<article class="party-boss-meso-card owner-themed" data-theme="'+esc(row.theme)+'"><div><b>'+esc(row.ownerName)+'</b><small>'+row.runs+'캐릭터 · 평균 '+formatRate(row.averageRate)+'</small><small>'+esc(row.grade.label)+'</small></div><div class="party-boss-meso-amount"><strong>'+formatMeso(row.total)+'</strong><small>캐릭터당 '+formatMeso(row.averageMeso)+'</small></div></article>';
-      });
+      // Keep reading order vertical: six owners per column, then the next column.
+      var mesoColumns=Math.ceil(mesoRows.length/6);
+      html+='<div class="party-boss-meso-grid" style="--pb-meso-columns:'+Math.min(3,mesoColumns)+'" aria-label="주인별 예상 수익, 세로 6명씩">';
+      for(var mi=0;mi<mesoRows.length;mi+=6){
+        html+='<div class="party-boss-meso-column" aria-label="'+(Math.floor(mi/6)+1)+'열">';
+        mesoRows.slice(mi,mi+6).forEach(function(row){
+          html+='<article class="party-boss-meso-card owner-themed" data-theme="'+esc(row.theme)+'"><div><b>'+esc(row.ownerName)+'</b><small>'+row.runs+'캐릭터 · 평균 '+formatRate(row.averageRate)+'</small><small>'+esc(row.grade.label)+'</small></div><div class="party-boss-meso-amount"><strong>'+formatMeso(row.total)+'</strong><small>캐릭터당 '+formatMeso(row.averageMeso)+'</small></div></article>';
+        });
+        html+='</div>';
+      }
       html+='</div></section>';
     }
     html+='</section>';
