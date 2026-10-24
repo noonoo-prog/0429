@@ -1477,6 +1477,7 @@ Deno.serve(async(req)=>{
         const savedTime=new Date(String(slot.savedAt||""));
         savedSlots[i]={
           savedAt:Number.isFinite(savedTime.getTime())?savedTime.toISOString():new Date().toISOString(),
+          name:String(slot.name||"").replace(/[\u0000-\u001f\u007f]/g,"").trim().slice(0,30),
           settings:slotSettings,
           selected:slotSelected,
           guests:slotGuests,
