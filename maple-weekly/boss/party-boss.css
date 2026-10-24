@@ -2957,3 +2957,10 @@ html[data-theme="dark"] #partyBossPanel .owner-themed[data-theme="guest"]{
   #partyBossPanel .party-boss-slot-name-row{gap:4px}
   #partyBossPanel .party-boss-slot-rename{min-width:54px;padding:0 5px;font-size:10px}
 }
+
+/* Five named party slots on wide screens */
+@media(min-width:1180px){
+  #partyBossPanel .party-boss-slot-grid{
+    grid-template-columns:repeat(5,minmax(0,1fr));
+  }
+}
