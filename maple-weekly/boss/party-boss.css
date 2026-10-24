@@ -2340,3 +2340,134 @@ html[data-theme="dark"] .party-boss-party-card.out-target>header>div>em{
   .party-boss-member-action{grid-column:2;grid-row:2;justify-self:start}
   .party-boss-member-remove{grid-column:3;grid-row:2}
 }
+
+/* Three party result slots */
+.party-boss-slots{
+  margin:16px 0;
+  padding:15px;
+  border:1px solid var(--line-strong);
+  border-radius:14px;
+  background:var(--surface);
+}
+.party-boss-slots-heading{margin-bottom:12px}
+.party-boss-slots-heading span{
+  display:block;
+  color:var(--muted);
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.075em;
+}
+.party-boss-slots-heading strong{
+  display:block;
+  margin-top:3px;
+  font-size:16px;
+  color:var(--text);
+  font-weight:950;
+}
+.party-boss-slots-heading p{
+  margin:4px 0 0;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.6;
+}
+.party-boss-slot-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.party-boss-slot{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  min-width:0;
+  padding:12px;
+  border:1px solid var(--line-strong);
+  background:var(--surface-soft);
+  border-radius:12px;
+}
+.party-boss-slot.filled{
+  border-color:var(--accent,#008cc0);
+}
+.party-boss-slot-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:6px;
+  margin-bottom:3px;
+}
+.party-boss-slot-top span{
+  color:var(--text);
+  font-size:12px;
+  font-weight:950;
+}
+.party-boss-slot-top b{
+  color:var(--muted);
+  font-size:10px;
+  font-weight:850;
+  white-space:nowrap;
+}
+.party-boss-slot>strong{
+  display:block;
+  font-size:13px;
+  font-weight:950;
+  color:var(--text);
+  overflow-wrap:anywhere;
+}
+.party-boss-slot>p{
+  margin:0;
+  color:var(--text);
+  font-size:11px;
+  line-height:1.5;
+}
+.party-boss-slot>small{
+  margin-top:2px;
+  color:var(--muted);
+  font-size:10px;
+}
+.party-boss-slot-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:auto;
+  padding-top:10px;
+}
+.party-boss-slot-actions button{
+  flex:1 1 auto;
+  min-height:34px;
+  min-width:0;
+  padding:5px 7px;
+  border:1px solid var(--line-strong);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--text);
+  font:inherit;
+  font-size:10px;
+  font-weight:900;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.party-boss-slot-actions .party-boss-slot-save{
+  background:var(--accent,#008cc0);
+  border-color:var(--accent,#008cc0);
+  color:#fff;
+}
+.party-boss-slot-actions .party-boss-slot-delete{
+  color:var(--muted);
+}
+.party-boss-slot-actions button:disabled{
+  opacity:.42;
+  cursor:not-allowed;
+}
+.party-boss-slot-actions button:focus-visible{
+  outline:2px solid var(--accent,#008cc0);
+  outline-offset:2px;
+}
+@media(max-width:780px){
+  .party-boss-slot-grid{grid-template-columns:1fr}
+  .party-boss-slot{padding:11px}
+  .party-boss-slot-actions button{flex:0 0 auto;padding:7px 13px}
+}
+@media(max-width:390px){
+  .party-boss-slots{padding:11px}
+  .party-boss-slot-actions button{flex:1 1 0;padding:7px 5px}
+}
