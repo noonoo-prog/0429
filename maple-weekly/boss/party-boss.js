@@ -52,6 +52,9 @@ var RENDER_PENDING=false;
 var RENDER_TIMER=null;
 var BUILDING=false;
 var MESO_SORT="original";
+var MANUAL_PICK="";
+var MANUAL_DRAG="";
+var MANUAL_UNDO=null;
 var COMPARING=false;
 var COMPARE_RESULTS=[];
 var COMPARE_PROGRESS="";
@@ -250,6 +253,7 @@ function applySharedState(state,updatedBy,updatedAt){
   SHARED_UPDATED_AT=String(updatedAt||"");
   SHARED_LOADED=true;
   restoreSavedResult();
+  MANUAL_PICK="";MANUAL_DRAG="";MANUAL_UNDO=null;
   DIRTY=false;
   return true;
 }
@@ -446,6 +450,64 @@ function normalizeParties(parties){
     p.max=6;
   });
   return parties;
+}
+
+/* Party-only manual edits. The original boss/checklist records are untouched. */
+function findResultMember(key){
+  for(var pi=0;pi<RESULT.length;pi++){
+    var mi=RESULT[pi].members.findIndex(function(c){return c.key===String(key||"")});
+    if(mi>=0)return {partyIndex:pi,memberIndex:mi,member:RESULT[pi].members[mi]};
+  }
+  return null;
+}
+function modifyPartyResult(sourceKey,targetPartyId,swapKey){
+  if(BUILDING||COMPARING||SAVING){notify("계산 또는 저장이 끝난 다음 수정해 주세요.");return false}
+  var srcInfo=findResultMember(sourceKey);
+  var dstIndex=RESULT.findIndex(function(p){return String(p.id)===String(targetPartyId)});
+  if(!srcInfo||dstIndex<0){notify("캐릭터나 대상 파티를 찾지 못했어요.");return false}
+  if(srcInfo.partyIndex===dstIndex){notify("같은 파티로는 이동할 수 없어요.");return false}
+  var swapping=!!swapKey;
+  var dstInfo=swapping?findResultMember(swapKey):null;
+  if(swapping&&(!dstInfo||dstInfo.partyIndex!==dstIndex)){notify("교환할 캐릭터를 찾지 못했어요.");return false}
+  var cap=SETTINGS.partySize==="any"?6:Math.max(2,Math.min(6,Number(SETTINGS.partySize)||3));
+  var from=RESULT[srcInfo.partyIndex],to=RESULT[dstIndex];
+  if(!swapping&&from.members.length<=2){notify("파티는 최소 2명이어야 해요. 다른 캐릭터와 교환해 주세요.");return false}
+  if(!swapping&&to.members.length>=cap){notify("대상 파티가 인원 제한("+cap+"명)에 도달했어요. 교환을 이용해 주세요.");return false}
+  var candidate=RESULT.map(function(p){return {id:p.id,max:p.max,members:p.members.slice(),total:p.total}});
+  var src=candidate[srcInfo.partyIndex],dst=candidate[dstIndex];
+  if(swapping){
+    src.members[srcInfo.memberIndex]=dstInfo.member;
+    dst.members[dstInfo.memberIndex]=srcInfo.member;
+  }else{
+    src.members.splice(srcInfo.memberIndex,1);
+    dst.members.push(srcInfo.member);
+  }
+  if(!validPartyOwners(candidate)){notify("한 파티에 같은 주인의 캐릭터가 겹칠 수 없어요. 다른 교환 대상을 골라 주세요.");return false}
+  if(candidate.some(function(p){return p.members.length<2||p.members.length>cap})){notify("파티별 2명 이상, 최대 "+cap+"명 조건을 지켜야 해요.");return false}
+  var oldKeys=[],newKeys=[];
+  RESULT.forEach(function(p){p.members.forEach(function(c){oldKeys.push(c.key)})});
+  candidate.forEach(function(p){p.members.forEach(function(c){newKeys.push(c.key)})});
+  oldKeys.sort();newKeys.sort();
+  if(oldKeys.length!==newKeys.length||oldKeys.some(function(k,i){return k!==newKeys[i]})){
+    notify("캐릭터 누락·중복 방지를 위해 수정이 중단됐어요.");return false;
+  }
+  MANUAL_UNDO=RESULT.map(function(p){return {id:p.id,max:p.max,members:p.members.slice(),total:p.total}});
+  RESULT=candidate;
+  RESULT.forEach(function(p){p.total=partyTotal(p);p.max=cap});
+  MANUAL_PICK="";MANUAL_DRAG="";
+  invalidateComparison();markDirty();render();
+  notify(srcInfo.member.name+(swapping?" ↔ "+dstInfo.member.name+" 교환":" → "+to.id+"파티 이동")+" 완료 · 저장을 누르면 공용 반영됩니다.");
+  return true;
+}
+function undoPartyResult(){
+  if(!MANUAL_UNDO||SAVING||BUILDING||COMPARING)return;
+  RESULT=MANUAL_UNDO;MANUAL_UNDO=null;MANUAL_PICK="";MANUAL_DRAG="";
+  invalidateComparison();markDirty();render();
+  notify("직전 이동·교환을 취소했어요. 저장하면 공용 반영됩니다.");
+}
+function selectManualMember(key){
+  if(SAVING||BUILDING||COMPARING||!findResultMember(key))return;
+  MANUAL_PICK=MANUAL_PICK===key?"":key;render();
 }
 function candidateScore(parties,target,ownerAvgs,mode){
   mode=normalizeMode(mode);
@@ -713,6 +775,7 @@ function compareAllModes(){
 }
 function applyComparedMode(mode){
   if(COMPARING||BUILDING)return;
+  MANUAL_PICK="";MANUAL_UNDO=null;
   var found=COMPARE_RESULTS.find(function(row){return row.mode===mode});
   if(!found||!found.parties.length)return;
   if(!validPartyOwners(found.parties)){
@@ -743,6 +806,7 @@ function fetchBoard(restoreResult){
   }).finally(function(){loading=false});
 }
 function performBuild(){
+  MANUAL_PICK="";MANUAL_UNDO=null;
   invalidateComparison();
   var chars=selectedChars();
   if(chars.length<2){
@@ -844,6 +908,8 @@ function renderNow(){
   var panel=document.getElementById("partyBossPanel");
   if(!panel)return;
   var chars=allChars();
+  if(!RESULT.length){MANUAL_PICK="";MANUAL_UNDO=null}
+  if(MANUAL_PICK&&!findResultMember(MANUAL_PICK))MANUAL_PICK="";
   if(RESULT.length&&!validPartyOwners(RESULT)){
     RESULT=[];
     markDirty();
@@ -972,18 +1038,29 @@ function renderNow(){
     }else{
       html+='<div class="party-boss-target-success" role="status">모든 파티가 최소 목표 '+formatRate(target)+'를 충족했습니다.</div>';
     }
+    html+='<div class="party-boss-manual-help" role="status"><span><b>직접 편집</b> 캐릭터의 <b>이동</b> → 대상 파티의 <b>여기로 이동</b> 또는 다른 캐릭터의 <b>교환</b>을 누르세요. PC에서는 드래그도 가능합니다.</span>'+(MANUAL_UNDO?'<button type="button" data-pb-undo="1">직전 편집 취소</button>':'')+'</div>';
+    if(MANUAL_PICK){
+      var selectedMember=findResultMember(MANUAL_PICK);
+      if(selectedMember)html+='<div class="party-boss-manual-pick"><span><b>'+esc(selectedMember.member.name)+'</b> 선택됨 · 대상 파티나 교환할 캐릭터를 골라 주세요.</span><button type="button" data-pb-cancel-pick="1">취소</button></div>';
+    }
     html+='<div class="party-boss-result-grid">';
     RESULT.forEach(function(p){
-      html+='<article class="party-boss-party-card '+(p.total<target?"out-target":(p.total<=target*1.1?"in-target":"above-target"))+'">';
+      html+='<article class="party-boss-party-card '+(p.total<target?"out-target":(p.total<=target*1.1?"in-target":"above-target"))+(MANUAL_PICK?" manual-target":"")+'" data-pb-drop-party="'+p.id+'">';
       var status=p.total<target?"미달 "+formatRate(target-p.total):(p.total>target*1.1?"권장 범위 초과":"목표 충족");
       var partyMesoEach=crystalPrice()/Math.max(1,p.members.length);
       html+='<header><div><span>'+p.id+'</span><b>'+p.id+'파티 · '+p.members.length+'명</b>'+(status?'<em>'+status+'</em>':'')+'</div><div class="party-boss-party-totals"><strong>'+formatRate(p.total)+'</strong><small>인당 '+formatMeso(partyMesoEach)+'</small></div></header>';
+      if(MANUAL_PICK&&findResultMember(MANUAL_PICK).partyIndex!==RESULT.indexOf(p)){
+        html+='<div class="party-boss-drop-actions"><button type="button" data-pb-move-target="'+p.id+'">여기로 이동</button></div>';
+      }
       html+='<div class="party-boss-members">';
       p.members.forEach(function(c){
-        html+='<div class="party-boss-member owner-themed" data-theme="'+c.theme+'">';
+        var picked=MANUAL_PICK===c.key;
+        var other=MANUAL_PICK&&findResultMember(MANUAL_PICK).partyIndex!==RESULT.indexOf(p);
+        html+='<div class="party-boss-member owner-themed'+(picked?" manual-picked":"")+'" data-theme="'+c.theme+'" draggable="true" data-pb-drag-member="'+esc(c.key)+'" data-pb-swap-drop="'+esc(c.key)+'" data-pb-member-party="'+p.id+'">';
         html+='<span class="party-boss-member-dot"></span>';
         html+='<div><b>'+esc(c.name)+'</b>'+(c.external?'<small>'+esc(c.ownerName)+'</small>':'')+'</div>';
         html+='<strong>'+formatRate(c.multiplier)+'</strong>';
+        html+='<button type="button" class="party-boss-member-action'+(picked?" selected":"")+(other?" swap":"")+'" data-pb-member-action="'+esc(c.key)+'" data-pb-member-party="'+p.id+'" aria-pressed="'+(picked?"true":"false")+'">'+(picked?"취소":(other?"교환":"이동"))+'</button>';
         html+='</div>';
       });
       html+='</div></article>';
@@ -1060,8 +1137,73 @@ function renderNow(){
   if(buildBtn)buildBtn.onclick=build;
   var saveBtn=panel.querySelector("[data-pb-save]");
   if(saveBtn)saveBtn.onclick=savePrefs;
+  var undoBtn=panel.querySelector("[data-pb-undo]");
+  if(undoBtn)undoBtn.onclick=undoPartyResult;
+  var cancelPick=panel.querySelector("[data-pb-cancel-pick]");
+  if(cancelPick)cancelPick.onclick=function(){MANUAL_PICK="";render()};
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-move-target]"),function(btn){
+    btn.onclick=function(){if(MANUAL_PICK)modifyPartyResult(MANUAL_PICK,btn.dataset.pbMoveTarget,"")};
+  });
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-member-action]"),function(btn){
+    btn.onclick=function(){
+      var key=btn.dataset.pbMemberAction;
+      var source=MANUAL_PICK?findResultMember(MANUAL_PICK):null;
+      var target=findResultMember(key);
+      if(source&&target&&source.partyIndex!==target.partyIndex){
+        modifyPartyResult(MANUAL_PICK,btn.dataset.pbMemberParty,key);
+      }else selectManualMember(key);
+    };
+  });
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-drag-member]"),function(row){
+    row.ondragstart=function(e){
+      if(SAVING||BUILDING||COMPARING){e.preventDefault();return}
+      MANUAL_DRAG=row.dataset.pbDragMember;
+      if(e.dataTransfer){e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",MANUAL_DRAG)}
+      row.classList.add("manual-dragging");
+    };
+    row.ondragend=function(){
+      MANUAL_DRAG="";
+      Array.prototype.forEach.call(panel.querySelectorAll(".manual-drag-over"),function(el){el.classList.remove("manual-drag-over")});
+      row.classList.remove("manual-dragging");
+    };
+    row.ondragover=function(e){
+      if(!MANUAL_DRAG||MANUAL_DRAG===row.dataset.pbSwapDrop)return;
+      var source=findResultMember(MANUAL_DRAG),target=findResultMember(row.dataset.pbSwapDrop);
+      if(!source||!target||source.partyIndex===target.partyIndex)return;
+      e.preventDefault();e.stopPropagation();
+      if(e.dataTransfer)e.dataTransfer.dropEffect="move";
+      row.classList.add("manual-drag-over");
+    };
+    row.ondragleave=function(){row.classList.remove("manual-drag-over")};
+    row.ondrop=function(e){
+      e.preventDefault();e.stopPropagation();
+      row.classList.remove("manual-drag-over");
+      var key=MANUAL_DRAG;
+      if(key&&key!==row.dataset.pbSwapDrop)modifyPartyResult(key,row.dataset.pbMemberParty,row.dataset.pbSwapDrop);
+      MANUAL_DRAG="";
+    };
+  });
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-drop-party]"),function(card){
+    card.ondragover=function(e){
+      if(!MANUAL_DRAG)return;
+      var from=findResultMember(MANUAL_DRAG);
+      if(!from||String(RESULT[from.partyIndex].id)===card.dataset.pbDropParty)return;
+      e.preventDefault();
+      if(e.dataTransfer)e.dataTransfer.dropEffect="move";
+      card.classList.add("manual-drag-over");
+    };
+    card.ondragleave=function(e){
+      if(!e.relatedTarget||!card.contains(e.relatedTarget))card.classList.remove("manual-drag-over");
+    };
+    card.ondrop=function(e){
+      e.preventDefault();
+      card.classList.remove("manual-drag-over");
+      if(MANUAL_DRAG)modifyPartyResult(MANUAL_DRAG,card.dataset.pbDropParty,"");
+      MANUAL_DRAG="";
+    };
+  });
   var resetBtn=panel.querySelector("[data-pb-reset]");
-  if(resetBtn)resetBtn.onclick=function(){invalidateComparison();SELECTED=[];RESULT=[];markDirty();render()};
+  if(resetBtn)resetBtn.onclick=function(){invalidateComparison();MANUAL_PICK="";MANUAL_UNDO=null;SELECTED=[];RESULT=[];markDirty();render()};
 
   var guestForm=panel.querySelector("[data-pb-guest-form]");
   if(guestForm)guestForm.onsubmit=function(e){
