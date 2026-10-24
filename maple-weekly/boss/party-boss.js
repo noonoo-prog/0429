@@ -445,10 +445,10 @@ function guestOwnerKey(g){
 function addGuest(name,owner,rate){
   name=String(name||"").trim().slice(0,30);
   owner=String(owner||"").trim().slice(0,30);
-  if(!name){notify("외부 캐릭터 이름을 입력해 주세요.");return}
-  if(GUESTS.length>=100){notify("외부 인력은 최대 100명까지 등록할 수 있어요.");return}
+  if(!name){notify("용병 캐릭터 이름을 입력해 주세요.");return}
+  if(GUESTS.length>=100){notify("용병은 최대 100명까지 등록할 수 있어요.");return}
   if(GUESTS.some(function(g){return g.name===name&&g.owner===owner})){
-    notify("같은 이름과 소속의 외부 인력이 이미 등록되어 있어요.");return;
+    notify("같은 이름과 소속의 용병이 이미 등록되어 있어요.");return;
   }
   var g={id:"ext-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8),name:name,owner:owner};
   GUESTS.push(g);
@@ -460,13 +460,13 @@ function addGuest(name,owner,rate){
   invalidateComparison();
   markDirty();
   render();
-  notify("외부 인력을 추가했어요. 공용 반영은 저장을 눌러 주세요.");
+  notify("용병을 추가했어요. 공용 반영은 저장을 눌러 주세요.");
 }
 function removeGuest(id){
   var index=GUESTS.findIndex(function(g){return g.id===id});
   if(index<0)return;
   var g=GUESTS[index];
-  if(!window.confirm(g.name+" 외부 인력을 삭제할까요?"))return;
+  if(!window.confirm(g.name+" 용병을 삭제할까요?"))return;
   var key=guestKey(g);
   GUESTS.splice(index,1);
   SELECTED=SELECTED.filter(function(k){return k!==key});
@@ -503,7 +503,7 @@ function allChars(){
     out.push({
       key:key,
       ownerId:guestOwnerKey(g),
-      ownerName:g.owner?(g.owner+" (외부)"):(g.name+" (외부)"),
+      ownerName:g.owner?(g.owner+" (용병)"):(g.name+" (용병)"),
       theme:"guest",
       name:g.name,
       pi:-1,
@@ -1081,7 +1081,7 @@ function organizePartyPanels(panel,selectedCount){
   roster.appendChild(guests);
   var groups=[
     [settings,"settings","편성 설정",SETTINGS.boss+" · "+SETTINGS.difficulty+" · 목표 "+formatRate(SETTINGS.targetRate),!RESULT.length],
-    [roster,"roster","참여 인원",selectedCount+"명 선택 · 외부 "+GUESTS.length+"명 등록",selectedCount===0],
+    [roster,"roster","참여 인원",selectedCount+"명 선택 · 용병 "+GUESTS.length+"명 등록",true],
     [panel.querySelector(".party-boss-unassigned"),"unassigned","대기 인원",unassignedChars().length+"명",!!MANUAL_ADD],
     [panel.querySelector(".party-boss-slots"),"slots","저장한 편성",SAVED_SLOTS.filter(Boolean).length+" / 3",false]
   ];
@@ -1091,14 +1091,23 @@ function organizePartyPanels(panel,selectedCount){
     var fold=document.createElement("details");
     fold.className="party-boss-fold";
     fold.dataset.pbFold=group[1];
-    fold.open=Object.prototype.hasOwnProperty.call(PANEL_OPEN,group[1])?PANEL_OPEN[group[1]]:group[4];
-    if(group[1]!=="slots")fold.hidden=!editing;
+    var alwaysVisible=group[1]==="roster";
+    fold.open=alwaysVisible?true:(Object.prototype.hasOwnProperty.call(PANEL_OPEN,group[1])?PANEL_OPEN[group[1]]:group[4]);
+    if(group[1]!=="slots"&&!alwaysVisible)fold.hidden=!editing;
+    if(alwaysVisible){fold.classList.add("always-visible");PANEL_OPEN.roster=true}
     var summary=document.createElement("summary");
     summary.innerHTML="<strong>"+group[2]+"</strong><span>"+esc(group[3])+"</span>";
     content.before(fold);
     fold.appendChild(summary);
     fold.appendChild(content);
-    fold.addEventListener("toggle",function(){PANEL_OPEN[group[1]]=fold.open});
+    if(alwaysVisible){
+      summary.addEventListener("click",function(e){e.preventDefault()});
+      summary.setAttribute("aria-label","참여 인원, 항상 표시");
+    }
+    fold.addEventListener("toggle",function(){
+      if(alwaysVisible){if(!fold.open)fold.open=true;PANEL_OPEN.roster=true}
+      else PANEL_OPEN[group[1]]=fold.open;
+    });
   });
   var result=panel.querySelector(".party-boss-result");
   var waiting=panel.querySelector('[data-pb-fold="unassigned"]');
@@ -1189,29 +1198,34 @@ function renderNow(){
   }
   html+='</section>';
 
-  html+='<section class="party-boss-external" aria-label="외부 인력 관리">';
-  html+='<div class="party-boss-external-heading"><div><span>GUEST MEMBERS</span><strong>외부 인력</strong><p>기존 보스 현황판에는 등록하지 않고, 파티보스에서만 사용합니다. 추가 시 자동으로 선택됩니다.</p></div><b>'+GUESTS.length+'명 등록</b></div>';
-  html+='<form class="party-boss-external-form" data-pb-guest-form="1">';
-  html+='<label><span>캐릭터 이름</span><input data-pb-guest-name="1" type="text" maxlength="30" placeholder="외부 캐릭터 닉네임" required autocomplete="off"></label>';
-  html+='<label><span>주인 / 소속 (선택)</span><input data-pb-guest-owner="1" type="text" maxlength="30" placeholder="같은 주인은 동일하게 입력" autocomplete="off"></label>';
-  html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input data-pb-guest-rate="1" type="number" min="0" step="0.01" inputmode="decimal" value="0" aria-label="외부 캐릭터 배율"></label>';
-  html+='<button type="submit">+ 외부 인력 추가</button>';
-  html+='</form>';
+
+  // Render mercenaries as one more vertical owner roster column.
+  var chosenGuests=GUESTS.filter(function(g){return selectedSet.has(guestKey(g))});
+  html+='<section class="party-boss-external party-boss-owner owner-themed" data-theme="guest" aria-label="용병 관리">';
+  html+='<header class="party-boss-external-heading"><div class="party-boss-owner-title"><strong>용병</strong><span>선택 '+chosenGuests.length+'명 · 등록 '+GUESTS.length+'명</span></div></header>';
   if(GUESTS.length){
-    html+='<div class="party-boss-external-grid">';
+    html+='<div class="party-boss-external-grid party-boss-char-grid">';
     GUESTS.forEach(function(g){
       var key=guestKey(g);
       var chosen=selectedSet.has(key);
       var rate=getBossMultiplier(SETTINGS.boss,key);
-      html+='<article class="party-boss-external-person '+(chosen?"active":"")+'">';
-      html+='<button type="button" class="party-boss-external-select" data-pb-char="'+esc(key)+'" aria-pressed="'+(chosen?"true":"false")+'"><b>'+esc(g.name)+'</b><small>'+esc(g.owner||"소속 미지정")+' · '+(chosen?"선택됨":"미선택")+'</small></button>';
+      html+='<article class="party-boss-external-person party-boss-char owner-themed '+(chosen?"active":"")+'" data-theme="guest">';
+      html+='<button type="button" class="party-boss-external-select party-boss-char-toggle" data-pb-char="'+esc(key)+'" aria-pressed="'+(chosen?"true":"false")+'"><span class="party-boss-char-name"><b>'+esc(g.name)+'</b>'+(g.owner?'<small>'+esc(g.owner)+'</small>':'')+'</span></button>';
       html+='<label><span>배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(key)+'" value="'+String(rate)+'" aria-label="'+esc(g.name)+' 배율"></label>';
-      html+='<button type="button" class="party-boss-external-remove" data-pb-guest-remove="'+esc(g.id)+'" aria-label="'+esc(g.name)+' 외부 인력 삭제" title="외부 인력 삭제">삭제</button>';
+      html+='<button type="button" class="party-boss-external-remove" data-pb-guest-remove="'+esc(g.id)+'" aria-label="'+esc(g.name)+' 용병 삭제" title="용병 삭제">삭제</button>';
       html+='</article>';
     });
     html+='</div>';
+  }else{
+    html+='<p class="party-boss-external-empty">등록된 용병이 없습니다.</p>';
   }
-  html+='<p class="party-boss-external-note">소속이 같으면 같은 파티에 2명을 배정하지 않습니다. 소속을 비우면 각각 별도 주인으로 취급합니다. 등록·삭제·배율 변경 후 상단의 저장 버튼을 눌러 주세요.</p>';
+  html+='<form class="party-boss-external-form" data-pb-guest-form="1">';
+  html+='<label><span>용병 닉네임</span><input data-pb-guest-name="1" type="text" maxlength="30" placeholder="캐릭터 이름" required autocomplete="off"></label>';
+  html+='<label><span>주인 / 소속</span><input data-pb-guest-owner="1" type="text" maxlength="30" placeholder="선택 입력" autocomplete="off"></label>';
+  html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input data-pb-guest-rate="1" type="number" min="0" step="0.01" inputmode="decimal" value="0" aria-label="용병 배율"></label>';
+  html+='<button type="submit">+ 용병 추가</button>';
+  html+='</form>';
+  html+='<p class="party-boss-external-note">용병은 파티보스에서만 사용합니다. 같은 주인은 한 파티에 1명만 배정합니다. 변경 후 저장을 눌러 주세요.</p>';
   html+='</section>';
 
   html+='<section class="party-boss-owner-groups">';
