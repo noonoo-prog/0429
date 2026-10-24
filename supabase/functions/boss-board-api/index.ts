@@ -1411,17 +1411,30 @@ Deno.serve(async(req)=>{
         guests.push({id,name,owner});
       }
 
-      // Three independent, named-on-screen Party Balancer snapshots.
+      // Five independent Party Balancer snapshots with persistent custom names.
       // Old clients without savedSlots must not erase slots created by newer clients.
       let incomingSlots=raw.savedSlots;
-      if(!Array.isArray(incomingSlots)){
+      // An older cached client may only know the first three slots; preserve slots 4-5.
+      if(!Array.isArray(incomingSlots)||incomingSlots.length<5){
         const {data:previousSlots,error:previousSlotsError}=await db.from("boss_party_balancer_state")
           .select("payload").eq("id",1).maybeSingle();
         if(previousSlotsError)throw previousSlotsError;
-        incomingSlots=previousSlots?.payload?.savedSlots;
+        const previous=Array.isArray(previousSlots?.payload?.savedSlots)?previousSlots.payload.savedSlots:[];
+        if(!Array.isArray(incomingSlots))incomingSlots=previous;
+        else{
+          const count=incomingSlots.length;
+          incomingSlots=Array.from({length:5},(_,i)=>{
+            if(i>=count)return previous[i]||null;
+            const current=incomingSlots[i];
+            if(current&&typeof current==="object"&&!Array.isArray(current)&&current.name===undefined){
+              return {...current,name:String(previous[i]?.name||"")};
+            }
+            return current;
+          });
+        }
       }
-      const savedSlots:any[]=[null,null,null];
-      for(let i=0;i<3;i++){
+      const savedSlots:any[]=[null,null,null,null,null];
+      for(let i=0;i<5;i++){
         const slot=Array.isArray(incomingSlots)?incomingSlots[i]:null;
         if(!slot||typeof slot!=="object"||Array.isArray(slot))continue;
         const rawSlotSettings=(slot.settings&&typeof slot.settings==="object"&&!Array.isArray(slot.settings))?slot.settings:{};
