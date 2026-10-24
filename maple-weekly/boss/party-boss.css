@@ -1930,3 +1930,169 @@ html[data-theme="dark"] .party-boss-party-card.out-target>header>div>em{
   }
   .party-boss-compare-actions button{width:100%}
 }
+
+/* External party-only members (not part of the main boss board) */
+.party-boss-external{
+  margin:14px 0;
+  padding:16px;
+  border:1px solid var(--line-strong);
+  background:var(--surface);
+  border-radius:14px;
+}
+.party-boss-external-heading{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:12px;
+}
+.party-boss-external-heading span{
+  display:block;
+  color:var(--muted);
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.07em;
+}
+.party-boss-external-heading strong{
+  display:block;
+  font-size:18px;
+  font-weight:950;
+  color:var(--text);
+}
+.party-boss-external-heading p,.party-boss-external-note{
+  margin:4px 0 0;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.55;
+}
+.party-boss-external-heading>b{
+  padding:6px 10px;
+  background:var(--surface-soft);
+  border-radius:9px;
+  color:var(--text);
+  font-size:11px;
+}
+.party-boss-external-form{
+  display:grid;
+  grid-template-columns:minmax(140px,1.15fr) minmax(140px,1fr) minmax(105px,.6fr) auto;
+  align-items:end;
+  gap:9px;
+  margin-bottom:12px;
+}
+.party-boss-external-form label>span,.party-boss-external-person label>span{
+  display:block;
+  margin-bottom:5px;
+  color:var(--muted);
+  font-size:10px;
+  font-weight:850;
+}
+.party-boss-external-form input,.party-boss-external-person input{
+  width:100%;
+  min-width:0;
+  min-height:38px;
+  box-sizing:border-box;
+  border-radius:9px;
+  border:1px solid var(--line-strong);
+  background:var(--surface);
+  color:var(--text);
+  font:inherit;
+  font-size:12px;
+  font-weight:750;
+  padding:0 9px;
+}
+.party-boss-external-form>button{
+  min-height:38px;
+  border:none;
+  border-radius:9px;
+  background:var(--accent,#008cc0);
+  color:white;
+  padding:0 15px;
+  cursor:pointer;
+  white-space:nowrap;
+  font:inherit;
+  font-size:12px;
+  font-weight:900;
+}
+.party-boss-external-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-bottom:10px;
+}
+.party-boss-external-person{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 93px auto;
+  align-items:center;
+  gap:9px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:9px;
+  background:var(--surface-soft);
+}
+.party-boss-external-person.active{
+  border-color:var(--accent,#008cc0);
+}
+.party-boss-external-select{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  min-width:0;
+  padding:3px 5px;
+  border:0;
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
+  font:inherit;
+  text-align:left;
+}
+.party-boss-external-select b{
+  max-width:100%;
+  font-size:12px;
+  overflow-wrap:anywhere;
+}
+.party-boss-external-select small{
+  margin-top:3px;
+  color:var(--muted);
+  font-size:10px;
+  overflow-wrap:anywhere;
+}
+.party-boss-external-person label{min-width:0}
+.party-boss-external-person input{min-height:34px}
+.party-boss-external-remove{
+  min-height:34px;
+  border:1px solid var(--line-strong);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--text);
+  padding:0 9px;
+  cursor:pointer;
+  font:inherit;
+  font-size:11px;
+  font-weight:850;
+}
+.party-boss-external-select:focus-visible,
+.party-boss-external-remove:focus-visible,
+.party-boss-external-form>button:focus-visible{
+  outline:2px solid var(--accent,#008cc0);
+  outline-offset:2px;
+}
+.party-boss-member small{
+  display:block;
+  margin-top:2px;
+  color:var(--muted);
+  font-size:10px;
+  overflow-wrap:anywhere;
+}
+@media(max-width:840px){
+  .party-boss-external-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .party-boss-external-form>button{grid-column:1/-1}
+  .party-boss-external-grid{grid-template-columns:1fr}
+}
+@media(max-width:430px){
+  .party-boss-external{padding:12px}
+  .party-boss-external-form{grid-template-columns:1fr}
+  .party-boss-external-person{grid-template-columns:minmax(0,1fr) 76px auto;gap:5px;padding:7px}
+  .party-boss-external-form>button{grid-column:auto}
+  .party-boss-external-remove{padding:0 6px}
+}
