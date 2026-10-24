@@ -523,8 +523,10 @@ function removePartyMember(key){
   var original=RESULT[source.partyIndex],disband=original.members.length<=2;
   if(disband&&!window.confirm("이 파티는 2인 파티입니다. "+source.member.name+"을 빼면 파티가 해체되고 남은 캐릭터도 미배정으로 돌아갑니다. 계속할까요?"))return false;
   var next=RESULT.map(function(p){return {id:p.id,max:p.max,members:p.members.slice(),total:p.total}});
-  if(disband)next.splice(source.partyIndex,1);
-  else next[source.partyIndex].members.splice(source.memberIndex,1);
+  if(disband){
+    next.splice(source.partyIndex,1);
+    next.forEach(function(p,i){p.id=i+1});
+  }else next[source.partyIndex].members.splice(source.memberIndex,1);
   MANUAL_UNDO=RESULT.map(function(p){return {id:p.id,max:p.max,members:p.members.slice(),total:p.total}});
   RESULT=next;
   RESULT.forEach(function(p){p.total=partyTotal(p)});
