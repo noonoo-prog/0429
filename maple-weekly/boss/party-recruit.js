@@ -106,7 +106,7 @@ function groupHtml(g){
   var missing=Math.max(0,(Number(g.capacity)||3)-members.length);
   var open=openIds.has(g.id);
   var html='<details class="recruit-card" data-r-card="'+esc(g.id)+'"'+(open?' open':'')+'>';
-  html+='<summary><span class="recruit-card-title">'+esc(g.name||"새 파티")+'</span><span class="recruit-card-sub">'+bosses.length+'보스 · '+members.length+'/'+g.capacity+'명';
+  html+='<summary><span class="recruit-card-title">'+esc(g.name||"새 파티")+'</span><span class="recruit-card-sub">'+bosses.map(function(b){return esc(b.difficulty+' '+b.boss)}).join(' · ')+' · '+members.length+'/'+g.capacity+'명';
   if(g.status==="recruiting")html+=' · '+(missing?missing+'명 모집':'인원 충족');
   html+='</span>'+badgeFor(g.status)+'</summary>';
   html+='<div class="recruit-details">';
@@ -167,12 +167,12 @@ function render(){
   }
   var shown=state.groups.filter(function(g){return filter==="all"||(filter==="recruiting"?g.status==="recruiting":g.status!=="recruiting")});
   var active=state.groups.filter(function(g){return g.status==="recruiting"}).length;
-  var html='<div class="recruit-shell"><div class="recruit-heading"><div><strong>파티 모집</strong><p>같은 멤버로 여러 보스 · 계획 배율 자동 연결</p></div><button class="recruit-primary" type="button" data-r-action="add-group">+ 파티 추가</button></div>';
+  var html='<div class="recruit-shell"><div class="recruit-heading"><div><strong>파티 모집</strong><p>이전에 저장한 파티도 함께 확인할 수 있어요.</p></div><button class="recruit-primary" type="button" data-r-action="add-group">+ 파티 추가</button></div>';
   html+='<div class="recruit-toolbar"><div class="recruit-filters">';
-  [["recruiting","모집 중"],["all","전체"],["finished","완료·종료"]].forEach(function(f){
+  [["all","전체 "+state.groups.length],["recruiting","모집 중 "+active],["finished","완료·종료 "+(state.groups.length-active)]].forEach(function(f){
     html+='<button type="button" data-r-action="filter" data-r-filter="'+f[0]+'" class="'+(filter===f[0]?"selected":"")+'">'+f[1]+'</button>';
   });
-  html+='</div><span class="recruit-muted">모집 중 '+active+'팀</span></div>';
+  html+='</div><span class="recruit-muted">저장된 파티 '+state.groups.length+'팀</span></div>';
   if(shown.length){shown.forEach(function(g){html+=groupHtml(g)})}
   else html+='<div class="recruit-empty">표시할 파티가 없어요. <b>+ 파티 추가</b>로 시작해 보세요.</div>';
   html+='<div class="recruit-footer"><div><strong>'+(dirty?"미저장 변경사항":saving?"저장 중…":"저장된 상태")+'</strong><span>모집 변경은 아래 저장 버튼 · 배율 변경은 배율 관리에서 수동 저장</span></div>';
