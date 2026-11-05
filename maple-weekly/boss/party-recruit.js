@@ -2,7 +2,10 @@
 "use strict";
 var ROOT="https://ibqpjcedzcllacbamrnu.supabase.co/functions/v1/";
 var KEY="sb_publishable_s-EiUNh66D17Xd3JFGUyvA_aNEDNMKq";
-var BOSSES=["스우","데미안","가엔슬","루시드","윌","더스크","진힐라","듄켈","세렌","칼로스","대적자","카링","흉성","벨로나","림보","발드릭스","유피테르","검은 마법사"];
+var BOSSES=["스우","세렌","칼로스","대적자","카링","흉성","벨로나","림보","발드릭스","유피테르","검은 마법사"];
+var DIFFICULTY_RATES={};
+function activeDifficulties(boss){if(boss==="스우")return ["익스트림"];if(boss==="세렌")return ["하드","익스트림"];return (DIFFS[boss]||[]).slice()}
+function bossOptions(current){var list=BOSSES.slice();if(current&&list.indexOf(current)<0)list.push(current);return list}
 var DIFFS={"스우":["노말","하드","익스트림"],"데미안":["노말","하드"],"가엔슬":["노말","카오스"],"루시드":["이지","노말","하드"],"윌":["이지","노말","하드"],"더스크":["노말","카오스"],"진힐라":["노말","하드"],"듄켈":["노말","하드"],"세렌":["노말","하드","익스트림"],"칼로스":["이지","노말","카오스","익스트림"],"대적자":["이지","노말","하드","익스트림"],"카링":["이지","노말","하드","익스트림"],"흉성":["노말","하드"],"벨로나":["이지","노말","하드"],"림보":["노말","하드"],"발드릭스":["노말","하드"],"유피테르":["노말","하드"],"검은 마법사":["하드","익스트림"]};
 var state={groups:[],people:[]},plan={},owners=[],people=[],revision=0;
 var pendingRates={},rateQueue={},rateSequence=0;
@@ -45,23 +48,25 @@ function buildPeople(){
   people=all.filter(function(p){if(found.has(p.key))return false;found.add(p.key);return true});
 }
 function member(key){return people.find(function(p){return p.key===key})||{key:key,name:key.split("|").slice(-1)[0]||"알 수 없음",owner:"미등록",ownerKey:key}}
-function rateFor(boss,key){
-  var pending=pendingRates[boss+"||"+key];
+function rateFor(boss,difficulty,key){
+  var pending=pendingRates[boss+"||"+difficulty+"||"+key];
   if(pending)return {value:pending.value,source:"저장 중"};
-  var base=plan.multipliers&&plan.multipliers[boss]&&plan.multipliers[boss][key];
-  return {value:Math.max(0,Number(base)||0),source:"공용"};
+  var byBoss=DIFFICULTY_RATES[boss]&&DIFFICULTY_RATES[boss][difficulty];
+  if(byBoss&&Object.prototype.hasOwnProperty.call(byBoss,key))return {value:Number(byBoss[key])||0,source:"공용"};
+  var legacy=plan.multipliers&&plan.multipliers[boss]&&plan.multipliers[boss][key];
+  return {value:0,source:legacy?"기존 "+legacy+"% · 난이도 미확인":"미입력"};
+
 }
-function setSharedRate(boss,key,value){
-  var ref=boss+"||"+key,seq=++rateSequence;
+function setSharedRate(boss,difficulty,key,value){
+  var ref=boss+"||"+difficulty+"||"+key,seq=++rateSequence;
   pendingRates[ref]={value:value,seq:seq};
   var prior=rateQueue[ref]||Promise.resolve();
   var next=prior.catch(function(){}).then(function(){
-    return api("boss-party-recruit",{action:"rate_set",boss:boss,key:key,value:value});
+    return api("boss-party-recruit",{action:"rate_set",boss:boss,difficulty:difficulty,key:key,value:value});
   }).then(function(data){
-    if(!plan.multipliers)plan.multipliers={};
-    if(!plan.multipliers[boss])plan.multipliers[boss]={};
-    if(data.value>0)plan.multipliers[boss][key]=data.value;
-    else delete plan.multipliers[boss][key];
+    if(!DIFFICULTY_RATES[boss])DIFFICULTY_RATES[boss]={};
+    if(!DIFFICULTY_RATES[boss][difficulty])DIFFICULTY_RATES[boss][difficulty]={};
+    DIFFICULTY_RATES[boss][difficulty][key]=Number(data.value)||0;
     if(pendingRates[ref]&&pendingRates[ref].seq===seq){
       delete pendingRates[ref];
       notify("공용 배율을 저장했어요.");
@@ -93,19 +98,21 @@ function loadAll(force){
   Promise.all([
     api("boss-board-api",{action:"bootstrap"}),
     api("boss-board-api",{action:"party_boss_state_get"}),
-    api("boss-party-recruit",{action:"load"})
+    api("boss-party-recruit",{action:"load"}),
+    api("boss-party-recruit",{action:"rate_get"})
   ]).then(function(results){
     owners=Array.isArray(results[0].owners)?results[0].owners:[];
     plan=results[1].state||{};
     state=results[2].state||{groups:[],people:[]};
+    DIFFICULTY_RATES=results[3].rates||{};
     revision=Number(results[2].revision)||0;
     normalize();buildPeople();loaded=true;dirty=false;lastFetch=Date.now();
   }).catch(function(e){error=e.message||"모집 정보를 불러오지 못했어요."}).finally(function(){loading=false;render()});
 }
 function refreshPlan(){
   if(loading)return;
-  api("boss-board-api",{action:"party_boss_state_get"}).then(function(data){
-    plan=data.state||{};buildPeople();lastFetch=Date.now();render();
+  Promise.all([api("boss-board-api",{action:"party_boss_state_get"}),api("boss-party-recruit",{action:"rate_get"})]).then(function(data){
+    plan=data[0].state||{};DIFFICULTY_RATES=data[1].rates||{};buildPeople();lastFetch=Date.now();render();
   }).catch(function(){});
 }
 function save(){
@@ -143,8 +150,9 @@ function groupHtml(g){
   html+='</div>';
   html+='<div class="recruit-block"><div class="recruit-line"><strong>같이 갈 보스</strong><button type="button" class="recruit-small-btn" data-r-action="add-boss" data-r-id="'+esc(g.id)+'">+ 보스 추가</button></div>';
   bosses.forEach(function(b,i){
-    html+='<div class="recruit-boss-row"><select aria-label="보스 선택" data-r-edit="boss" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">'+options(BOSSES,b.boss)+'</select>';
-    html+='<select aria-label="난이도" data-r-edit="difficulty" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">'+options(DIFFS[b.boss]||["하드"],b.difficulty)+'</select>';
+    html+='<div class="recruit-boss-row"><select aria-label="보스 선택" data-r-edit="boss" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">'+options(bossOptions(b.boss),b.boss)+'</select>';
+    var choices=activeDifficulties(b.boss);if(choices.indexOf(b.difficulty)<0)choices.push(b.difficulty);
+    html+='<select aria-label="난이도" data-r-edit="difficulty" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">'+options(choices,b.difficulty)+'</select>';
     html+='<label class="recruit-rate-limit"><input aria-label="모집 희망 배율" type="number" min="0" step="0.01" data-r-edit="minRate" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'" value="'+esc(b.minRate)+'"><span>% 이상</span></label>';
     html+='<button type="button" class="recruit-icon-btn" aria-label="보스 삭제" data-r-action="remove-boss" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">×</button></div>';
   });
@@ -162,7 +170,7 @@ function groupHtml(g){
   html+='<div class="recruit-join-row"><input aria-label="외부 파티원 닉네임" data-r-manual-name="'+esc(g.id)+'" maxlength="30" placeholder="외부 파티원 닉네임"><button type="button" class="recruit-small-btn" data-r-action="add-manual" data-r-id="'+esc(g.id)+'">외부인 추가</button></div>';
   html+='</div>';
   if(members.length&&bosses.length){
-    html+='<div class="recruit-block"><div class="recruit-line"><strong>캐릭터별 배율</strong><span class="recruit-muted">공용 배율 · 수정 즉시 저장</span></div>';
+    html+='<div class="recruit-block"><div class="recruit-line"><strong>캐릭터별 배율</strong><span class="recruit-muted">캐릭터·보스·난이도별 공용 저장</span></div>';
     html+='<div class="recruit-matrix-scroll"><table class="recruit-matrix"><thead><tr><th>캐릭터</th>';
     bosses.forEach(function(b){html+='<th>'+esc(b.difficulty)+' '+esc(b.boss)+'</th>'});
     html+='</tr></thead><tbody>';
@@ -170,8 +178,8 @@ function groupHtml(g){
       var p=member(key);
       html+='<tr><th>'+esc(p.name)+'</th>';
       bosses.forEach(function(b){
-        var v=rateFor(b.boss,key);
-        html+='<td><div class="recruit-rate-cell"><input type="number" min="0" max="100000" step="0.01" inputmode="decimal" aria-label="'+esc(p.name)+' '+esc(b.boss)+' 배율" data-r-edit="rate" data-r-id="'+esc(g.id)+'" data-r-boss="'+esc(b.boss)+'" data-r-key="'+esc(key)+'" value="'+(v.value?esc(v.value):"")+'" placeholder="미입력"><span>% · '+(v.value?esc(v.source):"미입력")+'</span></div></td>';
+        var v=rateFor(b.boss,b.difficulty,key);
+        html+='<td><div class="recruit-rate-cell"><input type="number" min="0" max="100000" step="0.01" inputmode="decimal" aria-label="'+esc(p.name)+' '+esc(b.boss)+' 배율" data-r-edit="rate" data-r-id="'+esc(g.id)+'" data-r-boss="'+esc(b.boss)+'" data-r-key="'+esc(key)+'" value="'+(v.value?esc(v.value):"")+'" placeholder="미입력"><span>% · '+esc(v.source)+'</span></div></td>';
       });
       html+='</tr>';
     });
@@ -211,7 +219,7 @@ function copyGroup(g){
   if(g.day||g.time)lines.push("일정 "+[g.day,g.time].filter(Boolean).join(" "));
   if(g.members.length){
     lines.push("현재 멤버");
-    g.members.forEach(function(k){var p=member(k);lines.push(" - "+p.name+" ("+g.bosses.map(function(b){var v=rateFor(b.boss,k).value;return b.boss+" "+(v?formatRate(v):"미입력")}).join(", ")+")")});
+    g.members.forEach(function(k){var p=member(k);lines.push(" - "+p.name+" ("+g.bosses.map(function(b){var v=rateFor(b.boss,b.difficulty,k).value;return b.difficulty+" "+b.boss+" "+(v?formatRate(v):"미입력")}).join(", ")+")")});
   }
   if(g.note)lines.push(g.note);
   var text=lines.join("\n");
@@ -287,10 +295,13 @@ function change(e){
     else b.minRate=Math.max(0,Number(value)||0);
   }else if(field==="rate"){
     var boss=target.dataset.rBoss,key=target.dataset.rKey,v=Number(value);
+    var bossRecord=g.bosses.find(function(item){return item.boss===boss});
+    if(!bossRecord){notify("보스 정보를 찾지 못했어요.");return}
+    var difficulty=bossRecord.difficulty;
     if(value.trim()!==""&&(!Number.isFinite(v)||v<0||v>100000)){
       notify("배율은 0~100000 사이로 입력해 주세요.");render();return;
     }
-    setSharedRate(boss,key,value.trim()===""?0:v);
+    setSharedRate(boss,difficulty,key,value.trim()===""?0:v);
     render();
     return;
   }
