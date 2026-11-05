@@ -294,7 +294,7 @@ function renderRates(){
         const draft=edits.has(ref)?edits.get(ref):null;
         const stored=readRate(selected,b.name,difficulty);
         const value=draft!==null?draft:stored;
-        code+='<div class="rate-line"><span class="rate-label">'+htmlEscape(difficulty)+'</span>';
+        code+='<div class="rate-line"><span class="rate-label" data-difficulty="'+htmlEscape(difficulty)+'">'+htmlEscape(difficulty)+'</span>';
         if(editingRates){
           code+='<div class="rate-edit-value"><input class="rate-input'+(edits.has(ref)?' is-dirty':'')+'" type="number" step="0.01" min="0" max="100000" inputmode="decimal" data-rate-boss="'+htmlEscape(b.name)+'" data-rate-difficulty="'+htmlEscape(difficulty)+'" aria-label="'+htmlEscape(b.name+" "+difficulty+" 배율")+'" placeholder="미입력" value="'+htmlEscape(value)+'"'+(saving?' disabled':'')+'><span class="rate-unit">%</span></div>';
         }else{
