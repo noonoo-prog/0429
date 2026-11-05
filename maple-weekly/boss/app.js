@@ -1718,8 +1718,8 @@ function updatePageView(){
   if(ownerbar)ownerbar.hidden=route||party;
 
   var pageTitle=document.getElementById("pageTitle"),pageSub=document.getElementById("pageSub");
-  if(pageTitle)pageTitle.textContent=checklist?"보스 체크리스트":(route?"도핑 최소 루트":(party?"파티보스":"보스 현황판"));
-  if(pageSub)pageSub.textContent=checklist?"달력은 일~토 · 보스 초기화는 목요일~수요일":(route?"2인 이상 파티 선택 · 루트 만들기":(party?"총 배율을 비슷하게 맞춰 자동 파티 편성":"주간 최대 12개 · 검은 마법사는 월간"));
+  if(pageTitle)pageTitle.textContent=checklist?"보스 체크리스트":(route?"파티보스 모집":(party?"파티보스 계획":"보스 현황판"));
+  if(pageSub)pageSub.textContent=checklist?"달력은 일~토 · 보스 초기화는 목요일~수요일":(route?"같은 파티원으로 여러 보스 모집 · 계획 배율 자동 불러오기":(party?"총 배율을 비슷하게 맞춰 자동 파티 편성":"주간 최대 12개 · 검은 마법사는 월간"));
 
   Array.prototype.forEach.call(document.querySelectorAll("[data-page-view]"),function(btn){
     btn.classList.toggle("active",btn.dataset.pageView===PAGE_VIEW);
@@ -2525,7 +2525,7 @@ function render(){
   if(PAGE_VIEW==="checklist"){
     renderChecklist();
   }else if(PAGE_VIEW==="route"){
-    renderPartyRoute();
+    if(window.renderPartyRecruitPage)window.renderPartyRecruitPage();
   }else if(PAGE_VIEW==="party"){
     if(window.renderPartyBossPage)window.renderPartyBossPage();
   }else{
