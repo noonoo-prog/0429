@@ -89,7 +89,7 @@ function setSharedRate(boss,difficulty,key,value){
 function formatRate(n){return Number(n).toFixed(2).replace(/\.00$/,"").replace(/(\.\d)0$/,"$1")+"%"}
 function group(id){return state.groups.find(function(g){return g.id===id})}
 function mark(){dirty=true;render()}
-function defaultDifficulty(boss){return (DIFFS[boss]||[]).includes("하드")?"하드":(DIFFS[boss]||["노말"])[0]}
+function defaultDifficulty(boss){var choices=activeDifficulties(boss);return choices.includes("하드")?"하드":(choices[0]||"노말")}
 function loadAll(force){
   if(loading)return;
   if(dirty&&force){refreshPlan();return}
