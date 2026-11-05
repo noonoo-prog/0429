@@ -230,3 +230,11 @@
   .rate-import-bottom{align-items:flex-start}
   .rate-import textarea{min-height:86px}
 }
+
+
+/* Saved rate displays: clear distinction between viewing and editing */
+.party-app .party-boss-rate-info{grid-column:1/-1}
+.party-app input[readonly]{background:var(--surface-soft);color:var(--text);cursor:default;opacity:.9}
+.party-app .recruit-rate-link{font-size:11px;font-weight:800;color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.party-app .recruit-rate-cell input[readonly]{border-color:transparent;background:var(--surface-soft);box-shadow:none}
+.rate-actions .rate-save:not(:disabled){box-shadow:0 1px 4px rgba(0,140,192,.16)}
