@@ -268,8 +268,13 @@ function click(e){
   }
   if(action==="remove-member"){g.members=g.members.filter(function(k){return k!==button.dataset.rKey});mark();return}
   if(action==="delete-group"){
-    if(!window.confirm(g.name+" 파티를 삭제할까요?"))return;
-    state.groups=state.groups.filter(function(item){return item.id!==g.id});openIds.delete(g.id);mark();return;
+    if(saving){notify("저장 중에는 파티를 삭제할 수 없어요.");return}
+    if(!window.confirm("["+g.name+"] 모집 파티를 삭제할까요?\n삭제하면 공용 모집판에서 제거됩니다.\n캐릭터 배율과 파티 계획은 그대로 유지됩니다."))return;
+    state.groups=state.groups.filter(function(item){return item.id!==g.id});
+    openIds.delete(g.id);
+    mark();
+    save(); // Confirmed deletion is persisted immediately. Version conflicts remain unsaved and visible.
+    return;
   }
   if(action==="copy"){copyGroup(g);return}
 }
