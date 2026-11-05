@@ -312,3 +312,52 @@
  .party-app .rate-grid{grid-template-columns:1fr}
  .party-app .rate-panel-header h2{font-size:16px}
 }
+
+
+/* Owner-colored character selector: uses the same owner palette as the boss board. */
+.party-app .rate-char-picker.owner-themed{
+  --owner-picker-ink:#151a22;
+  border-color:var(--owner-line,var(--line));
+  border-left:4px solid var(--owner-accent,#68707c);
+  gap:9px;
+}
+.party-app .rate-char-picker.owner-themed select#rateCharacter{
+  background:var(--owner-accent,#68707c);
+  border-color:var(--owner-accent,#68707c);
+  color:var(--owner-picker-ink);
+  font-weight:900;
+  border-radius:8px;
+  padding:8px 10px;
+  min-height:38px;
+  transition:background-color .15s ease,border-color .15s ease;
+}
+.party-app .rate-char-picker.owner-themed select#rateCharacter:focus-visible{
+  outline:2px solid var(--owner-accent,#68707c);
+  outline-offset:3px;
+}
+.party-app .rate-char-picker.owner-themed select#rateCharacter optgroup,
+.party-app .rate-char-picker.owner-themed select#rateCharacter option{
+  background:var(--surface);
+  color:var(--text);
+  font-weight:700;
+}
+.party-app .rate-char-picker.owner-themed .rate-char-meta{
+  color:var(--owner-accent,var(--text));
+  font-size:11px;
+  font-weight:850;
+  border:1px solid var(--owner-line,var(--line));
+  border-radius:7px;
+  padding:6px 9px;
+  background:var(--surface);
+}
+.party-app .rate-char-picker.owner-themed[data-theme="peacock"],
+.party-app .rate-char-picker.owner-themed[data-theme="default"]{
+  --owner-picker-ink:#ffffff;
+}
+html[data-theme="dark"] .party-app .rate-char-picker.owner-themed{
+  --owner-picker-ink:#151a22;
+}
+@media(max-width:700px){
+  .party-app .rate-char-picker.owner-themed select#rateCharacter{min-height:39px}
+  .party-app .rate-char-picker.owner-themed .rate-char-meta{padding:4px 7px}
+}
