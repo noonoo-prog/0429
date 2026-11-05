@@ -198,7 +198,7 @@ function render(){
   }
   var shown=state.groups.filter(function(g){return filter==="all"||(filter==="recruiting"?g.status==="recruiting":g.status!=="recruiting")});
   var active=state.groups.filter(function(g){return g.status==="recruiting"}).length;
-  var html='<div class="recruit-shell"><div class="recruit-heading"><div><strong>파티보스 모집</strong><p>같은 멤버로 여러 보스 · 계획 배율 자동 연결</p></div><button class="recruit-primary" type="button" data-r-action="add-group">+ 파티 추가</button></div>';
+  var html='<div class="recruit-shell"><div class="recruit-heading"><div><strong>파티 모집</strong><p>같은 멤버로 여러 보스 · 계획 배율 자동 연결</p></div><button class="recruit-primary" type="button" data-r-action="add-group">+ 파티 추가</button></div>';
   html+='<div class="recruit-toolbar"><div class="recruit-filters">';
   [["recruiting","모집 중"],["all","전체"],["finished","완료·종료"]].forEach(function(f){
     html+='<button type="button" data-r-action="filter" data-r-filter="'+f[0]+'" class="'+(filter===f[0]?"selected":"")+'">'+f[1]+'</button>';
