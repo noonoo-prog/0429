@@ -524,7 +524,7 @@ html[data-theme="dark"] .party-app .rate-char-picker.owner-themed{
 }
 
 /* Browse bosses without opening the editor; draft recruitment from each party. */
-.party-boss-heading.is-viewing{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.party-app #partyBossPanel .party-boss-head>div.party-boss-heading.is-viewing:first-child{display:flex;flex-direction:row;align-items:center;flex-wrap:wrap;gap:12px}
 .party-quick-boss{position:relative;font-size:12px;font-weight:700}
 .party-quick-boss summary{cursor:pointer;list-style:none;padding:8px 10px;border:1px solid var(--line,#ddd);border-radius:8px;background:var(--surface,#fff);white-space:nowrap}
 .party-quick-boss summary::-webkit-details-marker{display:none}
