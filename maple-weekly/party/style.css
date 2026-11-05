@@ -238,3 +238,77 @@
 .party-app .recruit-rate-link{font-size:11px;font-weight:800;color:var(--accent);text-decoration:underline;text-underline-offset:2px}
 .party-app .recruit-rate-cell input[readonly]{border-color:transparent;background:var(--surface-soft);box-shadow:none}
 .rate-actions .rate-save:not(:disabled){box-shadow:0 1px 4px rgba(0,140,192,.16)}
+
+
+/* 2026-11-05: Five-column read-only rates board; show edit form on demand only. */
+.party-app .rate-panel-header{
+  position:sticky;top:0;z-index:13;align-items:center;
+  padding:9px 10px;margin:0 0 9px;border:1px solid var(--line);
+  border-radius:10px;background:var(--surface);
+  box-shadow:0 3px 12px rgba(20,35,50,.05);
+}
+.party-app .rate-panel-header h2{font-size:16px;margin:0}
+.party-app .rate-panel-header p{font-size:10px;margin:3px 0 0;color:var(--muted)}
+.party-app .rate-editor-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.party-app .rate-editor-status{font-size:10px;color:var(--muted);white-space:nowrap;padding:0 3px}
+.party-app .rate-editor-status.is-pending{color:#007eae;font-weight:800}
+.party-app .rate-edit-toggle,.party-app .rate-save{
+  appearance:none;min-height:34px;border-radius:7px;padding:6px 12px;
+  border:1px solid var(--line);background:var(--surface-soft);
+  color:var(--text);font-size:12px;font-weight:850;cursor:pointer;white-space:nowrap;
+}
+.party-app .rate-edit-toggle.is-active{background:var(--surface-soft);border-color:var(--party-blue);color:var(--party-blue)}
+.party-app .rate-save{background:var(--party-blue);border-color:var(--party-blue);color:#fff}
+.party-app .rate-edit-toggle:disabled,.party-app .rate-save:disabled{opacity:.43;cursor:default}
+.party-app .rate-char-picker{margin-bottom:9px}
+.party-app .rate-edit-help{margin:0 0 9px;padding:8px 11px;border-radius:8px;font-size:11px;color:var(--muted);
+  background:var(--surface-soft);border:1px solid var(--line);line-height:1.5}
+.party-app .rate-edit-help b{color:var(--text)}
+.party-app .rate-grid{
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:7px;align-items:start;
+}
+.party-app .rate-group{
+  padding:8px 9px;border:1px solid var(--line);border-radius:9px;
+  background:var(--surface);min-width:0;
+}
+.party-app .rate-group h3{font-size:13px;margin:0 0 4px;line-height:1.4}
+.party-app .rate-group h3 small{font-size:10px}
+.party-app .rate-line{
+  display:flex;justify-content:space-between;align-items:center;
+  grid-template-columns:none;gap:5px;padding:5px 0;min-height:30px;
+  border-top:1px solid var(--line);
+}
+.party-app .rate-label{font-size:11px;min-width:0;white-space:nowrap}
+.party-app .rate-read-value{
+  font-size:12px;font-weight:850;color:var(--text);
+  font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;
+}
+.party-app .rate-read-value small{font-size:10px;color:var(--muted);margin-left:2px;font-weight:500}
+.party-app .rate-read-value.is-empty{font-size:13px;color:var(--muted);opacity:.5}
+.party-app .rate-grid.is-readonly .rate-line{min-height:27px;padding:4px 0}
+.party-app .rate-edit-value{display:flex;align-items:center;justify-content:flex-end;gap:3px;min-width:0}
+.party-app .rate-input{
+  width:78px;max-width:100%;min-height:31px;text-align:right;
+  border-radius:6px;padding:4px 5px;font-size:11px;
+}
+.party-app .rate-unit{width:auto;font-size:10px}
+.party-app .rate-error{font-size:11px;color:#ba3e46;margin:9px 0}
+@media(max-width:1120px){
+ .party-app .rate-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:920px){
+ .party-app .rate-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:660px){
+ .party-app .rate-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .party-app .rate-panel-header{padding:7px 9px;gap:8px;flex-wrap:wrap}
+ .party-app .rate-panel-header>div:first-child{flex:1}
+ .party-app .rate-editor-actions{gap:5px;flex:1;justify-content:flex-end}
+ .party-app .rate-editor-status{font-size:10px}
+ .party-app .rate-edit-toggle,.party-app .rate-save{min-height:36px;padding:6px 10px;font-size:11px}
+}
+@media(max-width:385px){
+ .party-app .rate-grid{grid-template-columns:1fr}
+ .party-app .rate-panel-header h2{font-size:16px}
+}
