@@ -10,6 +10,7 @@ var DIFFS={"스우":["노말","하드","익스트림"],"데미안":["노말","�
 var state={groups:[],people:[]},plan={},owners=[],people=[],revision=0;
 var loaded=false,loading=false,dirty=false,saving=false,lastFetch=0,filter="recruiting",error="";
 var openIds=new Set();
+var planDraft=null;
 function esc(value){return String(value==null?"":value).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function id(){return "grp-"+(window.crypto&&crypto.randomUUID?crypto.randomUUID():""+Date.now()+"-"+Math.floor(Math.random()*100000))}
 function notify(msg){var toast=document.getElementById("toast");if(!toast)return;toast.textContent=msg;toast.classList.add("show");setTimeout(function(){toast.classList.remove("show")},2300)}
@@ -177,7 +178,39 @@ function render(){
   html+='<button type="button" class="recruit-primary" data-r-action="save"'+(!dirty||saving?' disabled':'')+'>'+(saving?"저장 중…":"저장")+'</button></div>';
   if(error)html+='<p class="recruit-error">'+esc(error)+'</p>';
   html+='</div>';panel.innerHTML=html;
+  if(planDraft)renderPlanDraft();
 }
+function renderPlanDraft(){
+  var old=document.getElementById('planRecruitDialog');if(old)return;
+  var draft=planDraft,room=Math.max(0,6-draft.members.length);
+  var dialog=document.createElement('dialog');dialog.id='planRecruitDialog';dialog.className='plan-recruit-dialog';
+  dialog.innerHTML='<form method="dialog"><h2>모집글 만들기</h2><p>'+esc(draft.difficulty+' '+draft.boss+' · '+draft.partyId+'파티')+'</p><div class="plan-recruit-members">'+draft.members.map(function(m){return '<span>'+esc(m.name)+'</span>'}).join('')+'</div><label>시간<input name="schedule" required maxlength="30" placeholder="예: 목요일 21:00" autocomplete="off"></label><label>추가 모집 인원<input name="count" type="number" min="0" max="'+room+'" step="1" value="'+(room?1:0)+'" required></label><small>현재 '+draft.members.length+'명 · 최대 '+room+'명 추가 가능</small><p>멤버·보스·난이도를 가져옵니다. 만든 뒤 저장을 눌러 공용 반영하세요.</p><div class="plan-recruit-actions"><button type="button" data-draft-cancel>취소</button><button type="submit">모집글 만들기</button></div></form>';
+  document.body.appendChild(dialog);
+  function close(){planDraft=null;dialog.close();dialog.remove()}
+  dialog.addEventListener('cancel',function(e){e.preventDefault();close()});
+  dialog.querySelector('[data-draft-cancel]').onclick=close;
+  dialog.querySelector('form').onsubmit=function(e){
+    e.preventDefault();if(saving||loading){notify('불러오기 또는 저장이 끝난 뒤 다시 시도해 주세요.');return}
+    var schedule=dialog.querySelector('[name="schedule"]').value.trim();
+    var count=Number(dialog.querySelector('[name="count"]').value);
+    if(!schedule||!Number.isInteger(count)||count<0||count>room)return;
+    var keys=draft.members.map(function(m){
+      if(people.some(function(p){return p.key===m.key}))return m.key;
+      var person={id:'manual-'+id(),name:m.name,owner:m.owner||'외부'};
+      state.people.push(person);return 'manual|'+person.id;
+    });
+    var g={id:id(),name:draft.boss+' '+draft.partyId+'파티',capacity:keys.length+count,day:'',time:schedule,note:'',status:count?'recruiting':'confirmed',members:keys,bosses:[{boss:draft.boss,difficulty:draft.difficulty,minRate:0}]};
+    state.groups.unshift(g);buildPeople();openIds.add(g.id);filter='all';close();mark();notify('모집글을 만들었어요. 저장을 눌러 공용 반영하세요.');
+  };
+  dialog.showModal();
+}
+window.createRecruitFromPlan=function(draft){
+  if(saving){notify('모집판 저장이 끝난 뒤 다시 시도해 주세요.');return}
+  planDraft=JSON.parse(JSON.stringify(draft));
+  location.hash='recruit';
+  wire();
+  if(!loaded){if(!loading)loadAll(false)}else renderPlanDraft();
+};
 function copyGroup(g){
   var lines=["["+g.name+"] 파티원 모집"];
   g.bosses.forEach(function(b){lines.push("• "+b.difficulty+" "+b.boss+" · 희망 개인 배율 "+formatRate(b.minRate||0)+" 이상")});

@@ -55,6 +55,8 @@ var BUILDING=false;
 var MESO_SORT="original";
 var PANEL_OPEN={};
 var EDIT_MODE=false;
+var BOSS_VIEWS={};
+var QUICK_BOSS_OPEN=false;
 var MANUAL_PICK="";
 var MANUAL_ADD="";
 var MANUAL_DRAG="";
@@ -1176,6 +1178,17 @@ function organizePartyPanels(panel,selectedCount){
     fold.addEventListener("toggle",function(){PANEL_OPEN.meso=fold.open});
   }
 }
+function switchViewedBoss(boss,difficulty){
+  if(SAVING)return;
+  if(boss===SETTINGS.boss&&difficulty===SETTINGS.difficulty)return;
+  BOSS_VIEWS[SETTINGS.boss+"|"+SETTINGS.difficulty]={settings:Object.assign({},SETTINGS),selected:SELECTED.slice(),result:serializeResult()};
+  var cached=BOSS_VIEWS[boss+"|"+difficulty];
+  if(!cached)cached=SAVED_SLOTS.find(function(slot){return slot&&slot.settings&&slot.settings.boss===boss&&slot.settings.difficulty===difficulty});
+  SETTINGS=Object.assign({},SETTINGS,cached?cached.settings:{},{boss:boss,difficulty:difficulty});
+  if(cached&&Array.isArray(cached.selected))SELECTED=cached.selected.slice();
+  SAVED_RESULT=cached?JSON.parse(JSON.stringify(cached.result||[])):[];
+  restoreSavedResult();invalidateComparison();markDirty();render();
+}
 function renderNow(){
   var panel=document.getElementById("partyBossPanel");
   if(!panel)return;
@@ -1205,6 +1218,14 @@ function renderNow(){
     html+='<span class="party-boss-kicker">파티 계획 · 편집</span><strong class="party-boss-edit-title">편성 설정</strong>';
   }else{
     html+='<span class="party-boss-kicker">파티 계획</span><div class="party-boss-boss-title" data-difficulty="'+esc(SETTINGS.difficulty)+'"><strong>'+esc(SETTINGS.boss)+'</strong><span class="party-boss-difficulty-chip">'+esc(SETTINGS.difficulty)+'</span></div>';
+  }
+  if(!editing){
+    html+='<details class="party-quick-boss" '+(QUICK_BOSS_OPEN?'open':'')+'><summary>보스 변경 ▾</summary><div class="party-quick-fields"><label>보스<select data-pb-quick-boss '+(SAVING?'disabled':'')+'>';
+    VISIBLE_BOSSES.forEach(function(b){html+='<option '+(b===SETTINGS.boss?'selected':'')+'>'+esc(b)+'</option>'});
+    html+='</select></label><label>난이도<select data-pb-quick-difficulty '+(SAVING?'disabled':'')+'>';
+    var quickDiffs=difficultyChoices(SETTINGS.boss);if(quickDiffs.indexOf(SETTINGS.difficulty)<0)quickDiffs.push(SETTINGS.difficulty);
+    quickDiffs.forEach(function(d){html+='<option '+(d===SETTINGS.difficulty?'selected':'')+'>'+esc(d)+'</option>'});
+    html+='</select></label></div></details>';
   }
   html+='</div>';
   html+='<div class="party-boss-head-actions">';
@@ -1405,7 +1426,7 @@ function renderNow(){
         if(editing)html+='<button type="button" class="party-boss-member-remove" data-pb-remove-member="'+esc(c.key)+'" title="'+esc(c.name)+' 파티에서 빼기 (캐릭터 정보 유지)" aria-label="'+esc(c.name)+' 파티에서 빼기">빼기</button>';
         html+='</div>';
       });
-      html+='</div></article>';
+      html+='</div><button type="button" class="party-create-recruit" data-pb-recruit="'+p.id+'">모집글 만들기</button></article>';
     });
     html+='</div>';
     var mesoTotals=ownerMesoTotals();
@@ -1439,6 +1460,18 @@ function renderNow(){
   panel.innerHTML=html;
   organizePartyPanels(panel,selected.length);
 
+  var quick=panel.querySelector('.party-quick-boss');
+  if(quick)quick.ontoggle=function(){QUICK_BOSS_OPEN=quick.open};
+  var quickBoss=panel.querySelector('[data-pb-quick-boss]');
+  if(quickBoss)quickBoss.onchange=function(){switchViewedBoss(this.value,defaultDifficulty(this.value))};
+  var quickDiff=panel.querySelector('[data-pb-quick-difficulty]');
+  if(quickDiff)quickDiff.onchange=function(){switchViewedBoss(SETTINGS.boss,this.value)};
+  panel.querySelectorAll('[data-pb-recruit]').forEach(function(button){button.onclick=function(){
+    var party=RESULT.find(function(p){return String(p.id)===button.dataset.pbRecruit});
+    if(!party||!party.members.length)return;
+    if(typeof window.createRecruitFromPlan!=="function"){notify("파티 모집 화면에서 다시 시도해 주세요.");return}
+    window.createRecruitFromPlan({boss:SETTINGS.boss,difficulty:SETTINGS.difficulty,partyId:party.id,members:party.members.map(function(c){return {key:c.key,name:c.name,owner:c.ownerName}})});
+  }});
   var editBtn=panel.querySelector("[data-pb-edit]");
   if(editBtn)editBtn.onclick=function(){
     EDIT_MODE=!editing;
@@ -1446,9 +1479,9 @@ function renderNow(){
     render();
   };
   var boss=panel.querySelector("[data-pb-boss]");
-  if(boss)boss.onchange=function(){invalidateComparison();SETTINGS.boss=boss.value;SETTINGS.difficulty=defaultDifficulty(SETTINGS.boss);RESULT=[];markDirty();render()};
+  if(boss)boss.onchange=function(){switchViewedBoss(boss.value,defaultDifficulty(boss.value))};
   var difficulty=panel.querySelector("[data-pb-difficulty]");
-  if(difficulty)difficulty.onchange=function(){invalidateComparison();SETTINGS.difficulty=difficulty.value;RESULT=[];invalidateComparison();markDirty();render()};
+  if(difficulty)difficulty.onchange=function(){switchViewedBoss(SETTINGS.boss,difficulty.value)};
   var size=panel.querySelector("[data-pb-size]");
   if(size)size.onchange=function(){
     var n=Math.floor(Number(size.value)||0);

@@ -522,3 +522,25 @@ html[data-theme="dark"] .party-app .rate-char-picker.owner-themed{
 @media(max-width:660px){
   .party-app .rate-monthly-section{margin-top:13px;padding-top:8px}
 }
+
+/* Browse bosses without opening the editor; draft recruitment from each party. */
+.party-boss-heading.is-viewing{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.party-quick-boss{position:relative;font-size:12px;font-weight:700}
+.party-quick-boss summary{cursor:pointer;list-style:none;padding:8px 10px;border:1px solid var(--line,#ddd);border-radius:8px;background:var(--surface,#fff);white-space:nowrap}
+.party-quick-boss summary::-webkit-details-marker{display:none}
+.party-quick-fields{position:absolute;z-index:20;top:100%;left:0;display:flex;gap:10px;padding:12px;background:var(--surface,#fff);border:1px solid var(--line,#ddd);border-radius:10px;box-shadow:0 6px 24px #0002}
+.party-quick-fields label{display:grid;gap:5px;font-size:12px}
+.party-quick-fields select{max-width:145px;padding:8px;background:var(--surface,#fff);color:inherit;border:1px solid var(--line,#ddd);border-radius:6px}
+.party-create-recruit{display:block;width:calc(100% - 16px);margin:8px;padding:7px;border:1px solid var(--line,#ddd);border-radius:7px;background:var(--surface,#fff);color:var(--accent,#008cc0);font-size:12px;font-weight:700;cursor:pointer}
+.plan-recruit-dialog{width:min(420px,calc(100vw - 32px));box-sizing:border-box;padding:24px;border:1px solid var(--line,#ddd);border-radius:16px;background:var(--surface,#fff);color:var(--text,#17191d)}
+.plan-recruit-dialog::backdrop{background:#0007}
+.plan-recruit-dialog h2{margin:0 0 8px;font-size:22px}
+.plan-recruit-dialog p,.plan-recruit-dialog small{font-size:12px;color:var(--muted,#777);line-height:1.6}
+.plan-recruit-dialog label{display:grid;gap:7px;margin:16px 0;font-size:13px;font-weight:700}
+.plan-recruit-dialog input{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--line,#ddd);border-radius:8px;background:var(--surface,#fff);color:inherit;font:inherit}
+.plan-recruit-members{display:flex;gap:6px;flex-wrap:wrap}
+.plan-recruit-members span{padding:5px 8px;border:1px solid var(--line,#ddd);border-radius:6px;font-size:12px}
+.plan-recruit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+.plan-recruit-actions button{padding:9px 14px;border:1px solid var(--line,#ddd);border-radius:8px;cursor:pointer}
+.plan-recruit-actions button[type=submit]{background:var(--accent,#008cc0);color:white;border-color:transparent}
+@media(max-width:600px){.party-quick-fields{position:static;margin-top:6px}.party-boss-heading.is-viewing{gap:8px}}
