@@ -4801,3 +4801,28 @@ html[data-theme="dark"] .board-check-save-status.status-saved{color:#87d8a9}
 html[data-theme="dark"] .board-check-save-status.status-failed,
 html[data-theme="dark"] .board-check-save-status.status-locked{color:#ff9ba6}
 @media(max-width:959px){.board-check-save-status{font-size:9px}}
+
+
+/* Main navigation – same simple back affordance as the Party workspace. */
+.app-shell>.boss-home-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:32px;
+  padding:7px 12px;
+  margin:0 0 12px;
+  border:1px solid var(--line,#dfe3e8);
+  border-radius:10px;
+  background:var(--surface,#fff);
+  color:var(--text,#13161b);
+  font-size:12px;
+  font-weight:850;
+  line-height:1;
+  text-decoration:none;
+  white-space:nowrap;
+}
+.app-shell>.boss-home-link:hover{border-color:var(--muted,#747b86)}
+.app-shell>.boss-home-link:focus-visible{outline:2px solid var(--accent,#5d55d8);outline-offset:2px}
+@media(max-width:700px){
+  .app-shell>.boss-home-link{min-height:34px;margin-bottom:9px;font-size:11px}
+}
