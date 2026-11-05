@@ -4,38 +4,40 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#f7f8fb">
-  <title>메이플 기록 | 보스 현황판 · 쇼츠</title>
-  <meta name="description" content="보스 현황판과 쇼츠 수익 기록으로 바로 이동하세요.">
+  <title>메이플 기록 | 보스 현황판 · Party · 쇼츠</title>
+  <meta name="description" content="보스 현황판, Party, 쇼츠 수익 기록으로 바로 이동하세요.">
   <meta property="og:type" content="website">
   <meta property="og:title" content="메이플 기록">
-  <meta property="og:description" content="보스 현황판 · 쇼츠 수익 기록">
+  <meta property="og:description" content="보스 현황판 · Party · 쇼츠 수익 기록">
   <meta property="og:url" content="https://noonoo-prog.github.io/0429/">
   <style>
     :root{font-family:"Apple SD Gothic Neo",Pretendard,"Malgun Gothic",system-ui,-apple-system,sans-serif;color-scheme:light;--ink:#212632;--muted:#6b7381;--line:#e5e7ef;--corn:#f1c748;--pink:#fb68a6}
     *{box-sizing:border-box}
     body{margin:0;min-height:100svh;background:radial-gradient(ellipse 400px 220px at 10% 0%,#fff1cc 0%,transparent 95%),radial-gradient(ellipse 420px 320px at 90% 95%,#ffe8f2 0%,transparent 85%),#f7f8fb;color:var(--ink)}
-    .page{width:min(820px,calc(100% - 36px));min-height:100svh;margin:0 auto;display:flex;flex-direction:column;justify-content:center;padding:66px 0}
+    .page{width:min(1020px,calc(100% - 36px));min-height:100svh;margin:0 auto;display:flex;flex-direction:column;justify-content:center;padding:66px 0}
     .eyebrow{display:flex;align-items:center;gap:9px;margin:0 0 15px;color:#777b8a;font-weight:800;font-size:12px;letter-spacing:.12em}
     .dot{width:10px;height:10px;border-radius:4px;background:var(--corn);transform:rotate(-10deg)}
     .dot.pink{background:var(--pink);transform:rotate(10deg);margin-left:-12px}
     h1{margin:0;font-size:clamp(31px,5.4vw,48px);font-weight:900;letter-spacing:-.055em;line-height:1.23}
     .subtitle{font-size:15px;line-height:1.8;color:var(--muted);margin:14px 0 33px}
-    .links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+    .links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
     .card{min-width:0;min-height:226px;display:flex;flex-direction:column;position:relative;gap:15px;padding:26px 23px 21px;border-radius:20px;border:1px solid var(--line);background:#fff;box-shadow:0 12px 30px rgba(34,42,69,.045);color:inherit;text-decoration:none;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;overflow:hidden}
     .card:before{content:"";position:absolute;left:0;top:0;width:100%;height:6px;background:var(--corn)}
     .card.shorts:before{background:linear-gradient(90deg,var(--corn),var(--pink))}
+    .card.party:before{background:#008cc0}
     .card:hover,.card:focus-visible{transform:translateY(-3px);border-color:#bfc7d4;box-shadow:0 19px 36px rgba(34,42,69,.1);outline:none}
     .card:focus-visible{outline:3px solid #6f95ff;outline-offset:4px}
     .card-top{display:flex;justify-content:space-between;align-items:start}
     .card-icon{width:47px;height:47px;display:grid;place-items:center;border-radius:13px;background:#fff3c8;color:#79590f;font-size:22px;font-weight:900;line-height:1}
     .shorts .card-icon{background:#ffe5ee;color:#b72c71}
+    .party .card-icon{background:#e0f3fa;color:#0078a6}
     .arrow{display:grid;place-items:center;border-radius:50%;width:35px;height:35px;color:#555e70;background:#f3f5f8;font-size:23px;line-height:1}
     .card h2{font-size:24px;line-height:1.2;letter-spacing:-.045em;font-weight:900;margin:1px 0 0}
     .card p{font-size:13px;line-height:1.65;color:var(--muted);margin:-3px 0 0;word-break:keep-all}
     .tags{margin-top:auto;display:flex;flex-wrap:wrap;gap:5px}
     .tags span{border-radius:100px;padding:5px 10px;background:#f5f6f8;color:#737a86;font-size:11px;font-weight:750}
     footer{margin-top:30px;color:#9ca2ae;font-size:12px}
-    @media(max-width:900px){.links{grid-template-columns:1fr 1fr}}@media(max-width:600px){.page{justify-content:flex-start;padding-top:clamp(54px,13vh,125px)}.links{grid-template-columns:1fr;gap:12px}.card{min-height:172px;padding:22px}.card h2{font-size:22px}.card p{font-size:12px}.subtitle{margin-bottom:25px}}
+    @media(max-width:900px){.card{padding:22px 17px}.card h2{font-size:22px}}@media(max-width:600px){.page{justify-content:flex-start;padding-top:clamp(54px,13vh,125px)}.links{grid-template-columns:1fr;gap:12px}.card{min-height:172px;padding:22px}.card h2{font-size:22px}.card p{font-size:12px}.subtitle{margin-bottom:25px}}
     @media(prefers-reduced-motion:reduce){.card{transition:none}.card:hover,.card:focus-visible{transform:none}}
   </style>
 </head>
@@ -50,8 +52,14 @@
       <a class="card" href="./boss/">
         <div class="card-top"><div class="card-icon" aria-hidden="true">✓</div><span class="arrow" aria-hidden="true">↗</span></div>
         <h2>보스 현황판</h2>
-        <p>캐릭터별 보스 체크와 파티 기록을 관리해요.</p>
-        <div class="tags"><span>주간 보스</span><span>파티 연동</span></div>
+        <p>주간·월간 보스 체크와 캐릭터 현황을 관리해요.</p>
+        <div class="tags"><span>보스 현황</span><span>체크리스트</span></div>
+      </a>
+      <a class="card party" href="./party/">
+        <div class="card-top"><div class="card-icon" aria-hidden="true">P</div><span class="arrow" aria-hidden="true">↗</span></div>
+        <h2>Party</h2>
+        <p>배율 관리부터 파티 편성과 모집까지 한곳에서.</p>
+        <div class="tags"><span>배율 관리</span><span>파티 계획</span><span>파티 모집</span></div>
       </a>
       <a class="card shorts" href="./shorts/">
         <div class="card-top"><div class="card-icon" aria-hidden="true">▣</div><span class="arrow" aria-hidden="true">↗</span></div>
@@ -60,7 +68,7 @@
         <div class="tags"><span>사용 메소</span><span>쇼츠 이미지</span></div>
       </a>
     </nav>
-    <footer>보스 현황판과 쇼츠 수익은 기존 주소에서도 계속 이용할 수 있어요.</footer>
+    <footer>세 페이지의 기존 기록은 유지되며, Party는 공용 배율 데이터를 사용합니다.</footer>
   </main>
 </body>
 </html>
