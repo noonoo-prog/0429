@@ -173,8 +173,25 @@ function render(){
     html+='<button type="button" data-r-action="filter" data-r-filter="'+f[0]+'" class="'+(filter===f[0]?"selected":"")+'">'+f[1]+'</button>';
   });
   html+='</div><span class="recruit-muted">저장된 파티 '+state.groups.length+'팀</span></div>';
-  if(shown.length){shown.forEach(function(g){html+=groupHtml(g)})}
-  else html+='<div class="recruit-empty">표시할 파티가 없어요. <b>+ 파티 추가</b>로 시작해 보세요.</div>';
+  if(shown.length){
+    var regular=shown.filter(function(g){return !/^grp-hist-/.test(g.id)});
+    if(regular.length){
+      html+='<div class="recruit-collection-title"><strong>모집판에 저장한 파티</strong><span>'+regular.length+'팀</span></div>';
+      regular.forEach(function(g){html+=groupHtml(g)});
+    }
+    var archiveGroups={};
+    shown.filter(function(g){return /^grp-hist-/.test(g.id)}).forEach(function(g){
+      var label=String(g.name||"").split(" · ")[0]||"파티 계획 저장본";
+      if(!archiveGroups[label])archiveGroups[label]=[];
+      archiveGroups[label].push(g);
+    });
+    Object.keys(archiveGroups).forEach(function(label){
+      var list=archiveGroups[label];
+      html+='<section class="recruit-history-group"><div class="recruit-collection-title"><strong>'+esc(label)+'</strong><span>파티 계획 저장본 · '+list.length+'팀</span></div>';
+      list.forEach(function(g){html+=groupHtml(g)});
+      html+='</section>';
+    });
+  }else html+='<div class="recruit-empty">표시할 파티가 없어요. 전체 보기에서 다른 파티를 확인해 주세요.</div>';
   html+='<div class="recruit-footer"><div><strong>'+(dirty?"미저장 변경사항":saving?"저장 중…":"저장된 상태")+'</strong><span>모집 변경은 아래 저장 버튼 · 배율 변경은 배율 관리에서 수동 저장</span></div>';
   html+='<button type="button" class="recruit-small-btn" data-r-action="reload"'+(dirty||saving?' disabled':'')+'>새로고침</button>';
   html+='<button type="button" class="recruit-primary" data-r-action="save"'+(!dirty||saving?' disabled':'')+'>'+(saving?"저장 중…":"저장")+'</button></div>';
