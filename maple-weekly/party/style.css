@@ -590,3 +590,26 @@ html[data-theme="dark"] .party-app .rate-char-picker.owner-themed{
 @media(max-width:600px){
   .party-app .recruit-footer{bottom:5px;padding:8px}
 }
+
+/* Readable party results, with controls confined to editing. */
+.party-app #partyBossPanel .party-boss-result-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important;align-items:stretch}
+.party-app #partyBossPanel .party-boss-party-card{padding:0!important;border:1px solid var(--line)!important;box-shadow:none!important;background:var(--surface)!important;min-height:0!important}
+.party-app #partyBossPanel .party-boss-party-card>header{padding:12px!important;gap:8px;align-items:flex-start;background:transparent!important}
+.party-app #partyBossPanel .party-boss-party-card>header>div:first-child{display:flex;align-items:baseline;flex-wrap:wrap;gap:5px}
+.party-app #partyBossPanel .party-boss-party-card>header>div:first-child>b{font-size:17px!important;line-height:1.3}
+.party-app #partyBossPanel .party-member-count{font-size:12px;color:var(--muted);font-weight:500}
+.party-app #partyBossPanel .party-boss-party-card>header em{font-size:11px!important;color:#c65044!important;flex-basis:100%;margin:3px 0 0!important}
+.party-app #partyBossPanel .party-boss-party-totals>strong{font-size:21px!important;font-variant-numeric:tabular-nums;line-height:1.25}
+.party-app #partyBossPanel .party-boss-party-totals>small{font-size:11px!important;color:var(--muted)!important;margin-top:4px}
+.party-app #partyBossPanel .party-boss-members{padding:0 8px 8px!important;gap:5px!important}
+.party-app #partyBossPanel .party-boss-member{display:flex!important;align-items:center;gap:7px!important;min-height:38px!important;padding:7px 9px!important;border:0!important;border-left:3px solid var(--owner-accent,#8b96a5)!important;background:color-mix(in srgb,var(--owner-accent,#8b96a5) 14%,var(--surface))!important;box-sizing:border-box;flex-wrap:wrap}
+.party-app #partyBossPanel .party-boss-member>div{flex:1;min-width:0}
+.party-app #partyBossPanel .party-boss-member>div>b,.party-app #partyBossPanel .party-member-name{font-size:13px!important;font-weight:750;overflow-wrap:anywhere;color:var(--text)}
+.party-app #partyBossPanel .party-member-name{border:0;background:transparent;padding:0;text-align:left;cursor:pointer;font-family:inherit;line-height:1.4}
+.party-app #partyBossPanel .party-member-name:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.party-app #partyBossPanel .party-boss-member>strong{font-size:13px!important;white-space:nowrap;font-variant-numeric:tabular-nums;margin-left:auto}
+.party-app #partyBossPanel .party-boss-member.manual-picked{outline:2px solid var(--owner-accent);outline-offset:-2px}
+.party-app #partyBossPanel .party-boss-target-success{background:transparent;border:0;color:var(--muted);font-size:12px;padding:4px 0 10px}
+@media(max-width:1100px){.party-app #partyBossPanel .party-boss-result-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media(max-width:850px){.party-app #partyBossPanel .party-boss-result-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:560px){.party-app #partyBossPanel .party-boss-result-grid{grid-template-columns:minmax(0,1fr)!important}}

@@ -1392,7 +1392,7 @@ function renderNow(){
     }else{
       html+='<div class="party-boss-target-success" role="status">모든 파티가 최소 목표 '+formatRate(target)+'를 충족했습니다.</div>';
     }
-    if(editing)html+='<div class="party-boss-manual-help" role="status"><span><b>직접 편집</b> <b>이동</b> · <b>빼기</b>로 조정할 수 있어요. PC에서는 드래그도 가능합니다.</span>'+(MANUAL_UNDO?'<button type="button" data-pb-undo="1">직전 편집 취소</button>':'')+'</div>';
+    if(editing)html+='<div class="party-boss-manual-help" role="status"><span><b>직접 편집</b> 캐릭터 이름을 선택하면 이동·빼기가 나타납니다. 다른 파티의 이름을 누르면 교환합니다. PC에서는 드래그도 가능합니다.</span>'+(MANUAL_UNDO?'<button type="button" data-pb-undo="1">직전 편집 취소</button>':'')+'</div>';
     if(MANUAL_PICK){
       var selectedMember=findResultMember(MANUAL_PICK);
       if(selectedMember)html+='<div class="party-boss-manual-pick"><span><b>'+esc(selectedMember.member.name)+'</b> 선택됨 · 대상 파티나 교환할 캐릭터를 골라 주세요.</span><button type="button" data-pb-cancel-pick="1">취소</button></div>';
@@ -1400,9 +1400,9 @@ function renderNow(){
     html+='<div class="party-boss-result-grid">';
     RESULT.forEach(function(p){
       html+='<article class="party-boss-party-card '+(p.total<target?"out-target":(p.total<=target*1.1?"in-target":"above-target"))+(MANUAL_PICK?" manual-target":"")+'" data-pb-drop-party="'+p.id+'">';
-      var status=p.total<target?"미달 "+formatRate(target-p.total):(p.total>target*1.1?"권장 범위 초과":"목표 충족");
+      var status=p.total<target?"목표까지 "+formatRate(target-p.total)+" 부족":"";
       var partyMesoEach=crystalPrice()/Math.max(1,p.members.length);
-      html+='<header><div><span>'+p.id+'</span><b>'+p.id+'파티 · '+p.members.length+'명</b>'+(status?'<em>'+status+'</em>':'')+'</div><div class="party-boss-party-totals"><strong>'+formatRate(p.total)+'</strong><small>인당 '+formatMeso(partyMesoEach)+'</small></div></header>';
+      html+='<header><div><span>'+p.id+'</span><b>'+p.id+'파티</b><small class="party-member-count">'+p.members.length+'명</small>'+(status?'<em>'+status+'</em>':'')+'</div><div class="party-boss-party-totals"><strong>'+formatRate(p.total)+'</strong><small>인당 '+formatMeso(partyMesoEach)+'</small></div></header>';
       if(MANUAL_PICK&&findResultMember(MANUAL_PICK).partyIndex!==RESULT.indexOf(p)){
         html+='<div class="party-boss-drop-actions"><button type="button" data-pb-move-target="'+p.id+'">여기로 이동</button></div>';
       }
@@ -1420,13 +1420,13 @@ function renderNow(){
         var other=MANUAL_PICK&&findResultMember(MANUAL_PICK).partyIndex!==RESULT.indexOf(p);
         html+='<div class="party-boss-member owner-themed'+(picked?" manual-picked":"")+'" data-theme="'+c.theme+'" draggable="'+(editing?'true':'false')+'" data-pb-drag-member="'+esc(c.key)+'" data-pb-swap-drop="'+esc(c.key)+'" data-pb-member-party="'+p.id+'">';
         html+='<span class="party-boss-member-dot"></span>';
-        html+='<div><b>'+esc(c.name)+'</b>'+(c.external?'<small>'+esc(c.ownerName)+'</small>':'')+'</div>';
+        html+='<div>'+(editing?'<button type="button" class="party-member-name" data-pb-member-action="'+esc(c.key)+'" data-pb-member-party="'+p.id+'" aria-pressed="'+picked+'">'+esc(c.name)+'</button>':'<b>'+esc(c.name)+'</b>')+(c.external?'<small>'+esc(c.ownerName)+'</small>':'')+'</div>';
         html+='<strong>'+formatRate(c.multiplier)+'</strong>';
-        if(editing)html+='<button type="button" class="party-boss-member-action'+(picked?" selected":"")+(other?" swap":"")+'" data-pb-member-action="'+esc(c.key)+'" data-pb-member-party="'+p.id+'" aria-pressed="'+(picked?"true":"false")+'">'+(picked?"취소":(other?"교환":"이동"))+'</button>';
-        if(editing)html+='<button type="button" class="party-boss-member-remove" data-pb-remove-member="'+esc(c.key)+'" title="'+esc(c.name)+' 파티에서 빼기 (캐릭터 정보 유지)" aria-label="'+esc(c.name)+' 파티에서 빼기">빼기</button>';
+        if(editing&&picked)html+='<button type="button" class="party-boss-member-action'+(picked?" selected":"")+(other?" swap":"")+'" data-pb-member-action="'+esc(c.key)+'" data-pb-member-party="'+p.id+'" aria-pressed="'+(picked?"true":"false")+'">'+(picked?"취소":(other?"교환":"이동"))+'</button>';
+        if(editing&&picked)html+='<button type="button" class="party-boss-member-remove" data-pb-remove-member="'+esc(c.key)+'" title="'+esc(c.name)+' 파티에서 빼기 (캐릭터 정보 유지)" aria-label="'+esc(c.name)+' 파티에서 빼기">빼기</button>';
         html+='</div>';
       });
-      html+='</div><button type="button" class="party-create-recruit" data-pb-recruit="'+p.id+'">모집글 만들기</button></article>';
+      html+='</div>'+(editing?'<button type="button" class="party-create-recruit" data-pb-recruit="'+p.id+'">모집글 만들기</button>':'')+'</article>';
     });
     html+='</div>';
     var mesoTotals=ownerMesoTotals();
