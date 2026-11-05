@@ -497,3 +497,28 @@ html[data-theme="dark"] .party-app .rate-char-picker.owner-themed{
   }
   .party-app #partyBossPanel .party-boss-boss-title{gap:8px}
 }
+
+
+/* Keep monthly Black Mage separate from the six-column weekly boss board. */
+.party-app .rate-section-title{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:8px;margin:9px 1px 8px;min-height:23px;
+}
+.party-app .rate-section-title>strong{
+  color:var(--text);font-size:12px;font-weight:900;
+}
+.party-app .rate-section-title>span{
+  color:var(--muted);font-size:10px;font-weight:650;
+}
+.party-app .rate-monthly-section{
+  margin-top:18px;padding-top:11px;border-top:1px solid var(--line);
+}
+.party-app .rate-monthly-section .rate-section-title{
+  margin-top:0;
+}
+.party-app .rate-monthly-section .rate-group{
+  border-color:var(--line-strong);
+}
+@media(max-width:660px){
+  .party-app .rate-monthly-section{margin-top:13px;padding-top:8px}
+}
