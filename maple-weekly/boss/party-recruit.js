@@ -4,9 +4,9 @@ var ROOT="https://ibqpjcedzcllacbamrnu.supabase.co/functions/v1/";
 var KEY="sb_publishable_s-EiUNh66D17Xd3JFGUyvA_aNEDNMKq";
 var BOSSES=["스우","세렌","칼로스","대적자","카링","흉성","벨로나","림보","발드릭스","유피테르","검은 마법사"];
 var DIFFICULTY_RATES={};
-function activeDifficulties(boss){if(boss==="스우")return ["익스트림"];if(boss==="세렌")return ["하드","익스트림"];return (DIFFS[boss]||[]).slice()}
+function activeDifficulties(boss){if(boss==="스우")return ["익스트림"];return (DIFFS[boss]||[]).slice()}
 function bossOptions(current){var list=BOSSES.slice();if(current&&list.indexOf(current)<0)list.push(current);return list}
-var DIFFS={"스우":["노말","하드","익스트림"],"데미안":["노말","하드"],"가엔슬":["노말","카오스"],"루시드":["이지","노말","하드"],"윌":["이지","노말","하드"],"더스크":["노말","카오스"],"진힐라":["노말","하드"],"듄켈":["노말","하드"],"세렌":["노말","하드","익스트림"],"칼로스":["이지","노말","카오스","익스트림"],"대적자":["이지","노말","하드","익스트림"],"카링":["이지","노말","하드","익스트림"],"흉성":["노말","하드"],"벨로나":["이지","노말","하드"],"림보":["노말","하드"],"발드릭스":["노말","하드"],"유피테르":["노말","하드"],"검은 마법사":["하드","익스트림"]};
+var DIFFS={"스우":["노말","하드","익스트림"],"데미안":["노말","하드"],"가엔슬":["노말","카오스"],"루시드":["이지","노말","하드"],"윌":["이지","노말","하드"],"더스크":["노말","카오스"],"진힐라":["노말","하드"],"듄켈":["노말","하드"],"세렌":["노말","하드","익스트림","데스티니","챔피언"],"칼로스":["이지","노말","카오스","익스트림","데스티니","챔피언"],"대적자":["이지","노말","하드","익스트림","데스티니"],"카링":["이지","노말","하드","익스트림","데스티니"],"흉성":["노말","하드"],"벨로나":["이지","노말","하드"],"림보":["노말","하드","익스트림","데스티니"],"발드릭스":["노말","하드","익스트림","데스티니"],"유피테르":["노말","하드"],"검은 마법사":["하드","익스트림","챔피언"]};
 var state={groups:[],people:[]},plan={},owners=[],people=[],revision=0;
 var pendingRates={},rateQueue={},rateSequence=0;
 var loaded=false,loading=false,dirty=false,saving=false,lastFetch=0,filter="recruiting",error="";
