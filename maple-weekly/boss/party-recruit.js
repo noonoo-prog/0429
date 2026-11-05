@@ -321,6 +321,11 @@ function wire(){
   el.addEventListener("change",change);
   el.addEventListener("toggle",trackDetails,true);
 }
+window.refreshPartyRecruitRates=function(){
+  if(!loaded||loading)return;
+  if(dirty)refreshPlan();
+  else loadAll(true);
+};
 window.renderPartyRecruitPage=function(){
   wire();
   if(!loaded&&!loading){loadAll(false);return}
