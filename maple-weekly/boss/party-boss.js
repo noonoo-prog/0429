@@ -89,6 +89,30 @@ function readJSON(key,fallback){
   }catch(e){return fallback}
 }
 var MULT=readJSON(MULT_KEY,{});
+var DIFFICULTY_RATES={},RATE_PENDING={},RATE_WRITES={},RATE_SEQ=0,RATE_READY=false;
+var RECRUIT_RATE_API=SUPABASE_URL+"/functions/v1/boss-party-recruit";
+var VISIBLE_BOSSES=["스우","세렌","칼로스","대적자","카링","흉성","벨로나","림보","발드릭스","유피테르","검은 마법사"];
+function difficultyChoices(boss){
+  var all=BOSS_DIFFICULTIES[boss]||[];
+  if(boss==="스우")return ["익스트림"];
+  if(boss==="세렌")return ["하드","익스트림"];
+  return all.slice();
+}
+function rateApi(action,extra){
+  return fetch(RECRUIT_RATE_API,{method:"POST",mode:"cors",cache:"no-store",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},body:JSON.stringify(Object.assign({action:action},extra||{}))}).then(function(r){
+    return r.json().then(function(data){if(!r.ok||data.ok===false)throw new Error(data.error||"배율 서버 요청 실패");return data});
+  });
+}
+function loadDifficultyRates(){
+  return rateApi("rate_get").then(function(data){
+    DIFFICULTY_RATES=data.rates||{};RATE_READY=true;
+    render();return true;
+  }).catch(function(e){notify("난이도별 배율 불러오기 실패: "+e.message);return false});
+}
+function rateRef(boss,difficulty,key){return boss+"||"+difficulty+"||"+key}
+function legacyRateFor(boss,key){var m=MULT[boss];return Math.max(0,Number(m&&m[key])||0)}
+function hasDifficultyRate(boss,difficulty,key){return !!(DIFFICULTY_RATES[boss]&&DIFFICULTY_RATES[boss][difficulty]&&Object.prototype.hasOwnProperty.call(DIFFICULTY_RATES[boss][difficulty],key))}
+
 var LEGACY_MULT=readJSON(LEGACY_MULT_KEY,{});
 var SELECTED=readJSON(SELECT_KEY,[]);
 var SETTINGS=Object.assign({boss:"카링",difficulty:"하드",partySize:"any",partyCount:0,targetRate:130,mode:"strong"},readJSON(SETTINGS_KEY,{}));
@@ -454,15 +478,29 @@ function bossMultiplierMap(boss,create){
   return null;
 }
 function getBossMultiplier(boss,key){
-  var map=bossMultiplierMap(boss,false);
-  if(map)return Math.max(0,Number(map[key])||0);
-  return 0;
+  var difficulty=SETTINGS.difficulty;
+  var ref=rateRef(boss,difficulty,key);
+  if(RATE_PENDING[ref])return RATE_PENDING[ref].value;
+  return hasDifficultyRate(boss,difficulty,key)?Math.max(0,Number(DIFFICULTY_RATES[boss][difficulty][key])||0):0;
 }
 function setBossMultiplier(boss,key,value){
-  var map=bossMultiplierMap(boss,true);
-  value=Math.max(0,Number(value)||0);
-  if(value>0)map[key]=value;
-  else delete map[key];
+  var difficulty=SETTINGS.difficulty;
+  value=Number(value);
+  if(!Number.isFinite(value)||value<0||value>100000){notify("배율은 0~100000 사이로 입력해 주세요.");return}
+  var ref=rateRef(boss,difficulty,key),seq=++RATE_SEQ;
+  RATE_PENDING[ref]={value:value,seq:seq};
+  var current=RATE_WRITES[ref]||Promise.resolve();
+  RATE_WRITES[ref]=current.catch(function(){}).then(function(){
+    return rateApi("rate_set",{boss:boss,difficulty:difficulty,key:key,value:value});
+  }).then(function(data){
+    if(!DIFFICULTY_RATES[boss])DIFFICULTY_RATES[boss]={};
+    if(!DIFFICULTY_RATES[boss][difficulty])DIFFICULTY_RATES[boss][difficulty]={};
+    DIFFICULTY_RATES[boss][difficulty][key]=data.value;
+    if(RATE_PENDING[ref]&&RATE_PENDING[ref].seq===seq){delete RATE_PENDING[ref];notify("공용 배율을 저장했어요.")}
+    render();
+  }).catch(function(e){
+    if(RATE_PENDING[ref]&&RATE_PENDING[ref].seq===seq){delete RATE_PENDING[ref];notify("배율 저장 실패: "+e.message);render()}
+  });
 }
 function materializeCurrentBossMultipliers(){
   bossMultiplierMap(String(SETTINGS.boss||""),true);
@@ -1183,7 +1221,7 @@ function renderNow(){
 
   html+='<section class="party-boss-shell">';
   html+='<header class="party-boss-head">';
-  html+='<div><span>PARTY BALANCER</span><strong>파티보스</strong><p>파티 구성과 배율을 한눈에 확인하세요.</p></div>';
+  html+='<div><span>PARTY BALANCER</span><strong>파티보스 계획</strong><p>캐릭터·보스·난이도별 배율을 모집과 공유합니다.</p></div>';
   html+='<div class="party-boss-head-actions">';
   html+='<span class="party-boss-shared-meta">'+esc(sharedMetaText())+'</span>';
   html+='<button class="party-boss-save '+(DIRTY&&!SAVING?"needs-save":"")+'" type="button" data-pb-save="1" '+(SAVING?"disabled":"")+'>'+(SAVING?"저장 중…":(DIRTY?"저장":"공용 저장됨"))+'</button>';
@@ -1193,14 +1231,16 @@ function renderNow(){
   html+='</header>';
 
   html+='<section class="party-boss-controls">';
+  html+='<div class="party-boss-legacy-notice" style="font-size:12px;color:var(--muted);margin:6px 0">기존 보스별 배율은 난이도가 확인되지 않은 기록으로 보존됩니다. 현재 난이도의 배율을 확인해 직접 입력하세요.</div>';
   html+='<label><span>보스</span><select data-pb-boss="1">';
   BOSSES.forEach(function(b){
+    if(VISIBLE_BOSSES.indexOf(b)<0&&b!==SETTINGS.boss)return;
     html+='<option value="'+esc(b)+'" '+(SETTINGS.boss===b?"selected":"")+'>'+esc(b)+'</option>';
   });
   html+='</select></label>';
   normalizeDifficulty();
   html+='<label><span>난이도</span><select data-pb-difficulty="1">';
-  (BOSS_DIFFICULTIES[SETTINGS.boss]||[]).forEach(function(d){
+  (difficultyChoices(SETTINGS.boss).indexOf(SETTINGS.difficulty)>=0?difficultyChoices(SETTINGS.boss):difficultyChoices(SETTINGS.boss).concat([SETTINGS.difficulty])).forEach(function(d){
     html+='<option value="'+esc(d)+'" '+(SETTINGS.difficulty===d?"selected":"")+'>'+esc(d)+'</option>';
   });
   html+='</select></label>';
@@ -1244,7 +1284,7 @@ function renderNow(){
       var rate=getBossMultiplier(SETTINGS.boss,key);
       html+='<article class="party-boss-external-person party-boss-char owner-themed '+(chosen?"active":"")+'" data-theme="guest">';
       html+='<button type="button" class="party-boss-external-select party-boss-char-toggle" data-pb-char="'+esc(key)+'" aria-pressed="'+(chosen?"true":"false")+'"><span class="party-boss-char-name"><b>'+esc(g.name)+'</b>'+(g.owner?'<small>'+esc(g.owner)+'</small>':'')+'</span></button>';
-      html+='<label><span>배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(key)+'" value="'+String(rate)+'" aria-label="'+esc(g.name)+' 배율"></label>';
+      html+='<label><span>배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(key)+'" value="'+String(rate||"")+'" placeholder="'+esc(legacyRateFor(SETTINGS.boss,key)?("기존 "+legacyRateFor(SETTINGS.boss,key)+"%"):"미입력")+'" title="기존값은 난이도 미확인 · 입력하면 현재 난이도에 저장" aria-label="'+esc(g.name)+' 배율"></label>';
       html+='<button type="button" class="party-boss-external-remove" data-pb-guest-remove="'+esc(g.id)+'" aria-label="'+esc(g.name)+' 용병 삭제" title="용병 삭제">삭제</button>';
       html+='</article>';
     });
@@ -1279,7 +1319,7 @@ function renderNow(){
       html+='<button class="party-boss-char-toggle" type="button" data-pb-char="'+esc(c.key)+'" aria-pressed="'+(active?"true":"false")+'">';
       html+='<span class="party-boss-char-name"><b>'+esc(c.name)+'</b></span>';
       html+='</button>';
-      html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(c.key)+'" value="'+String(c.multiplier||0)+'" placeholder="0" aria-label="'+esc(c.name)+' 배율 직접 수정" title="배율 직접 수정 가능"></label>';
+      html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(c.key)+'" value="'+String(c.multiplier||"")+'" placeholder="'+esc(legacyRateFor(SETTINGS.boss,c.key)?("기존 "+legacyRateFor(SETTINGS.boss,c.key)+"%"):"미입력")+'" aria-label="'+esc(c.name)+' 배율 직접 수정" title="기존값은 난이도 미확인 · 입력하면 현재 난이도에 저장"></label>';
       html+='</article>';
     });
     html+='</div></section>';
@@ -1591,12 +1631,12 @@ function renderNow(){
   });
   Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-mult]"),function(input){
     input.onchange=function(){
-      invalidateComparison();
       var key=input.dataset.pbMult;
-      var v=Math.max(0,Number(input.value)||0);
+      var value=input.value.trim(),v=value===""?0:Number(value);
+      if(!Number.isFinite(v)||v<0||v>100000){notify("배율이 올바르지 않아요.");render();return}
+      invalidateComparison();
       setBossMultiplier(SETTINGS.boss,key,v);
       RESULT=[];
-      markDirty();
       render();
     };
     input.onclick=function(e){e.stopPropagation()};
@@ -1605,12 +1645,12 @@ function renderNow(){
 
 window.refreshPartyBossShared=function(){
   if(DIRTY||SAVING||partyEditing())return Promise.resolve(false);
-  return loadSharedState(false);
+  return Promise.all([loadSharedState(false),loadDifficultyRates()]);
 };
 window.renderPartyBossPage=function(){
   fetchBoard(false).then(function(){
     return loadSharedState(false);
-  }).then(render).catch(function(e){
+  }).then(loadDifficultyRates).then(render).catch(function(e){
     var panel=document.getElementById("partyBossPanel");
     if(panel)panel.innerHTML='<div class="party-boss-empty"><strong>파티보스를 불러오지 못했어요.</strong><span>'+esc(e.message||"연결 오류")+'</span></div>';
   });
@@ -1625,7 +1665,7 @@ window.addEventListener("beforeunload",function(e){
 document.addEventListener("DOMContentLoaded",function(){
   fetchBoard(true).then(function(){
     return loadSharedState(false);
-  }).then(function(){
+  }).then(loadDifficultyRates).then(function(){
     if(document.getElementById("partyBossPanel"))render();
   }).catch(function(){});
 });
