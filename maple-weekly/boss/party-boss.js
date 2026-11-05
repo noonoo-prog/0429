@@ -111,7 +111,6 @@ function loadDifficultyRates(){
   }).catch(function(e){notify("난이도별 배율 불러오기 실패: "+e.message);return false});
 }
 function rateRef(boss,difficulty,key){return boss+"||"+difficulty+"||"+key}
-function legacyRateFor(boss,key){var m=MULT[boss];return Math.max(0,Number(m&&m[key])||0)}
 function hasDifficultyRate(boss,difficulty,key){return !!(DIFFICULTY_RATES[boss]&&DIFFICULTY_RATES[boss][difficulty]&&Object.prototype.hasOwnProperty.call(DIFFICULTY_RATES[boss][difficulty],key))}
 
 var LEGACY_MULT=readJSON(LEGACY_MULT_KEY,{});
@@ -484,25 +483,6 @@ function getBossMultiplier(boss,key){
   if(RATE_PENDING[ref])return RATE_PENDING[ref].value;
   return hasDifficultyRate(boss,difficulty,key)?Math.max(0,Number(DIFFICULTY_RATES[boss][difficulty][key])||0):0;
 }
-function setBossMultiplier(boss,key,value){
-  var difficulty=SETTINGS.difficulty;
-  value=Number(value);
-  if(!Number.isFinite(value)||value<0||value>100000){notify("배율은 0~100000 사이로 입력해 주세요.");return}
-  var ref=rateRef(boss,difficulty,key),seq=++RATE_SEQ;
-  RATE_PENDING[ref]={value:value,seq:seq};
-  var current=RATE_WRITES[ref]||Promise.resolve();
-  RATE_WRITES[ref]=current.catch(function(){}).then(function(){
-    return rateApi("rate_set",{boss:boss,difficulty:difficulty,key:key,value:value});
-  }).then(function(data){
-    if(!DIFFICULTY_RATES[boss])DIFFICULTY_RATES[boss]={};
-    if(!DIFFICULTY_RATES[boss][difficulty])DIFFICULTY_RATES[boss][difficulty]={};
-    DIFFICULTY_RATES[boss][difficulty][key]=data.value;
-    if(RATE_PENDING[ref]&&RATE_PENDING[ref].seq===seq){delete RATE_PENDING[ref];notify("공용 배율을 저장했어요.")}
-    render();
-  }).catch(function(e){
-    if(RATE_PENDING[ref]&&RATE_PENDING[ref].seq===seq){delete RATE_PENDING[ref];notify("배율 저장 실패: "+e.message);render()}
-  });
-}
 function materializeCurrentBossMultipliers(){
   bossMultiplierMap(String(SETTINGS.boss||""),true);
 }
@@ -510,7 +490,7 @@ function guestKey(g){return "guest|"+String(g.id||"")}
 function guestOwnerKey(g){
   return "guest-owner:"+(String(g.owner||"").trim().toLowerCase()||g.id);
 }
-function addGuest(name,owner,rate){
+function addGuest(name,owner){
   name=String(name||"").trim().slice(0,30);
   owner=String(owner||"").trim().slice(0,30);
   if(!name){notify("용병 캐릭터 이름을 입력해 주세요.");return}
@@ -521,8 +501,6 @@ function addGuest(name,owner,rate){
   var g={id:"ext-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8),name:name,owner:owner};
   GUESTS.push(g);
   var key=guestKey(g);
-  var value=Math.max(0,Number(rate)||0);
-  if(value>0)setBossMultiplier(SETTINGS.boss,key,value);
   SELECTED.push(key);
   RESULT=[];
   invalidateComparison();
@@ -1232,7 +1210,7 @@ function renderNow(){
   html+='</header>';
 
   html+='<section class="party-boss-controls">';
-  html+='<div class="party-boss-legacy-notice" style="font-size:12px;color:var(--muted);margin:6px 0">기존 보스별 배율은 난이도가 확인되지 않은 기록으로 보존됩니다. 현재 난이도의 배율을 확인해 직접 입력하세요.</div>';
+  html+='<p class="party-boss-rate-info" style="margin:0 0 7px;color:var(--muted);font-size:11px">배율은 <a href="#rates" style="color:var(--accent);font-weight:800">배율 관리</a>에서 수정 후 직접 저장하세요.</p>';
   html+='<label><span>보스</span><select data-pb-boss="1">';
   BOSSES.forEach(function(b){
     if(VISIBLE_BOSSES.indexOf(b)<0&&b!==SETTINGS.boss)return;
@@ -1285,7 +1263,7 @@ function renderNow(){
       var rate=getBossMultiplier(SETTINGS.boss,key);
       html+='<article class="party-boss-external-person party-boss-char owner-themed '+(chosen?"active":"")+'" data-theme="guest">';
       html+='<button type="button" class="party-boss-external-select party-boss-char-toggle" data-pb-char="'+esc(key)+'" aria-pressed="'+(chosen?"true":"false")+'"><span class="party-boss-char-name"><b>'+esc(g.name)+'</b>'+(g.owner?'<small>'+esc(g.owner)+'</small>':'')+'</span></button>';
-      html+='<label><span>배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(key)+'" value="'+String(rate||"")+'" placeholder="'+esc(legacyRateFor(SETTINGS.boss,key)?("기존 "+legacyRateFor(SETTINGS.boss,key)+"%"):"미입력")+'" title="기존값은 난이도 미확인 · 입력하면 현재 난이도에 저장" aria-label="'+esc(g.name)+' 배율"></label>';
+      html+='<label><span>배율</span><input type="number" min="0" step="0.01" inputmode="decimal" readonly value="'+String(rate||"")+'" placeholder="미입력" title="배율 관리에서 수정 후 직접 저장" aria-label="'+esc(g.name)+' 배율 (읽기 전용)"></label>';
       html+='<button type="button" class="party-boss-external-remove" data-pb-guest-remove="'+esc(g.id)+'" aria-label="'+esc(g.name)+' 용병 삭제" title="용병 삭제">삭제</button>';
       html+='</article>';
     });
@@ -1296,7 +1274,6 @@ function renderNow(){
   html+='<form class="party-boss-external-form" data-pb-guest-form="1">';
   html+='<label><span>용병 닉네임</span><input data-pb-guest-name="1" type="text" maxlength="30" placeholder="캐릭터 이름" required autocomplete="off"></label>';
   html+='<label><span>주인 / 소속</span><input data-pb-guest-owner="1" type="text" maxlength="30" placeholder="선택 입력" autocomplete="off"></label>';
-  html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input data-pb-guest-rate="1" type="number" min="0" step="0.01" inputmode="decimal" value="0" aria-label="용병 배율"></label>';
   html+='<button type="submit">+ 용병 추가</button>';
   html+='</form>';
   html+='<p class="party-boss-external-note">용병은 파티보스에서만 사용합니다. 같은 주인은 한 파티에 1명만 배정합니다. 변경 후 저장을 눌러 주세요.</p>';
@@ -1320,7 +1297,7 @@ function renderNow(){
       html+='<button class="party-boss-char-toggle" type="button" data-pb-char="'+esc(c.key)+'" aria-pressed="'+(active?"true":"false")+'">';
       html+='<span class="party-boss-char-name"><b>'+esc(c.name)+'</b></span>';
       html+='</button>';
-      html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input type="number" min="0" step="0.01" inputmode="decimal" data-pb-mult="'+esc(c.key)+'" value="'+String(c.multiplier||"")+'" placeholder="'+esc(legacyRateFor(SETTINGS.boss,c.key)?("기존 "+legacyRateFor(SETTINGS.boss,c.key)+"%"):"미입력")+'" aria-label="'+esc(c.name)+' 배율 직접 수정" title="기존값은 난이도 미확인 · 입력하면 현재 난이도에 저장"></label>';
+      html+='<label><span>'+esc(SETTINGS.boss)+' 배율</span><input type="number" min="0" step="0.01" inputmode="decimal" readonly value="'+String(c.multiplier||"")+'" placeholder="미입력" aria-label="'+esc(c.name)+' 배율 (읽기 전용)" title="배율 관리에서 수정 후 직접 저장"></label>';
       html+='</article>';
     });
     html+='</div></section>';
@@ -1609,8 +1586,7 @@ function renderNow(){
     e.preventDefault();
     addGuest(
       guestForm.querySelector("[data-pb-guest-name]").value,
-      guestForm.querySelector("[data-pb-guest-owner]").value,
-      guestForm.querySelector("[data-pb-guest-rate]").value
+      guestForm.querySelector("[data-pb-guest-owner]").value
     );
   };
   Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-guest-remove]"),function(btn){
@@ -1629,18 +1605,6 @@ function renderNow(){
       markDirty();
       render();
     };
-  });
-  Array.prototype.forEach.call(panel.querySelectorAll("[data-pb-mult]"),function(input){
-    input.onchange=function(){
-      var key=input.dataset.pbMult;
-      var value=input.value.trim(),v=value===""?0:Number(value);
-      if(!Number.isFinite(v)||v<0||v>100000){notify("배율이 올바르지 않아요.");render();return}
-      invalidateComparison();
-      setBossMultiplier(SETTINGS.boss,key,v);
-      RESULT=[];
-      render();
-    };
-    input.onclick=function(e){e.stopPropagation()};
   });
 }
 
