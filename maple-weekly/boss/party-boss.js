@@ -106,6 +106,7 @@ function rateApi(action,extra){
 function loadDifficultyRates(){
   return rateApi("rate_get").then(function(data){
     DIFFICULTY_RATES=data.rates||{};RATE_READY=true;
+    if(!DIRTY&&!SAVING&&!partyEditing()&&Array.isArray(SAVED_RESULT)&&SAVED_RESULT.length)restoreSavedResult();
     render();return true;
   }).catch(function(e){notify("난이도별 배율 불러오기 실패: "+e.message);return false});
 }
@@ -127,7 +128,7 @@ SETTINGS.targetRate=Math.max(1,Number(SETTINGS.targetRate)||130);
 SETTINGS.mode=normalizeMode(SETTINGS.mode);
 
 function defaultDifficulty(boss){
-  var list=BOSS_DIFFICULTIES[boss]||[];
+  var list=difficultyChoices(boss);
   if(boss==="검은 마법사"&&list.indexOf("익스트림")>=0)return "익스트림";
   return list.indexOf("하드")>=0?"하드":String(list[0]||"");
 }
@@ -1464,7 +1465,7 @@ function renderNow(){
   var boss=panel.querySelector("[data-pb-boss]");
   if(boss)boss.onchange=function(){invalidateComparison();SETTINGS.boss=boss.value;SETTINGS.difficulty=defaultDifficulty(SETTINGS.boss);RESULT=[];markDirty();render()};
   var difficulty=panel.querySelector("[data-pb-difficulty]");
-  if(difficulty)difficulty.onchange=function(){invalidateComparison();SETTINGS.difficulty=difficulty.value;markDirty();render()};
+  if(difficulty)difficulty.onchange=function(){invalidateComparison();SETTINGS.difficulty=difficulty.value;RESULT=[];invalidateComparison();markDirty();render()};
   var size=panel.querySelector("[data-pb-size]");
   if(size)size.onchange=function(){
     var n=Math.floor(Number(size.value)||0);
