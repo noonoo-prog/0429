@@ -56,9 +56,14 @@ function importBossCutText(text){
   const match=pasteText.match(/Lv\.\s*\d+\s+([^\/\n\r]+)\s*\//);
   if(match){
     const pastedName=match[1].trim();
-    const char=characters.find(c=>c.key===selected);
-    if(char&&pastedName!==char.name){
-      pasteMessage="붙여넣은 캐릭터("+pastedName+")와 선택한 캐릭터("+char.name+")가 달라요. 먼저 선택을 바꿔 주세요.";
+    const matches=characters.filter(c=>c.name===pastedName);
+    if(matches.length===1){
+      selected=matches[0].key; // Full-page copy identifies the registered character unambiguously.
+    }else if(matches.length===0){
+      pasteMessage="붙여넣은 캐릭터("+pastedName+")가 보스 현황판에 등록되어 있지 않아요.";
+      pasteIsError=true;pasteParsedCount=0;renderRates();return;
+    }else if(!matches.some(c=>c.key===selected)){
+      pasteMessage="캐릭터명 "+pastedName+"이(가) 중복돼요. 소속을 확인해 캐릭터를 직접 선택해 주세요.";
       pasteIsError=true;pasteParsedCount=0;renderRates();return;
     }
   }
