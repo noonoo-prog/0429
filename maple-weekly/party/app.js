@@ -284,8 +284,9 @@ function renderRates(){
   if(!chosen){
     code+='<div class="rate-empty">등록된 캐릭터가 없어요. 보스 현황판에서 캐릭터를 추가해 주세요.</div>';
   }else{
-    code+='<div class="rate-grid'+(editingRates?' is-editing':' is-readonly')+'">';
-    BOSSES.forEach(b=>{
+    // Render monthly Black Mage separately, without changing the stored rate keys.
+    const monthlyBoss=BOSSES.find(b=>b.name==="검은 마법사");
+    const renderBossCard=b=>{
       let count=0;
       b.diff.forEach(d=>{if(readRate(selected,b.name,d)!=="")count++});
       code+='<section class="rate-group"><h3>'+htmlEscape(b.name)+'<small>'+count+'/'+b.diff.length+'</small></h3>';
@@ -303,8 +304,18 @@ function renderRates(){
         code+='</div>';
       });
       code+='</section>';
-    });
+    };
+    code+='<div class="rate-section-title"><strong>주간 보스</strong><span>보스별 배율</span></div>';
+    code+='<div class="rate-grid'+(editingRates?' is-editing':' is-readonly')+'">';
+    BOSSES.filter(b=>b.name!=="검은 마법사").forEach(renderBossCard);
     code+='</div>';
+    if(monthlyBoss){
+      code+='<section class="rate-monthly-section" aria-label="월간 보스">';
+      code+='<div class="rate-section-title"><strong>월간 보스</strong><span>검은 마법사 · 매월 1회</span></div>';
+      code+='<div class="rate-grid rate-monthly-grid'+(editingRates?' is-editing':' is-readonly')+'">';
+      renderBossCard(monthlyBoss);
+      code+='</div></section>';
+    }
   }
   if(loadError)code+='<p class="rate-error">'+htmlEscape(loadError)+'</p>';
   root.innerHTML=code;
