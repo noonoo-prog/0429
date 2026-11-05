@@ -70,7 +70,7 @@ function activateTab(tab,writeHash=true){
     plan:"저장된 배율로 파티를 편성하고 결과를 비교합니다.",
     recruit:"여러 보스를 함께 갈 파티원을 모집합니다."
   }[tab];
-  document.title=TABS[tab]+" | Party";
+  document.title=TABS[tab]+" | 파티";
   if(writeHash&&location.hash!=="#"+tab)history.replaceState(null,"","#"+tab);
   if(tab==="rates"){
     if(!initialLoaded&&!fetching)loadAll();
