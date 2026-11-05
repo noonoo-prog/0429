@@ -1204,7 +1204,7 @@ function renderNow(){
   if(editing){
     html+='<span class="party-boss-kicker">파티 계획 · 편집</span><strong class="party-boss-edit-title">편성 설정</strong>';
   }else{
-    html+='<span class="party-boss-kicker">파티 계획</span><div class="party-boss-boss-title"><strong>'+esc(SETTINGS.boss)+'</strong><span>'+esc(SETTINGS.difficulty)+'</span></div>';
+    html+='<span class="party-boss-kicker">파티 계획</span><div class="party-boss-boss-title" data-difficulty="'+esc(SETTINGS.difficulty)+'"><strong>'+esc(SETTINGS.boss)+'</strong><span class="party-boss-difficulty-chip">'+esc(SETTINGS.difficulty)+'</span></div>';
   }
   html+='</div>';
   html+='<div class="party-boss-head-actions">';
