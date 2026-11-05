@@ -118,7 +118,7 @@ function groupHtml(g){
   bosses.forEach(function(b,i){
     html+='<div class="recruit-boss-row"><select aria-label="보스 선택" data-r-edit="boss" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">'+options(bossOptions(b.boss),b.boss)+'</select>';
     var choices=activeDifficulties(b.boss);if(choices.indexOf(b.difficulty)<0)choices.push(b.difficulty);
-    html+='<select aria-label="난이도" data-r-edit="difficulty" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">'+options(choices,b.difficulty)+'</select>';
+    html+='<select aria-label="난이도" data-r-edit="difficulty" data-difficulty="'+esc(b.difficulty)+'" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">'+options(choices,b.difficulty)+'</select>';
     html+='<label class="recruit-rate-limit"><input aria-label="모집 희망 배율" type="number" min="0" step="0.01" data-r-edit="minRate" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'" value="'+esc(b.minRate)+'"><span>% 이상</span></label>';
     html+='<button type="button" class="recruit-icon-btn" aria-label="보스 삭제" data-r-action="remove-boss" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">×</button></div>';
   });
