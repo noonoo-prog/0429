@@ -8,7 +8,6 @@ function activeDifficulties(boss){if(boss==="스우")return ["익스트림"];ret
 function bossOptions(current){var list=BOSSES.slice();if(current&&list.indexOf(current)<0)list.push(current);return list}
 var DIFFS={"스우":["노말","하드","익스트림"],"데미안":["노말","하드"],"가엔슬":["노말","카오스"],"루시드":["이지","노말","하드"],"윌":["이지","노말","하드"],"더스크":["노말","카오스"],"진힐라":["노말","하드"],"듄켈":["노말","하드"],"세렌":["노말","하드","익스트림","데스티니","챔피언"],"칼로스":["이지","노말","카오스","익스트림","데스티니","챔피언"],"대적자":["이지","노말","하드","익스트림","데스티니"],"카링":["이지","노말","하드","익스트림","데스티니"],"흉성":["노말","하드"],"벨로나":["이지","노말","하드"],"림보":["노말","하드","익스트림","데스티니"],"발드릭스":["노말","하드","익스트림","데스티니"],"유피테르":["노말","하드"],"검은 마법사":["하드","익스트림","챔피언"]};
 var state={groups:[],people:[]},plan={},owners=[],people=[],revision=0;
-var pendingRates={},rateQueue={},rateSequence=0;
 var loaded=false,loading=false,dirty=false,saving=false,lastFetch=0,filter="recruiting",error="";
 var openIds=new Set();
 function esc(value){return String(value==null?"":value).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
@@ -49,42 +48,9 @@ function buildPeople(){
 }
 function member(key){return people.find(function(p){return p.key===key})||{key:key,name:key.split("|").slice(-1)[0]||"알 수 없음",owner:"미등록",ownerKey:key}}
 function rateFor(boss,difficulty,key){
-  var pending=pendingRates[boss+"||"+difficulty+"||"+key];
-  if(pending)return {value:pending.value,source:"저장 중"};
   var byBoss=DIFFICULTY_RATES[boss]&&DIFFICULTY_RATES[boss][difficulty];
-  if(byBoss&&Object.prototype.hasOwnProperty.call(byBoss,key))return {value:Number(byBoss[key])||0,source:"공용"};
-  var legacy=plan.multipliers&&plan.multipliers[boss]&&plan.multipliers[boss][key];
-  return {value:0,source:legacy?"기존 "+legacy+"% · 난이도 미확인":"미입력"};
-
-}
-function setSharedRate(boss,difficulty,key,value){
-  var ref=boss+"||"+difficulty+"||"+key,seq=++rateSequence;
-  pendingRates[ref]={value:value,seq:seq};
-  var prior=rateQueue[ref]||Promise.resolve();
-  var next=prior.catch(function(){}).then(function(){
-    return api("boss-party-recruit",{action:"rate_set",boss:boss,difficulty:difficulty,key:key,value:value});
-  }).then(function(data){
-    if(!DIFFICULTY_RATES[boss])DIFFICULTY_RATES[boss]={};
-    if(!DIFFICULTY_RATES[boss][difficulty])DIFFICULTY_RATES[boss][difficulty]={};
-    DIFFICULTY_RATES[boss][difficulty][key]=Number(data.value)||0;
-    if(pendingRates[ref]&&pendingRates[ref].seq===seq){
-      delete pendingRates[ref];
-      notify("공용 배율을 저장했어요.");
-    }
-    render();
-    var planPanel=document.getElementById("partyBossPanel");
-    if(planPanel&&!planPanel.hidden&&window.refreshPartyBossShared){
-      window.refreshPartyBossShared();
-    }
-  }).catch(function(e){
-    if(pendingRates[ref]&&pendingRates[ref].seq===seq){
-      delete pendingRates[ref];
-      notify("배율 저장 실패: "+(e.message||"연결 오류"));
-      render();
-    }
-  });
-  rateQueue[ref]=next;
-  return next;
+  if(byBoss&&Object.prototype.hasOwnProperty.call(byBoss,key))return {value:Number(byBoss[key])||0,source:"저장값"};
+  return {value:0,source:"미입력"};
 }
 function formatRate(n){return Number(n).toFixed(2).replace(/\.00$/,"").replace(/(\.\d)0$/,"$1")+"%"}
 function group(id){return state.groups.find(function(g){return g.id===id})}
@@ -170,7 +136,7 @@ function groupHtml(g){
   html+='<div class="recruit-join-row"><input aria-label="외부 파티원 닉네임" data-r-manual-name="'+esc(g.id)+'" maxlength="30" placeholder="외부 파티원 닉네임"><button type="button" class="recruit-small-btn" data-r-action="add-manual" data-r-id="'+esc(g.id)+'">외부인 추가</button></div>';
   html+='</div>';
   if(members.length&&bosses.length){
-    html+='<div class="recruit-block"><div class="recruit-line"><strong>캐릭터별 배율</strong><span class="recruit-muted">캐릭터·보스·난이도별 공용 저장</span></div>';
+    html+='<div class="recruit-block"><div class="recruit-line"><strong>캐릭터별 배율</strong><a href="#rates" class="recruit-rate-link">배율 관리에서 수정·수동 저장</a></div>';
     html+='<div class="recruit-matrix-scroll"><table class="recruit-matrix"><thead><tr><th>캐릭터</th>';
     bosses.forEach(function(b){html+='<th>'+esc(b.difficulty)+' '+esc(b.boss)+'</th>'});
     html+='</tr></thead><tbody>';
@@ -179,7 +145,7 @@ function groupHtml(g){
       html+='<tr><th>'+esc(p.name)+'</th>';
       bosses.forEach(function(b){
         var v=rateFor(b.boss,b.difficulty,key);
-        html+='<td><div class="recruit-rate-cell"><input type="number" min="0" max="100000" step="0.01" inputmode="decimal" aria-label="'+esc(p.name)+' '+esc(b.boss)+' 배율" data-r-edit="rate" data-r-id="'+esc(g.id)+'" data-r-boss="'+esc(b.boss)+'" data-r-key="'+esc(key)+'" value="'+(v.value?esc(v.value):"")+'" placeholder="미입력"><span>% · '+esc(v.source)+'</span></div></td>';
+        html+='<td><div class="recruit-rate-cell"><input type="number" min="0" max="100000" step="0.01" readonly inputmode="decimal" aria-label="'+esc(p.name)+' '+esc(b.boss)+' 배율 (읽기 전용)" title="배율 관리에서 수정 후 직접 저장" value="'+(v.value?esc(v.value):"")+'" placeholder="미입력"><span>% · '+esc(v.source)+'</span></div></td>';
       });
       html+='</tr>';
     });
@@ -206,7 +172,7 @@ function render(){
   html+='</div><span class="recruit-muted">모집 중 '+active+'팀</span></div>';
   if(shown.length){shown.forEach(function(g){html+=groupHtml(g)})}
   else html+='<div class="recruit-empty">표시할 파티가 없어요. <b>+ 파티 추가</b>로 시작해 보세요.</div>';
-  html+='<div class="recruit-footer"><div><strong>'+(dirty?"저장하지 않은 변경사항":saving?"저장 중…":"공용 저장됨")+'</strong><span>모집 정보는 저장 버튼 · 배율은 수정 즉시 파티보스 계획에 공유</span></div>';
+  html+='<div class="recruit-footer"><div><strong>'+(dirty?"미저장 변경사항":saving?"저장 중…":"저장된 상태")+'</strong><span>모집 변경은 아래 저장 버튼 · 배율 변경은 배율 관리에서 수동 저장</span></div>';
   html+='<button type="button" class="recruit-small-btn" data-r-action="reload"'+(dirty||saving?' disabled':'')+'>새로고침</button>';
   html+='<button type="button" class="recruit-primary" data-r-action="save"'+(!dirty||saving?' disabled':'')+'>'+(saving?"저장 중…":"저장")+'</button></div>';
   if(error)html+='<p class="recruit-error">'+esc(error)+'</p>';
@@ -269,11 +235,11 @@ function click(e){
   if(action==="remove-member"){g.members=g.members.filter(function(k){return k!==button.dataset.rKey});mark();return}
   if(action==="delete-group"){
     if(saving){notify("저장 중에는 파티를 삭제할 수 없어요.");return}
-    if(!window.confirm("["+g.name+"] 모집 파티를 삭제할까요?\n삭제하면 공용 모집판에서 제거됩니다.\n캐릭터 배율과 파티 계획은 그대로 유지됩니다."))return;
+    if(!window.confirm("["+g.name+"] 모집 파티를 삭제할까요?\n파티를 삭제하고 아래 ‘저장’을 눌러야 공용 DB에 반영됩니다.\n캐릭터 배율과 파티 계획은 그대로 유지됩니다."))return;
     state.groups=state.groups.filter(function(item){return item.id!==g.id});
     openIds.delete(g.id);
-    mark();
-    save(); // Confirmed deletion is persisted immediately. Version conflicts remain unsaved and visible.
+    mark(); // Explicit manual save persists deletion. Nothing is written automatically.
+    notify("삭제 내용을 적용했어요. 아래 ‘저장’을 눌러 확정하세요.");
     return;
   }
   if(action==="copy"){copyGroup(g);return}
@@ -298,17 +264,6 @@ function change(e){
       b.boss=value;b.difficulty=defaultDifficulty(value);
     }else if(field==="difficulty"){b.difficulty=value}
     else b.minRate=Math.max(0,Number(value)||0);
-  }else if(field==="rate"){
-    var boss=target.dataset.rBoss,key=target.dataset.rKey,v=Number(value);
-    var bossRecord=g.bosses.find(function(item){return item.boss===boss});
-    if(!bossRecord){notify("보스 정보를 찾지 못했어요.");return}
-    var difficulty=bossRecord.difficulty;
-    if(value.trim()!==""&&(!Number.isFinite(v)||v<0||v>100000)){
-      notify("배율은 0~100000 사이로 입력해 주세요.");render();return;
-    }
-    setSharedRate(boss,difficulty,key,value.trim()===""?0:v);
-    render();
-    return;
   }
   mark();
 }
