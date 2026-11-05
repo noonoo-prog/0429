@@ -69,7 +69,7 @@ let THEME_MODE=localStorage.getItem(THEME_KEY)==="dark"?"dark":"light";
 const CHECKLIST_START="2026-09-24";
 const PAGE_VIEW_KEY="boss-board-page-view-v1",ROUTE_SELECTION_PREFIX="boss-board-route-selection-v1-";
 const ROUTE_SAVED_SLOTS_KEY="boss-board-route-saved-slots-v1";
-let PAGE_VIEW=(function(){var v=localStorage.getItem(PAGE_VIEW_KEY);return v==="checklist"||v==="route"||v==="party"?v:"board"})();
+let PAGE_VIEW=(function(){var v=localStorage.getItem(PAGE_VIEW_KEY);return v==="checklist"?"checklist":"board"})();
 let CHECKLIST_MONTH=(function(){
   var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1;
   if(y<2026||(y===2026&&m<9))return "2026-09";
@@ -1729,7 +1729,7 @@ function updatePageView(){
   boardOnlyIds.forEach(function(id){var el=document.getElementById(id);if(el)el.hidden=!board});
 }
 function setPageView(view){
-  PAGE_VIEW=view==="checklist"?"checklist":(view==="route"?"route":(view==="party"?"party":"board"));
+  PAGE_VIEW=view==="checklist"?"checklist":"board";
   localStorage.setItem(PAGE_VIEW_KEY,PAGE_VIEW);
   updatePageView();
   render();
