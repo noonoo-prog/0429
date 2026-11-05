@@ -158,6 +158,16 @@ function activateTab(tab,writeHash=true){
     if(typeof window.refreshPartyRecruitRates==="function")window.refreshPartyRecruitRates();
   }
 }
+function ownerThemeFor(name){
+  return ({
+    "오똑":"ottok",
+    "츠죠":"tsujyo",
+    "피콕":"peacock",
+    "꿈품은":"dream",
+    "달하늘의별을":"sky",
+    "띵스":"ochre"
+  })[String(name||"").trim()]||"default";
+}
 function chooseCharacters(owners,guests,manuals){
   const chars=[],seen=new Set();
   function add(row){
@@ -242,13 +252,14 @@ function renderRates(){
     return;
   }
   const chosen=characters.find(x=>x.key===selected);
+  const chosenOwnerTheme=ownerThemeFor(chosen&&chosen.owner);
   const dirty=edits.size;
   const status=saving?"저장 중…":editingRates?(dirty?"미저장 "+dirty+"개":"편집 중"):"조회 중";
   let code='<div class="rate-panel-header"><div><h2>배율 관리</h2><p>'+(editingRates?"캐릭터별 배율을 변경한 뒤 직접 저장하세요.":"캐릭터별 보스 배율을 한눈에 확인하세요.")+'</p></div>';
   code+='<div class="rate-editor-actions"><span class="rate-editor-status'+(dirty?' is-pending':'')+'" id="rateSaveStatus">'+status+'</span>';
   code+='<button type="button" class="rate-edit-toggle'+(editingRates?' is-active':'')+'" id="rateEditToggle" aria-pressed="'+String(editingRates)+'"'+(saving||!chosen?' disabled':'')+'>'+(editingRates?'편집 취소':'배율 수정')+'</button>';
   code+='<button type="button" class="rate-save" id="rateSave"'+(!editingRates||!dirty||saving?' disabled':'')+'>'+(saving?'저장 중…':'저장')+'</button></div></div>';
-  code+='<div class="rate-char-picker"><label for="rateCharacter">캐릭터</label><select id="rateCharacter" aria-label="캐릭터 선택"'+(saving?' disabled':'')+'>';
+  code+='<div class="rate-char-picker owner-themed" data-theme="'+chosenOwnerTheme+'"><label for="rateCharacter">캐릭터</label><select id="rateCharacter" aria-label="캐릭터 선택"'+(saving?' disabled':'')+'>';
   let lastOwner="";
   characters.forEach(char=>{
     if(lastOwner!==char.owner){
