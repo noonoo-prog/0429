@@ -222,9 +222,9 @@ function renderRates(){
   code+='</select><span class="rate-char-meta">'+htmlEscape(chosen?chosen.owner:"선택 없음")+'</span></div>';
   code+='<div class="rate-hint"><b>캐릭터 · 보스 · 난이도별 배율</b>을 관리합니다. 입력·붙여넣기만으로는 저장되지 않아요. 아래 <b>변경 저장</b>을 눌러야 공용 DB에 반영됩니다.</div>';
   if(chosen){
-    code+='<section class="rate-import"><div class="rate-import-head"><strong>환산주스탯 텍스트 붙여넣기</strong><span>익스트림 발드릭스 → 노말 세렌 · 40개 고정 순서</span></div>';
-    code+='<textarea id="ratePaste" rows="3" maxlength="30000" placeholder="환산주스탯의 보스컷 배율 부분을 복사해서 여기에 붙여넣으세요. 자동으로 40개 배율을 채웁니다." aria-label="환산주스탯 보스컷 텍스트 붙여넣기">'+htmlEscape(pasteText)+'</textarea>';
-    code+='<div class="rate-import-bottom"><span class="rate-import-note'+(pasteIsError?' error':'')+'">'+htmlEscape(pasteMessage||"붙여넣으면 자동 분석합니다. 40개가 아니면 저장하지 않아요.")+'</span>';
+    code+='<section class="rate-import"><div class="rate-import-head"><strong>환산주스탯 → 전체 보기 → 복사·붙여넣기</strong><span>익스 발드릭스부터 노말 세렌까지 순서대로 복사</span></div>';
+    code+='<textarea id="ratePaste" rows="3" maxlength="30000" placeholder="환산주스탯 → 전체 보기 → 익스 발드릭스~노말 세렌까지 복사한 내용을 여기에 붙여넣으세요." aria-label="환산주스탯 보스컷 텍스트 붙여넣기">'+htmlEscape(pasteText)+'</textarea>';
+    code+='<div class="rate-import-bottom"><span class="rate-import-note'+(pasteIsError?' error':'')+'">'+htmlEscape(pasteMessage||"붙여넣으면 40개 배율을 자동으로 채워요. 확인한 뒤 아래 ‘변경 저장’을 눌러 주세요.")+'</span>';
     code+='<button type="button" class="rate-reload" id="rateAnalyze"'+(saving?' disabled':'')+'>순서대로 채우기</button></div>';
     code+='</section>';
   }
