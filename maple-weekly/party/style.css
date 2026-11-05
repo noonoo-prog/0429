@@ -361,3 +361,136 @@ html[data-theme="dark"] .party-app .rate-char-picker.owner-themed{
   .party-app .rate-char-picker.owner-themed select#rateCharacter{min-height:39px}
   .party-app .rate-char-picker.owner-themed .rate-char-meta{padding:4px 7px}
 }
+
+
+/* Boss difficulty color system: aligned to /boss/ status chips. */
+.party-app{
+  --difficulty-easy:#9ba3ab;
+  --difficulty-normal:#5e9fe9;
+  --difficulty-hard:#ff4e5b;
+  --difficulty-chaos:#111111;
+  --difficulty-extreme:#111111;
+  --difficulty-destiny:#6f4cb5;
+  --difficulty-champion:#a86c22;
+}
+/* VIEW: the boss is the primary visual title, never hidden by compact planner CSS */
+.party-app #partyBossPanel .party-boss-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;margin:0 0 12px;
+}
+.party-app #partyBossPanel .party-boss-head>div.party-boss-heading:first-child{
+  display:flex;align-items:flex-start;flex-direction:column;gap:6px;
+  min-width:0;flex:1 1 240px;
+}
+.party-app #partyBossPanel .party-boss-kicker{
+  font-size:10px;font-weight:900;letter-spacing:.055em;
+  color:var(--muted);
+}
+.party-app #partyBossPanel .party-boss-boss-title{
+  display:flex;align-items:center;flex-wrap:wrap;gap:11px;
+  padding:0;margin:0;min-width:0;
+}
+.party-app #partyBossPanel .party-boss-boss-title>strong{
+  display:block;margin:0;font-size:clamp(28px,3.7vw,43px);font-weight:950;
+  line-height:1.12;letter-spacing:-.055em;color:var(--text);
+  overflow-wrap:anywhere;
+}
+.party-app #partyBossPanel .party-boss-difficulty-chip{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:36px;padding:5px 14px;line-height:1.1;
+  font-size:16px;font-weight:950;letter-spacing:-.025em;
+  border-radius:9px;border:1px solid transparent;
+  background:var(--boss-diff-bg,#9ba3ab);color:var(--boss-diff-text,#fff);
+  box-shadow:0 2px 9px rgba(10,15,20,.07);
+}
+.party-app #partyBossPanel .party-boss-boss-title[data-difficulty="이지"]{
+  --boss-diff-bg:#9ba3ab;--boss-diff-text:#fff;
+}
+.party-app #partyBossPanel .party-boss-boss-title[data-difficulty="노말"]{
+  --boss-diff-bg:#5e9fe9;--boss-diff-text:#fff;
+}
+.party-app #partyBossPanel .party-boss-boss-title[data-difficulty="하드"]{
+  --boss-diff-bg:#ff4e5b;--boss-diff-text:#fff;
+}
+.party-app #partyBossPanel .party-boss-boss-title[data-difficulty="카오스"]{
+  --boss-diff-bg:#111;--boss-diff-text:#ffd64d;
+}
+.party-app #partyBossPanel .party-boss-boss-title[data-difficulty="익스트림"]{
+  --boss-diff-bg:#111;--boss-diff-text:#ff4052;
+}
+.party-app #partyBossPanel .party-boss-boss-title[data-difficulty="데스티니"]{
+  --boss-diff-bg:#624294;--boss-diff-text:#fff;
+}
+.party-app #partyBossPanel .party-boss-boss-title[data-difficulty="챔피언"]{
+  --boss-diff-bg:#945f21;--boss-diff-text:#fff;
+}
+.party-app #partyBossPanel .party-boss-heading.is-editing .party-boss-edit-title{
+  display:block;margin:0;font-size:22px;font-weight:950;line-height:1.2;color:var(--text);
+}
+.party-app #partyBossPanel .party-boss-head-actions{
+  display:flex;flex:0 1 auto;width:auto;
+  margin:0 0 0 auto;justify-content:flex-end;align-items:center;gap:6px;
+}
+.party-app #partyBossPanel .party-boss-head-actions .party-boss-shared-meta{
+  width:auto;max-width:240px;margin:0 5px 0 0;
+  min-height:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.party-app #partyBossPanel .party-boss-edit-toggle{
+  min-height:36px;padding:0 14px;font-size:12px;border-radius:9px;
+}
+.party-app #partyBossPanel .party-boss-shell:not(.is-editing) .party-boss-settings,
+.party-app #partyBossPanel .party-boss-shell:not(.is-editing) .party-boss-fold[data-pb-fold="roster"]{
+  display:none!important;
+}
+/* EDIT: reuse the same difficulty colors in the dropdown. */
+.party-app #partyBossPanel select[data-pb-difficulty][data-difficulty="이지"]{background:#9ba3ab;color:#fff}
+.party-app #partyBossPanel select[data-pb-difficulty][data-difficulty="노말"]{background:#5e9fe9;color:#fff}
+.party-app #partyBossPanel select[data-pb-difficulty][data-difficulty="하드"]{background:#ff4e5b;color:#fff}
+.party-app #partyBossPanel select[data-pb-difficulty][data-difficulty="카오스"]{background:#111;color:#ffd64d}
+.party-app #partyBossPanel select[data-pb-difficulty][data-difficulty="익스트림"]{background:#111;color:#ff4052}
+.party-app #partyBossPanel select[data-pb-difficulty][data-difficulty="데스티니"]{background:#624294;color:#fff}
+.party-app #partyBossPanel select[data-pb-difficulty][data-difficulty="챔피언"]{background:#945f21;color:#fff}
+.party-app #partyBossPanel select[data-pb-difficulty]{
+  font-weight:950;border-color:transparent;
+}
+/* Each boss tier uses the same small status chip style inside rate management. */
+.party-app .rate-label[data-difficulty]{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:20px;padding:2px 6px;border-radius:5px;
+  background:var(--rate-diff-bg,#9ba3ab);
+  color:var(--rate-diff-ink,#fff);
+  font-size:10px;font-weight:900;white-space:nowrap;
+}
+.party-app .rate-label[data-difficulty="이지"]{--rate-diff-bg:#9ba3ab;--rate-diff-ink:#fff}
+.party-app .rate-label[data-difficulty="노말"]{--rate-diff-bg:#5e9fe9;--rate-diff-ink:#fff}
+.party-app .rate-label[data-difficulty="하드"]{--rate-diff-bg:#ff4e5b;--rate-diff-ink:#fff}
+.party-app .rate-label[data-difficulty="카오스"]{--rate-diff-bg:#111;--rate-diff-ink:#ffd64d}
+.party-app .rate-label[data-difficulty="익스트림"]{--rate-diff-bg:#111;--rate-diff-ink:#ff4052}
+.party-app .rate-label[data-difficulty="데스티니"]{--rate-diff-bg:#624294;--rate-diff-ink:#fff}
+.party-app .rate-label[data-difficulty="챔피언"]{--rate-diff-bg:#945f21;--rate-diff-ink:#fff}
+/* Recruitment tier dropdowns carry the same difficulty semantic color. */
+.party-app .recruit-boss-row select[data-r-edit="difficulty"]{
+  color:#fff;font-weight:900;border-color:transparent;
+}
+.party-app .recruit-boss-row select[data-difficulty="이지"]{background:#9ba3ab;color:#fff}
+.party-app .recruit-boss-row select[data-difficulty="노말"]{background:#5e9fe9;color:#fff}
+.party-app .recruit-boss-row select[data-difficulty="하드"]{background:#ff4e5b;color:#fff}
+.party-app .recruit-boss-row select[data-difficulty="카오스"]{background:#111;color:#ffd64d}
+.party-app .recruit-boss-row select[data-difficulty="익스트림"]{background:#111;color:#ff4052}
+.party-app .recruit-boss-row select[data-difficulty="데스티니"]{background:#624294;color:#fff}
+.party-app .recruit-boss-row select[data-difficulty="챔피언"]{background:#945f21;color:#fff}
+.party-app .recruit-boss-row select[data-r-edit="difficulty"] option,
+.party-app #partyBossPanel select[data-pb-difficulty] option{background:var(--surface);color:var(--text)}
+@media(max-width:780px){
+  .party-app #partyBossPanel .party-boss-head{gap:8px}
+  .party-app #partyBossPanel .party-boss-head-actions{
+    flex:1 1 100%;width:100%;justify-content:flex-end;
+    gap:5px;
+  }
+  .party-app #partyBossPanel .party-boss-head-actions .party-boss-shared-meta{margin-right:auto;max-width:55%}
+  .party-app #partyBossPanel .party-boss-boss-title>strong{font-size:clamp(27px,7.3vw,36px)}
+  .party-app #partyBossPanel .party-boss-difficulty-chip{
+    min-height:32px;padding:5px 10px;font-size:14px;
+  }
+  .party-app #partyBossPanel .party-boss-boss-title{gap:8px}
+}
