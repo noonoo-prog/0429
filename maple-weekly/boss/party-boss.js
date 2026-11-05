@@ -65,18 +65,14 @@ var COMPARING=false;
 var COMPARE_RESULTS=[];
 var COMPARE_PROGRESS="";
 var MODES=[
-  {id:"balanced",name:"균형형",desc:"파티별 총 배율을 비슷하게"},
-  {id:"strong",name:"강자 우대형",desc:"강한 캐릭터는 소수팟 우선"},
-  {id:"equal",name:"수익 균등형",desc:"주인별 결정석 수익 격차 완화"},
-  {id:"small",name:"최소 인원형",desc:"가능한 2~3인팟을 많이"},
-  {id:"safe",name:"안정형",desc:"목표보다 여유 있는 배율"}
+  {id:"reciprocal",name:"품앗이형",desc:"서로 돕고 비슷한 배율끼리 편성"}
 ];
 function modeName(mode){
   var found=MODES.find(function(m){return m.id===mode});
-  return found?found.name:"강자 우대형";
+  return found?found.name:"품앗이형";
 }
 function normalizeMode(mode){
-  return MODES.some(function(m){return m.id===mode})?mode:"strong";
+  return "reciprocal";
 }
 
 function esc(s){
@@ -720,7 +716,6 @@ function addUnassignedToParty(key,partyId){
 function candidateScore(parties,target,ownerAvgs,mode){
   mode=normalizeMode(mode);
   var below=0,shortfall=0,above=0,min=Infinity,max=-Infinity;
-  var reward={},runs={};
   var strongSizePenalty=0,duplicateOwners=0,stableShort=0;
   var totalSizeDeviation=0;
   parties.forEach(function(p){
@@ -738,26 +733,12 @@ function candidateScore(parties,target,ownerAvgs,mode){
       var own=ownerAvgs[key]||0;
       var gradeBonus=own>=36?4:(own>=33?2.5:(own>=30?1:0));
       strongSizePenalty+=(c.multiplier+own*.12+gradeBonus)*Math.pow(sz-2,1.1);
-      reward[key]=(reward[key]||0)+1/sz;
-      runs[key]=(runs[key]||0)+1;
     });
   });
-  var keys=Object.keys(reward);
-  var totalShares=keys.reduce(function(sum,k){return sum+reward[k]},0);
-  var meanShare=totalShares/Math.max(1,keys.length);
-  var equalTotal=keys.reduce(function(sum,k){return sum+Math.pow(reward[k]-meanShare,2)},0);
-  var meanPerChar=keys.reduce(function(sum,k){return sum+reward[k]/runs[k]},0)/Math.max(1,keys.length);
-  var equalPerChar=keys.reduce(function(sum,k){
-    return sum+Math.pow(reward[k]/runs[k]-meanPerChar,2);
-  },0);
-  // Mandatory: no duplicate owner, minimum target, then mode-specific preferences.
+  // 품앗이 편성은 주인별 수익을 같게 맞추지 않고, 강한 캐릭터의 작은 파티 수익을 우선 지킵니다.
   var mandatory=duplicateOwners*1e12+below*1e9+shortfall*1e6;
   var spread=Math.pow(max-min,2);
-  if(mode==="balanced")return mandatory+spread*14+above*.4+strongSizePenalty*2+equalPerChar*1200;
-  if(mode==="equal")return mandatory+equalTotal*85000+equalPerChar*12000+spread*.45+strongSizePenalty*4+above*.12;
-  if(mode==="small")return mandatory+strongSizePenalty*32+spread*.3+above*.12+equalPerChar*4000;
-  if(mode==="safe")return mandatory+stableShort*900+spread*2+strongSizePenalty*3+equalPerChar*2500;
-  return mandatory+strongSizePenalty*55+spread*.45+above*.18+equalPerChar*18000;
+  return mandatory+spread*8+strongSizePenalty*5+above*.18+stableShort*.08;
 }
 function initialParties(chars,k,cap,target,ownerAvgs,seed){
   var groups={};
@@ -859,11 +840,6 @@ function partyCountOptions(n,cap,requested,total,target,ownerMin,mode){
   var feasible=[];
   for(var k=min;k<=max;k++)if(total+0.000001>=target*k)feasible.push(k);
   if(!feasible.length)return [min]; // Show an explicitly insufficient result.
-  if(mode==="small")return feasible.slice().reverse();
-  if(mode==="safe"){
-    var safeFeasible=feasible.filter(function(k){return total>=target*1.12*k});
-    if(safeFeasible.length)feasible=safeFeasible;
-  }
   var priority=feasible.filter(function(k){return k===6||k===7});
   if(priority.length)return priority;
   // Outside the preferred range, choose the nearest feasible count.
@@ -889,7 +865,6 @@ function balance(chars,partySize,targetRate,partyCount,mode){
   var deadline=Date.now()+1100;
   // When auto, favor 6-7 parties as long as the target remains feasible.
   options.forEach(function(k){
-    if(mode==="small"&&best&&best.every(function(p){return p.total+0.000001>=target}))return;
     if(Date.now()>deadline&&best)return;
     for(var seed=0;seed<3;seed++){
       if(Date.now()>deadline&&best)break;
@@ -1254,28 +1229,10 @@ function renderNow(){
   html+='<label class="party-boss-number"><span>파티 수</span><div><input type="number" min="0" max="50" step="1" inputmode="numeric" data-pb-count="1" value="'+String(Math.max(0,Number(SETTINGS.partyCount)||0))+'" placeholder="0"><em>0 = 자동</em></div></label>';
   html+='<label class="party-boss-target"><span>목표 배율</span><div><input type="number" min="1" step="0.1" inputmode="decimal" data-pb-target="1" value="'+String(SETTINGS.targetRate)+'" placeholder="130" aria-label="최소 목표 배율 직접 입력"><em>권장 '+formatRate(SETTINGS.targetRate)+'~'+formatRate(SETTINGS.targetRate*1.1)+'</em></div></label>';
   html+='<div class="party-boss-summary"><span>선택 캐릭터</span><b>'+selected.length+'명</b></div>';
-  html+='<button class="party-boss-build" type="button" data-pb-build="1" '+(BUILDING?"disabled":"")+'>'+(BUILDING?"편성 계산 중…":"자동 편성")+'</button>';
+  html+='<button class="party-boss-build" type="button" data-pb-build="1" '+(BUILDING?"disabled":"")+'>'+(BUILDING?"품앗이 편성 중…":"품앗이 편성")+'</button>';
   html+='</section>';
 
-  html+='<section class="party-boss-mode-panel" aria-label="자동 편성 모드">';
-  html+='<div class="party-boss-mode-heading"><div><span>편성 전략</span><strong>원하는 파티 편성 방식 선택</strong></div><small>모든 모드 · 주인당 1캐릭터 / 목표 '+formatRate(SETTINGS.targetRate)+'</small></div>';
-  html+='<div class="party-boss-mode-grid">';
-  MODES.forEach(function(mode){
-    var active=normalizeMode(SETTINGS.mode)===mode.id;
-    html+='<button type="button" class="party-boss-mode-option '+(active?"active":"")+'" data-pb-mode="'+mode.id+'" aria-pressed="'+(active?"true":"false")+'" '+(COMPARING||BUILDING?"disabled":"")+'><b>'+mode.name+'</b><small>'+mode.desc+'</small></button>';
-  });
-  html+='</div>';
-  html+='<div class="party-boss-compare-actions"><span>선택한 모드로 자동 편성하거나 5가지 결과를 한 번에 비교할 수 있어요.</span><button type="button" data-pb-compare="1" '+(COMPARING||BUILDING?"disabled":"")+'>'+(COMPARING?"비교 계산 중…":"5가지 모드 비교하기")+'</button></div>';
-  if(COMPARING)html+='<div class="party-boss-compare-progress" role="status">'+esc(COMPARE_PROGRESS)+'</div>';
-  if(COMPARE_RESULTS.length&&!COMPARING){
-    html+='<div class="party-boss-compare-results"><div class="party-boss-compare-title"><strong>5가지 편성 결과 비교</strong><span>메소는 현재 결정석 가격 기준 · 적용 후 저장해야 공용 반영</span></div><div class="party-boss-compare-table-wrap"><table class="party-boss-compare-table"><thead><tr><th>모드</th><th>파티</th><th>목표 충족</th><th>최고 수익 주인</th><th>파티 배율 차이</th><th>선택</th></tr></thead><tbody>';
-    COMPARE_RESULTS.forEach(function(row){
-      var stat=row.stats,ok=row.parties.length>0,allClear=ok&&stat.clear===stat.count;
-      html+='<tr><th>'+esc(modeName(row.mode))+'</th><td>'+(ok?stat.count+'개':'편성 불가')+'</td><td class="'+(allClear?"pb-clear":"pb-fail")+'">'+(ok?stat.clear+'/'+stat.count:'-')+'</td><td>'+esc(ok?stat.topOwner:"-")+(ok?'<small>'+formatMeso(stat.topMeso)+'</small>':'')+'</td><td>'+(ok?formatRate(stat.spread):'-')+'</td><td><button type="button" data-pb-apply-mode="'+row.mode+'" '+(!ok?"disabled":"")+'>이 편성 적용</button></td></tr>';
-    });
-    html+='</tbody></table></div></div>';
-  }
-  html+='</section>';
+  html+='<section class="party-boss-mode-panel party-boss-reciprocal-note" aria-label="품앗이 편성 기준"><strong>품앗이 편성</strong><span>서로 보스를 탈 수 있게 묶고, 강한 캐릭터는 가능한 작은 파티에 배치해 메소 수익을 지킵니다.</span></section>';
 
 
   // Render mercenaries as one more vertical owner roster column.
@@ -1384,7 +1341,7 @@ function renderNow(){
     var countLabel=Math.max(0,Number(SETTINGS.partyCount)||0)>0?" · "+Math.floor(Number(SETTINGS.partyCount))+"파티":"";
     var target=Number(SETTINGS.targetRate)||0;
     var targetLabel=" · "+modeName(SETTINGS.mode)+" · 목표 "+formatRate(target)+" ~ "+formatRate(target*1.1);
-    html+='<header><div><span>자동 편성 결과</span><strong>'+esc(SETTINGS.boss)+' · '+esc(SETTINGS.difficulty)+' · '+sizeLabel+countLabel+targetLabel+'</strong></div>';
+    html+='<header><div><span>품앗이 편성 결과</span><strong>'+esc(SETTINGS.boss)+' · '+esc(SETTINGS.difficulty)+' · '+sizeLabel+countLabel+targetLabel+'</strong></div>';
     html+='<div class="party-boss-gap"><span>파티간 차이</span><b>'+formatRate(max-min)+'</b></div></header>';
     var missingParties=RESULT.filter(function(p){return p.total+0.000001<target});
     if(missingParties.length){

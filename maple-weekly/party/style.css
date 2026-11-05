@@ -111,6 +111,8 @@
 .party-app .party-boss-controls{padding:9px;gap:7px;border-radius:9px}
 .party-app .party-boss-controls select{min-height:33px;padding:0 7px}
 .party-app .party-boss-mode-panel{margin:7px 0 8px;padding:9px;border-radius:9px}
+.party-app .party-boss-reciprocal-note{display:flex;align-items:center;gap:8px;margin:6px 0 9px;padding:7px 10px;background:#f7f8fa;border:1px solid #e3e7ec;color:#536170;font-size:11px}
+.party-app .party-boss-reciprocal-note strong{flex:none;color:#263746;font-size:12px}
 .party-app .party-boss-fold{margin:6px 0;border-radius:9px}
 .party-app .party-boss-fold>summary{min-height:37px;padding:8px 10px;gap:7px}
 .party-app .party-boss-fold>.party-boss-owner-groups,
