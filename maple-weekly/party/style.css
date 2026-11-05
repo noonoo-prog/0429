@@ -544,3 +544,36 @@ html[data-theme="dark"] .party-app .rate-char-picker.owner-themed{
 .plan-recruit-actions button{padding:9px 14px;border:1px solid var(--line,#ddd);border-radius:8px;cursor:pointer}
 .plan-recruit-actions button[type=submit]{background:var(--accent,#008cc0);color:white;border-color:transparent}
 @media(max-width:600px){.party-quick-fields{position:static;margin-top:6px}.party-boss-heading.is-viewing{gap:8px}}
+
+
+/* Recruitment archive: history groups and one-tap delete on saved party cards. */
+.party-app .recruit-collection-title{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin:14px 0 7px;padding:0 2px 7px;border-bottom:1px solid var(--line);
+}
+.party-app .recruit-collection-title strong{
+  color:var(--text);font-size:13px;font-weight:900;letter-spacing:-.02em;
+}
+.party-app .recruit-collection-title span{
+  color:var(--muted);font-size:10px;font-weight:700;text-align:right;
+}
+.party-app .recruit-history-group{display:block;margin-top:15px}
+.party-app .recruit-history-group .recruit-card{margin-bottom:6px}
+.party-app .recruit-card>summary .recruit-card-delete{
+  display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  border:1px solid color-mix(in srgb,#c54a55 32%,var(--line));
+  background:var(--surface);color:#b04450;
+  border-radius:7px;padding:5px 8px;min-height:29px;
+  font-size:10px;font-weight:850;cursor:pointer;margin-left:auto;
+}
+.party-app .recruit-card>summary .recruit-card-delete:hover{
+  background:color-mix(in srgb,#c54a55 9%,var(--surface));
+}
+.party-app .recruit-card>summary .recruit-card-delete:focus-visible{
+  outline:2px solid #c54a55;outline-offset:2px;
+}
+@media(max-width:680px){
+  .party-app .recruit-card>summary .recruit-card-delete{min-height:32px;padding:6px 8px}
+  .party-app .recruit-collection-title{margin-top:12px}
+  .party-app .recruit-collection-title strong{font-size:12px}
+}
