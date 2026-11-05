@@ -37,6 +37,7 @@ const IMPORT_ORDER=[
 let currentTab="rates",characters=[],selected="",rates={};
 let initialLoaded=false,fetching=false,saving=false,lastLoaded=0,loadError="";
 let edits=new Map();
+let editingRates=false;
 let pasteText="",pasteMessage="",pasteIsError=false,pasteParsedCount=0;
 function parseBossCutCopy(text){
   let source=String(text||"").replace(/[％﹪]/g,"%");
@@ -51,6 +52,7 @@ function parseBossCutCopy(text){
   return {numbers,valid,expected:IMPORT_ORDER.length};
 }
 function importBossCutText(text){
+  if(!editingRates||saving){notify("먼저 배율 수정을 눌러 주세요.");return}
   pasteText=String(text||"").slice(0,30000);
   if(!selected){pasteMessage="캐릭터를 먼저 선택해 주세요.";pasteIsError=true;renderRates();return}
   const match=pasteText.match(/Lv\.\s*\d+\s+([^\/\n\r]+)\s*\//);
@@ -58,7 +60,13 @@ function importBossCutText(text){
     const pastedName=match[1].trim();
     const matches=characters.filter(c=>c.name===pastedName);
     if(matches.length===1){
-      selected=matches[0].key; // Full-page copy identifies the registered character unambiguously.
+      if(matches[0].key!==selected){
+        if(edits.size&&!window.confirm("저장하지 않은 배율 수정 "+edits.size+"개가 있어요. 다른 캐릭터로 바꾸면 변경사항이 사라집니다. 계속할까요?")){
+          pasteMessage="먼저 현재 캐릭터의 배율을 저장하거나 편집을 취소해 주세요.";
+          pasteIsError=true;renderRates();return;
+        }
+        edits.clear();selected=matches[0].key;
+      }
     }else if(matches.length===0){
       pasteMessage="붙여넣은 캐릭터("+pastedName+")가 보스 현황판에 등록되어 있지 않아요.";
       pasteIsError=true;pasteParsedCount=0;renderRates();return;
@@ -115,6 +123,13 @@ function applyThemeUI(){
 }
 function activateTab(tab,writeHash=true){
   if(!TABS[tab])tab="rates";
+  if(tab!==currentTab&&edits.size){
+    if(!window.confirm("저장하지 않은 배율 "+edits.size+"개가 있어요. 이동하면 수정 내용이 사라집니다. 계속할까요?")){
+      if(location.hash!=="#"+currentTab)history.replaceState(null,"","#"+currentTab);
+      return;
+    }
+    edits.clear();editingRates=false;resetRatePaste();
+  }
   currentTab=tab;localStorage.setItem(STORE_TAB,tab);
   document.querySelectorAll("[data-party-tab]").forEach(b=>{
     const active=b.dataset.partyTab===tab;
@@ -200,6 +215,26 @@ function readRate(character,boss,difficulty){
   const byDiff=rates[boss]&&rates[boss][difficulty];
   return byDiff&&Object.prototype.hasOwnProperty.call(byDiff,character)?String(byDiff[character]):"";
 }
+function resetRatePaste(){
+  pasteText="";pasteMessage="";pasteIsError=false;pasteParsedCount=0;
+}
+function toggleRateEditor(){
+  if(saving)return;
+  if(editingRates){
+    if(edits.size&&!window.confirm("미저장 배율 "+edits.size+"개를 버리고 수정을 취소할까요?"))return;
+    edits.clear();editingRates=false;resetRatePaste();
+  }else{
+    editingRates=true;loadError="";
+  }
+  renderRates();
+}
+function switchRateCharacter(nextKey){
+  if(nextKey===selected)return true;
+  if(saving){notify("저장 중에는 캐릭터를 변경할 수 없어요.");return false}
+  if(edits.size&&!window.confirm("미저장 배율 "+edits.size+"개가 있어요. 다른 캐릭터로 이동하면 수정 내용이 사라집니다. 계속할까요?"))return false;
+  edits.clear();selected=nextKey;editingRates=false;resetRatePaste();renderRates();
+  return true;
+}
 function renderRates(){
   const root=panel();if(!root)return;
   if(!initialLoaded){
@@ -207,8 +242,13 @@ function renderRates(){
     return;
   }
   const chosen=characters.find(x=>x.key===selected);
-  let code='<div class="rate-panel-header"><div><h2>배율 관리</h2><p>캐릭터 하나를 선택해 보스별 배율을 한번에 수정하고 저장합니다.</p></div></div>';
-  code+='<div class="rate-char-picker"><label for="rateCharacter">캐릭터</label><select id="rateCharacter" aria-label="캐릭터 선택">';
+  const dirty=edits.size;
+  const status=saving?"저장 중…":editingRates?(dirty?"미저장 "+dirty+"개":"편집 중"):"조회 중";
+  let code='<div class="rate-panel-header"><div><h2>배율 관리</h2><p>'+(editingRates?"캐릭터별 배율을 변경한 뒤 직접 저장하세요.":"캐릭터별 보스 배율을 한눈에 확인하세요.")+'</p></div>';
+  code+='<div class="rate-editor-actions"><span class="rate-editor-status'+(dirty?' is-pending':'')+'" id="rateSaveStatus">'+status+'</span>';
+  code+='<button type="button" class="rate-edit-toggle'+(editingRates?' is-active':'')+'" id="rateEditToggle" aria-pressed="'+String(editingRates)+'"'+(saving||!chosen?' disabled':'')+'>'+(editingRates?'편집 취소':'배율 수정')+'</button>';
+  code+='<button type="button" class="rate-save" id="rateSave"'+(!editingRates||!dirty||saving?' disabled':'')+'>'+(saving?'저장 중…':'저장')+'</button></div></div>';
+  code+='<div class="rate-char-picker"><label for="rateCharacter">캐릭터</label><select id="rateCharacter" aria-label="캐릭터 선택"'+(saving?' disabled':'')+'>';
   let lastOwner="";
   characters.forEach(char=>{
     if(lastOwner!==char.owner){
@@ -220,41 +260,46 @@ function renderRates(){
   });
   if(lastOwner)code+='</optgroup>';
   code+='</select><span class="rate-char-meta">'+htmlEscape(chosen?chosen.owner:"선택 없음")+'</span></div>';
-  code+='<div class="rate-hint"><b>캐릭터 · 보스 · 난이도별 배율</b>을 관리합니다. 입력·붙여넣기만으로는 저장되지 않아요. 아래 <b>변경 저장</b>을 눌러야 공용 DB에 반영됩니다.</div>';
-  if(chosen){
-    code+='<section class="rate-import"><div class="rate-import-head"><strong>환산주스탯 → 전체 보기 → 복사·붙여넣기</strong><span>익스 발드릭스부터 노말 세렌까지 순서대로 복사</span></div>';
-    code+='<textarea id="ratePaste" rows="3" maxlength="30000" placeholder="환산주스탯 → 전체 보기 → 익스 발드릭스~노말 세렌까지 복사한 내용을 여기에 붙여넣으세요." aria-label="환산주스탯 보스컷 텍스트 붙여넣기">'+htmlEscape(pasteText)+'</textarea>';
-    code+='<div class="rate-import-bottom"><span class="rate-import-note'+(pasteIsError?' error':'')+'">'+htmlEscape(pasteMessage||"붙여넣으면 40개 배율을 자동으로 채워요. 확인한 뒤 아래 ‘변경 저장’을 눌러 주세요.")+'</span>';
-    code+='<button type="button" class="rate-reload" id="rateAnalyze"'+(saving?' disabled':'')+'>순서대로 채우기</button></div>';
-    code+='</section>';
+  if(editingRates){
+    code+='<div class="rate-edit-help">배율을 직접 수정하거나 아래에 환산주스탯 내용을 붙여넣으세요. <b>저장 버튼을 눌러야</b> 공용 DB에 반영돼요.</div>';
+    if(chosen){
+      code+='<section class="rate-import"><div class="rate-import-head"><strong>환산주스탯 → 전체 보기 → 복사·붙여넣기</strong><span>익스 발드릭스부터 노말 세렌까지 순서대로 복사</span></div>';
+      code+='<textarea id="ratePaste" rows="3" maxlength="30000" placeholder="환산주스탯 → 전체 보기 → 익스 발드릭스~노말 세렌까지 복사한 내용을 여기에 붙여넣으세요." aria-label="환산주스탯 보스컷 텍스트 붙여넣기">'+htmlEscape(pasteText)+'</textarea>';
+      code+='<div class="rate-import-bottom"><span class="rate-import-note'+(pasteIsError?' error':'')+'">'+htmlEscape(pasteMessage||"붙여넣기 후 40개 배율을 확인하고 상단 ‘저장’을 누르세요.")+'</span>';
+      code+='<button type="button" class="rate-reload" id="rateAnalyze"'+(saving?' disabled':'')+'>순서대로 채우기</button></div>';
+      code+='</section>';
+    }
   }
-  if(!chosen){code+='<div class="rate-empty">등록된 캐릭터가 없어요. 보스 현황판에서 캐릭터를 추가해 주세요.</div>';}
-  else {
-    code+='<div class="rate-grid">';
+  if(!chosen){
+    code+='<div class="rate-empty">등록된 캐릭터가 없어요. 보스 현황판에서 캐릭터를 추가해 주세요.</div>';
+  }else{
+    code+='<div class="rate-grid'+(editingRates?' is-editing':' is-readonly')+'">';
     BOSSES.forEach(b=>{
-      code+='<section class="rate-group"><h3>'+htmlEscape(b.name)+'<small>'+b.diff.length+'개 난이도</small></h3>';
+      let count=0;
+      b.diff.forEach(d=>{if(readRate(selected,b.name,d)!=="")count++});
+      code+='<section class="rate-group"><h3>'+htmlEscape(b.name)+'<small>'+count+'/'+b.diff.length+'</small></h3>';
       b.diff.forEach(difficulty=>{
-        const editKey=makeKey(selected,b.name,difficulty);
-        const draft=edits.has(editKey)?edits.get(editKey):null;
+        const ref=makeKey(selected,b.name,difficulty);
+        const draft=edits.has(ref)?edits.get(ref):null;
         const stored=readRate(selected,b.name,difficulty);
         const value=draft!==null?draft:stored;
-        code+='<div class="rate-line"><div><span class="rate-label">'+htmlEscape(difficulty)+'</span></div>';
-        code+='<input class="rate-input'+(edits.has(editKey)?' is-dirty':'')+'" type="number" step="0.01" min="0" max="100000" inputmode="decimal" data-rate-boss="'+htmlEscape(b.name)+'" data-rate-difficulty="'+htmlEscape(difficulty)+'" aria-label="'+htmlEscape(b.name+" "+difficulty+" 배율")+'" placeholder="미입력" value="'+htmlEscape(value)+'"'+(saving?' disabled':'')+'>';
-        code+='<span class="rate-unit">%</span></div>';
+        code+='<div class="rate-line"><span class="rate-label">'+htmlEscape(difficulty)+'</span>';
+        if(editingRates){
+          code+='<div class="rate-edit-value"><input class="rate-input'+(edits.has(ref)?' is-dirty':'')+'" type="number" step="0.01" min="0" max="100000" inputmode="decimal" data-rate-boss="'+htmlEscape(b.name)+'" data-rate-difficulty="'+htmlEscape(difficulty)+'" aria-label="'+htmlEscape(b.name+" "+difficulty+" 배율")+'" placeholder="미입력" value="'+htmlEscape(value)+'"'+(saving?' disabled':'')+'><span class="rate-unit">%</span></div>';
+        }else{
+          code+='<span class="rate-read-value'+(value===""?' is-empty':'')+'">'+(value===""?'—':htmlEscape(value)+'<small>%</small>')+'</span>';
+        }
+        code+='</div>';
       });
       code+='</section>';
     });
     code+='</div>';
   }
-  const count=edits.size;
-  code+='<div class="rate-actions"><div><b id="rateSaveStatus">'+(saving?"수동 저장 중…":(count?"미저장 배율 "+count+"개":"저장할 변경사항 없음"))+'</b><small>변경 저장을 눌러야 파티 계획·모집에도 반영됩니다.</small></div>';
-  code+='<div class="rate-buttons"><button type="button" class="rate-reload" id="rateRefresh"'+(saving||count?' disabled':'')+'>새로고침</button>';
-  code+='<button type="button" class="rate-save" id="rateSave"'+(saving||!count?' disabled':'')+'>'+(saving?"저장 중…":"변경 저장")+'</button></div></div>';
-  if(loadError)code+='<p style="color:#c94141;font-size:12px">'+htmlEscape(loadError)+'</p>';
+  if(loadError)code+='<p class="rate-error">'+htmlEscape(loadError)+'</p>';
   root.innerHTML=code;
 }
 function fieldChanged(input){
-  if(!selected||saving)return;
+  if(!selected||saving||!editingRates)return;
   const boss=input.dataset.rateBoss,difficulty=input.dataset.rateDifficulty;
   const key=makeKey(selected,boss,difficulty);
   const value=String(input.value||"").trim();
@@ -262,14 +307,14 @@ function fieldChanged(input){
   if(value===""||value===stored){edits.delete(key);input.classList.remove("is-dirty")}
   else{edits.set(key,value);input.classList.add("is-dirty")}
   const info=document.getElementById("rateSaveStatus");
-  if(info)info.textContent=edits.size?"미저장 배율 "+edits.size+"개":"저장할 변경사항 없음";
+  if(info){info.textContent=edits.size?"미저장 "+edits.size+"개":"편집 중";info.classList.toggle("is-pending",edits.size>0)}
   const save=document.getElementById("rateSave");
   if(save)save.disabled=!edits.size;
   const reload=document.getElementById("rateRefresh");
   if(reload)reload.disabled=!!edits.size;
 }
 async function saveChanges(){
-  if(saving||!edits.size)return;
+  if(!editingRates||saving||!edits.size)return;
   const all=[];
   for(const [key,value] of edits){
     const [char,boss,difficulty]=JSON.parse(key),number=Number(value);
@@ -294,6 +339,7 @@ async function saveChanges(){
       done+=batch.length;
     }
     lastLoaded=Date.now();
+    if(!edits.size){editingRates=false;resetRatePaste()}
     notify("공용 배율 "+done+"개를 저장했어요.");
   }catch(e){loadError=e.message||"공용 저장에 실패했어요.";notify("저장 실패: "+loadError)}
   finally{saving=false;renderRates()}
@@ -305,9 +351,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   const root=panel();
   root.addEventListener("change",e=>{
     if(e.target.id==="rateCharacter"){
-      selected=e.target.value;
-      pasteText="";pasteMessage="";pasteParsedCount=0;pasteIsError=false;
-      renderRates();
+      if(!switchRateCharacter(e.target.value))e.target.value=selected;
     }
   });
   root.addEventListener("input",e=>{
@@ -317,7 +361,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     }else if(e.target.matches("[data-rate-boss]"))fieldChanged(e.target);
   });
   root.addEventListener("paste",e=>{
-    if(e.target.id!=="ratePaste"||saving)return;
+    if(e.target.id!=="ratePaste"||saving||!editingRates)return;
     const raw=e.clipboardData&&e.clipboardData.getData("text/plain");
     if(typeof raw==="string"&&raw){
       e.preventDefault();
@@ -326,8 +370,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   });
   root.addEventListener("click",e=>{
     if(e.target.id==="rateSave")saveChanges();
-    else if(e.target.id==="rateRefresh")loadAll();
-    else if(e.target.id==="rateAnalyze")importBossCutText(pasteText);
+    else if(e.target.id==="rateEditToggle")toggleRateEditor();
+    else if(e.target.id==="rateAnalyze"&&editingRates)importBossCutText(pasteText);
   });
   const tabFromHash=location.hash.replace("#","");
   const preferred=TABS[tabFromHash]?tabFromHash:localStorage.getItem(STORE_TAB);
