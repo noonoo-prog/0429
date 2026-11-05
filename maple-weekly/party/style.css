@@ -67,3 +67,138 @@
  .rate-actions{padding:10px;bottom:8px}
  .rate-actions small{max-width:180px}
 }
+
+
+/* 2026-11-05: compact, task-oriented layout, scoped to standalone 파티 */
+.party-app{max-width:1270px;padding:14px 18px 24px}
+.party-header{margin-bottom:12px}
+.party-topline{margin-bottom:10px}
+.party-home,.party-theme-btn{padding:6px 10px;min-height:30px;border-radius:8px}
+.party-intro{padding-bottom:10px;align-items:center}
+.party-eyebrow{font-size:9px;letter-spacing:.07em}
+.party-intro h1{font-size:27px;margin:3px 0 4px}
+.party-intro p{font-size:11px}
+.party-tabs{gap:5px;padding-bottom:8px}
+.party-tab{min-width:120px;min-height:34px;padding:6px 13px;font-size:12px;border-radius:8px}
+.party-live-note{font-size:10px}
+.party-footer{margin-top:16px;padding-top:10px;font-size:10px}
+
+/* 01 — compact batch editor: more entries above the fold */
+.rate-panel-header{margin-bottom:8px}
+.rate-panel-header h2{font-size:18px}
+.rate-panel-header p{font-size:11px;margin-top:2px}
+.rate-char-picker{padding:8px 11px;border-radius:9px;margin-bottom:8px}
+.rate-char-picker select{padding:6px 8px;font-size:12px;max-width:500px}
+.rate-hint{padding:8px 10px;margin-bottom:8px;border-radius:8px;font-size:11px}
+.rate-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.rate-group{padding:8px 10px;border-radius:9px}
+.rate-group>h3{font-size:12px;margin-bottom:5px}
+.rate-group>h3 small{font-size:9px}
+.rate-line{grid-template-columns:minmax(0,1fr) 90px 12px;gap:4px;min-height:32px;padding:4px 0}
+.rate-label{font-size:11px}
+.rate-legacy{font-size:9px;margin:2px 0 0}
+.rate-input{min-height:30px;font-size:12px;border-radius:6px;padding:4px 6px}
+.rate-actions{padding:8px 11px;margin-top:9px;bottom:6px;border-radius:9px}
+.rate-save,.rate-reload{min-height:33px;padding:6px 11px}
+.rate-actions b{font-size:11px}
+.rate-actions small{font-size:10px}
+
+/* 02 — preserve existing automatic planner, tighten surrounding whitespace */
+.party-app .party-boss-head{gap:9px;margin-bottom:9px;align-items:center}
+.party-app .party-boss-head strong{font-size:20px}
+.party-app .party-boss-head p{margin:2px 0 0;font-size:11px}
+.party-app .party-boss-head-actions{gap:5px}
+.party-app .party-boss-controls{padding:9px;gap:7px;border-radius:9px}
+.party-app .party-boss-controls select{min-height:33px;padding:0 7px}
+.party-app .party-boss-mode-panel{margin:7px 0 8px;padding:9px;border-radius:9px}
+.party-app .party-boss-fold{margin:6px 0;border-radius:9px}
+.party-app .party-boss-fold>summary{min-height:37px;padding:8px 10px;gap:7px}
+.party-app .party-boss-fold>.party-boss-owner-groups,
+.party-app .party-boss-fold>.party-boss-slots,
+.party-app .party-boss-fold>.party-boss-external{padding:9px}
+.party-app .party-boss-owner-groups{margin-top:7px}
+.party-app .party-boss-owner{padding:8px 0}
+.party-app .party-boss-owner>header{margin-bottom:5px}
+.party-app .party-boss-char-grid{gap:5px}
+.party-app .party-boss-char{gap:5px;padding:6px;border-radius:8px}
+.party-app .party-boss-char input{min-height:31px;padding:5px}
+.party-app .party-boss-result{margin-top:9px;padding:10px;border-radius:9px}
+.party-app .party-boss-result>header{padding-bottom:8px}
+.party-app .party-boss-slots,.party-app .party-boss-unassigned{margin:7px 0;padding:9px;border-radius:9px}
+.party-app .party-boss-meso-grid{gap:6px}
+.party-app .party-boss-save,.party-app .party-boss-reset{min-height:32px}
+
+/* 03 — dense collapsed recruitment rows, compact editing when expanded */
+.party-app .recruit-shell{gap:7px}
+.party-app .recruit-heading{margin:0;gap:8px}
+.party-app .recruit-heading strong{font-size:19px}
+.party-app .recruit-heading p{margin-top:1px;font-size:11px}
+.party-app .recruit-primary,
+.party-app .recruit-small-btn,
+.party-app .recruit-delete{padding:6px 10px;min-height:31px;border-radius:7px;font-size:11px}
+.party-app .recruit-toolbar{gap:5px}
+.party-app .recruit-filters button{padding:6px 9px;font-size:11px;border-radius:7px}
+.party-app .recruit-card{border-radius:9px}
+.party-app .recruit-card>summary{min-height:45px;padding:9px 11px;gap:7px}
+.party-app .recruit-card>summary::before{font-size:18px}
+.party-app .recruit-card-title{font-size:13px}
+.party-app .recruit-card-sub{font-size:11px}
+.party-app .recruit-status{font-size:10px;padding:4px 7px}
+.party-app .recruit-details{padding:0 10px 10px;gap:8px}
+.party-app .recruit-fields{padding-top:8px;gap:6px}
+.party-app .recruit-fields>label,
+.party-app .recruit-note{gap:3px}
+.party-app .recruit-block{gap:5px}
+.party-app .recruit-block+.recruit-block{border-top:1px solid var(--line);padding-top:7px}
+.party-app .recruit-line strong{font-size:12px}
+.party-app .recruit-details input,
+.party-app .recruit-details select{min-height:31px;padding:5px 7px;font-size:11px;border-radius:6px}
+.party-app .recruit-boss-row{gap:4px}
+.party-app .recruit-member-chip{padding:4px 6px;gap:4px;font-size:10px}
+.party-app .recruit-member-chip b{font-size:11px}
+.party-app .recruit-matrix th,
+.party-app .recruit-matrix td{padding:5px 7px;min-width:95px}
+.party-app .recruit-matrix th:first-child{min-width:105px}
+.party-app .recruit-rate-cell input{width:68px}
+.party-app .recruit-actions{padding-top:3px;justify-content:space-between}
+.party-app .recruit-delete{color:#b5464c;border-color:color-mix(in srgb,#b5464c 25%,var(--line));background:transparent}
+.party-app .recruit-delete:hover{background:color-mix(in srgb,#b5464c 9%,var(--surface))}
+.party-app .recruit-footer{padding:8px 0 0;gap:5px}
+.party-app .recruit-empty,.party-app .recruit-loading{padding:29px 10px}
+
+/* compact, but keep touch-friendly controls on smaller screens */
+@media(max-width:1000px){
+  .rate-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .party-app .party-boss-char-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:700px){
+  .party-app{padding:10px 10px 20px}
+  .party-topline{margin-bottom:9px}
+  .party-intro h1{font-size:23px}
+  .party-intro{padding-bottom:9px}
+  .party-tabs{gap:4px}
+  .party-tab{min-width:0;flex:1;min-height:38px;padding:7px 4px;font-size:11px}
+  .party-tab span{display:none}
+  .rate-grid{grid-template-columns:1fr}
+  .rate-char-picker{gap:6px}
+  .rate-char-picker select{max-width:none}
+  .rate-line{grid-template-columns:minmax(0,1fr) 96px 12px;min-height:38px}
+  .rate-input{min-height:35px}
+  .party-app .party-boss-char-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .party-app .party-boss-head{align-items:flex-start}
+  .party-app .party-boss-controls{gap:7px}
+  .party-app .recruit-card>summary{min-height:48px;flex-wrap:wrap}
+  .party-app .recruit-card-sub{order:3;width:100%;margin-left:22px}
+  .party-app .recruit-details input,
+  .party-app .recruit-details select{min-height:34px}
+  .party-app .recruit-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .party-app .recruit-fields label:first-child{grid-column:1/-1}
+}
+@media(max-width:420px){
+  .party-actions{gap:7px}
+  .party-nav-link{font-size:10px}
+  .party-app .party-boss-char-grid{grid-template-columns:1fr}
+  .party-app .recruit-boss-row{grid-template-columns:minmax(70px,1.1fr) minmax(62px,1fr) minmax(86px,1fr) 20px}
+  .party-app .recruit-boss-row select,
+  .party-app .recruit-boss-row input{padding:3px}
+}
