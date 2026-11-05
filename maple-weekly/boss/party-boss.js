@@ -1139,7 +1139,7 @@ function organizePartyPanels(panel,selectedCount){
     fold.dataset.pbFold=group[1];
     var alwaysVisible=false;
     fold.open=editing&&group[1]==="settings"?true:(Object.prototype.hasOwnProperty.call(PANEL_OPEN,group[1])?PANEL_OPEN[group[1]]:group[4]);
-    if(group[1]!=="slots")fold.hidden=!editing;
+    fold.hidden=!editing; // Setup, roster and saved slots are only shown in edit mode.
     if(alwaysVisible){fold.classList.add("always-visible");PANEL_OPEN.roster=true}
     var summary=document.createElement("summary");
     summary.innerHTML="<strong>"+group[2]+"</strong><span>"+esc(group[3])+"</span>";
