@@ -1224,7 +1224,7 @@ function renderNow(){
   });
   html+='</select></label>';
   normalizeDifficulty();
-  html+='<label><span>난이도</span><select data-pb-difficulty="1">';
+  html+='<label><span>난이도</span><select data-pb-difficulty="1" data-difficulty="'+esc(SETTINGS.difficulty)+'">';
   (difficultyChoices(SETTINGS.boss).indexOf(SETTINGS.difficulty)>=0?difficultyChoices(SETTINGS.boss):difficultyChoices(SETTINGS.boss).concat([SETTINGS.difficulty])).forEach(function(d){
     html+='<option value="'+esc(d)+'" '+(SETTINGS.difficulty===d?"selected":"")+'>'+esc(d)+'</option>';
   });
