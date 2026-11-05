@@ -1112,7 +1112,7 @@ function render(){
 }
 function organizePartyPanels(panel,selectedCount){
   var shell=panel.querySelector(".party-boss-shell");
-  var editing=EDIT_MODE||!RESULT.length;
+  var editing=EDIT_MODE;
   shell.classList.toggle("is-editing",editing);
   // Keep the existing form nodes and handlers together in two task-oriented panels.
   var controls=panel.querySelector(".party-boss-controls");
@@ -1137,9 +1137,9 @@ function organizePartyPanels(panel,selectedCount){
     var fold=document.createElement("details");
     fold.className="party-boss-fold";
     fold.dataset.pbFold=group[1];
-    var alwaysVisible=group[1]==="roster";
-    fold.open=alwaysVisible?true:(Object.prototype.hasOwnProperty.call(PANEL_OPEN,group[1])?PANEL_OPEN[group[1]]:group[4]);
-    if(group[1]!=="slots"&&!alwaysVisible)fold.hidden=!editing;
+    var alwaysVisible=false;
+    fold.open=editing&&group[1]==="settings"?true:(Object.prototype.hasOwnProperty.call(PANEL_OPEN,group[1])?PANEL_OPEN[group[1]]:group[4]);
+    if(group[1]!=="slots")fold.hidden=!editing;
     if(alwaysVisible){fold.classList.add("always-visible");PANEL_OPEN.roster=true}
     var summary=document.createElement("summary");
     summary.innerHTML="<strong>"+group[2]+"</strong><span>"+esc(group[3])+"</span>";
@@ -1192,7 +1192,7 @@ function renderNow(){
     panel.innerHTML='<div class="party-boss-empty"><strong>캐릭터 정보를 불러오는 중…</strong><span>잠시만 기다려 주세요.</span></div>';
     return;
   }
-  var editing=EDIT_MODE||!RESULT.length;
+  var editing=EDIT_MODE;
   if(!editing){MANUAL_PICK="";MANUAL_ADD="";MANUAL_DRAG=""}
   var selectedSet=new Set(SELECTED);
   var selected=chars.filter(function(c){return selectedSet.has(c.key)});
@@ -1200,11 +1200,17 @@ function renderNow(){
 
   html+='<section class="party-boss-shell">';
   html+='<header class="party-boss-head">';
-  html+='<div><span>PARTY BALANCER</span><strong>파티 계획</strong><p>캐릭터·보스·난이도별 배율을 모집과 공유합니다.</p></div>';
+  html+='<div class="party-boss-heading '+(editing?'is-editing':'is-viewing')+'">';
+  if(editing){
+    html+='<span class="party-boss-kicker">파티 계획 · 편집</span><strong class="party-boss-edit-title">편성 설정</strong>';
+  }else{
+    html+='<span class="party-boss-kicker">파티 계획</span><div class="party-boss-boss-title"><strong>'+esc(SETTINGS.boss)+'</strong><span>'+esc(SETTINGS.difficulty)+'</span></div>';
+  }
+  html+='</div>';
   html+='<div class="party-boss-head-actions">';
   html+='<span class="party-boss-shared-meta">'+esc(sharedMetaText())+'</span>';
   html+='<button class="party-boss-save '+(DIRTY&&!SAVING?"needs-save":"")+'" type="button" data-pb-save="1" '+(SAVING?"disabled":"")+'>'+(SAVING?"저장 중…":(DIRTY?"저장":"공용 저장됨"))+'</button>';
-  html+='<button class="party-boss-edit-toggle" type="button" data-pb-edit="1" aria-pressed="'+(editing?'true':'false')+'" '+(!RESULT.length?'disabled':'')+'>'+(editing?'편집 완료':'파티 편집')+'</button>';
+  html+='<button class="party-boss-edit-toggle" type="button" data-pb-edit="1" aria-pressed="'+(editing?'true':'false')+'">'+(editing?'편집 완료':'편집')+'</button>';
   if(editing)html+='<button class="party-boss-reset" type="button" data-pb-reset="1">선택 초기화</button>';
   html+='</div>';
   html+='</header>';
@@ -1425,7 +1431,7 @@ function renderNow(){
     }
     html+='</section>';
   }else{
-    html+='<div class="party-boss-empty"><strong>캐릭터를 선택하고 배율을 입력해 주세요.</strong><span>편성 전략을 선택한 다음 자동 편성 또는 5가지 모드 비교하기를 눌러 주세요.</span></div>';
+    html+='<div class="party-boss-empty"><strong>'+(editing?'편성할 캐릭터를 선택해 주세요.':'아직 저장된 파티 편성이 없어요.')+'</strong><span>'+(editing?'참여 인원과 편성 전략을 선택한 뒤 자동 편성을 실행하세요.':'상단 편집 버튼을 눌러 새 파티를 편성할 수 있어요.')+'</span></div>';
   }
 
   html+='</section>';
