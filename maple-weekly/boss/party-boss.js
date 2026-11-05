@@ -1222,7 +1222,7 @@ function renderNow(){
 
   html+='<section class="party-boss-shell">';
   html+='<header class="party-boss-head">';
-  html+='<div><span>PARTY BALANCER</span><strong>파티보스 계획</strong><p>캐릭터·보스·난이도별 배율을 모집과 공유합니다.</p></div>';
+  html+='<div><span>PARTY BALANCER</span><strong>파티 계획</strong><p>캐릭터·보스·난이도별 배율을 모집과 공유합니다.</p></div>';
   html+='<div class="party-boss-head-actions">';
   html+='<span class="party-boss-shared-meta">'+esc(sharedMetaText())+'</span>';
   html+='<button class="party-boss-save '+(DIRTY&&!SAVING?"needs-save":"")+'" type="button" data-pb-save="1" '+(SAVING?"disabled":"")+'>'+(SAVING?"저장 중…":(DIRTY?"저장":"공용 저장됨"))+'</button>';
