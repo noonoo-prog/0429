@@ -34,7 +34,7 @@ const IMPORT_ORDER=[
   ["검은 마법사","챔피언"],["칼로스","이지"],["검은 마법사","하드"],["세렌","노말"]
 ];
 
-let currentTab="rates",characters=[],selected="",rates={},legacy={};
+let currentTab="rates",characters=[],selected="",rates={};
 let initialLoaded=false,fetching=false,saving=false,lastLoaded=0,loadError="";
 let edits=new Map();
 let pasteText="",pasteMessage="",pasteIsError=false,pasteParsedCount=0;
@@ -78,7 +78,7 @@ function importBossCutText(text){
     if(value===stored)edits.delete(ref);
     else edits.set(ref,value);
   });
-  pasteMessage="40개 배율을 순서대로 채웠어요. 첫 항목 "+parsed.numbers[0]+"% · 마지막 항목 "+parsed.numbers[39]+"%. 아래 값을 확인한 뒤 ‘변경 저장’을 눌러 주세요.";
+  pasteMessage="40개 배율을 입력칸에 채웠어요. 첫 항목 "+parsed.numbers[0]+"% · 마지막 항목 "+parsed.numbers[39]+"%. 아직 저장되지 않았어요. 값을 확인한 뒤 ‘변경 저장’을 눌러 주세요.";
   pasteIsError=false;pasteParsedCount=parsed.numbers.length;
   renderRates();
 }
@@ -175,7 +175,6 @@ async function loadAll(){
       api("boss-party-recruit","rate_get")
     ]);
     characters=chooseCharacters(bootstrap.owners,(plan.state||{}).guests,((recruit.state||{}).people)||[]);
-    legacy=(plan.state||{}).multipliers||{};
     rates=rateData.rates||{};
     const previous=selected;
     selected=characters.some(c=>c.key===previous)?previous:(characters[0]&&characters[0].key)||"";
@@ -191,7 +190,7 @@ async function refreshRates(){
       api("boss-board-api","party_boss_state_get"),
       api("boss-party-recruit","rate_get")
     ]);
-    rates=rateData.rates||{};legacy=(p.state||{}).multipliers||{};
+    rates=rateData.rates||{};
     lastLoaded=Date.now();loadError="";
   }catch(e){loadError=e.message||"배율을 새로고침하지 못했어요."}
   finally{fetching=false;renderRates()}
@@ -221,7 +220,7 @@ function renderRates(){
   });
   if(lastOwner)code+='</optgroup>';
   code+='</select><span class="rate-char-meta">'+htmlEscape(chosen?chosen.owner:"선택 없음")+'</span></div>';
-  code+='<div class="rate-hint"><b>하드 세렌 · 익스트림 스우 이상 중심</b>으로 관리합니다. 기존에 보스명만 저장된 배율은 난이도가 확인되지 않아 참고값으로만 표시합니다. <b>미입력은 빈칸, 0%는 숫자 0</b>으로 구분해 주세요.</div>';
+  code+='<div class="rate-hint"><b>캐릭터 · 보스 · 난이도별 배율</b>을 관리합니다. 입력·붙여넣기만으로는 저장되지 않아요. 아래 <b>변경 저장</b>을 눌러야 공용 DB에 반영됩니다.</div>';
   if(chosen){
     code+='<section class="rate-import"><div class="rate-import-head"><strong>환산주스탯 텍스트 붙여넣기</strong><span>익스트림 발드릭스 → 노말 세렌 · 40개 고정 순서</span></div>';
     code+='<textarea id="ratePaste" rows="3" maxlength="30000" placeholder="환산주스탯의 보스컷 배율 부분을 복사해서 여기에 붙여넣으세요. 자동으로 40개 배율을 채웁니다." aria-label="환산주스탯 보스컷 텍스트 붙여넣기">'+htmlEscape(pasteText)+'</textarea>';
@@ -233,15 +232,13 @@ function renderRates(){
   else {
     code+='<div class="rate-grid">';
     BOSSES.forEach(b=>{
-      const legacyRate=Number((legacy[b.name]||{})[chosen.key])||0;
       code+='<section class="rate-group"><h3>'+htmlEscape(b.name)+'<small>'+b.diff.length+'개 난이도</small></h3>';
       b.diff.forEach(difficulty=>{
         const editKey=makeKey(selected,b.name,difficulty);
         const draft=edits.has(editKey)?edits.get(editKey):null;
         const stored=readRate(selected,b.name,difficulty);
         const value=draft!==null?draft:stored;
-        const hint=legacyRate?'기존 난이도 미분류 '+legacyRate+'%':'';
-        code+='<div class="rate-line"><div><span class="rate-label">'+htmlEscape(difficulty)+'</span>'+(hint?'<p class="rate-legacy" title="기존 배율이며 특정 난이도로 자동 분류하지 않았습니다">'+htmlEscape(hint)+'</p>':'')+'</div>';
+        code+='<div class="rate-line"><div><span class="rate-label">'+htmlEscape(difficulty)+'</span></div>';
         code+='<input class="rate-input'+(edits.has(editKey)?' is-dirty':'')+'" type="number" step="0.01" min="0" max="100000" inputmode="decimal" data-rate-boss="'+htmlEscape(b.name)+'" data-rate-difficulty="'+htmlEscape(difficulty)+'" aria-label="'+htmlEscape(b.name+" "+difficulty+" 배율")+'" placeholder="미입력" value="'+htmlEscape(value)+'"'+(saving?' disabled':'')+'>';
         code+='<span class="rate-unit">%</span></div>';
       });
@@ -250,7 +247,7 @@ function renderRates(){
     code+='</div>';
   }
   const count=edits.size;
-  code+='<div class="rate-actions"><div><b id="rateSaveStatus">'+(saving?"공용 배율 저장 중…":(count?"변경한 배율 "+count+"개":"모든 배율은 공용 DB에 저장됩니다."))+'</b><small>저장한 값은 파티 계획·모집에 함께 반영됩니다.</small></div>';
+  code+='<div class="rate-actions"><div><b id="rateSaveStatus">'+(saving?"수동 저장 중…":(count?"미저장 배율 "+count+"개":"저장할 변경사항 없음"))+'</b><small>변경 저장을 눌러야 파티 계획·모집에도 반영됩니다.</small></div>';
   code+='<div class="rate-buttons"><button type="button" class="rate-reload" id="rateRefresh"'+(saving||count?' disabled':'')+'>새로고침</button>';
   code+='<button type="button" class="rate-save" id="rateSave"'+(saving||!count?' disabled':'')+'>'+(saving?"저장 중…":"변경 저장")+'</button></div></div>';
   if(loadError)code+='<p style="color:#c94141;font-size:12px">'+htmlEscape(loadError)+'</p>';
@@ -265,7 +262,7 @@ function fieldChanged(input){
   if(value===""||value===stored){edits.delete(key);input.classList.remove("is-dirty")}
   else{edits.set(key,value);input.classList.add("is-dirty")}
   const info=document.getElementById("rateSaveStatus");
-  if(info)info.textContent=edits.size?"변경한 배율 "+edits.size+"개":"모든 배율은 공용 DB에 저장됩니다.";
+  if(info)info.textContent=edits.size?"미저장 배율 "+edits.size+"개":"저장할 변경사항 없음";
   const save=document.getElementById("rateSave");
   if(save)save.disabled=!edits.size;
   const reload=document.getElementById("rateRefresh");
