@@ -4,7 +4,8 @@ var ROOT="https://ibqpjcedzcllacbamrnu.supabase.co/functions/v1/";
 var KEY="sb_publishable_s-EiUNh66D17Xd3JFGUyvA_aNEDNMKq";
 var BOSSES=["스우","데미안","가엔슬","루시드","윌","더스크","진힐라","듄켈","세렌","칼로스","대적자","카링","흉성","벨로나","림보","발드릭스","유피테르","검은 마법사"];
 var DIFFS={"스우":["노말","하드","익스트림"],"데미안":["노말","하드"],"가엔슬":["노말","카오스"],"루시드":["이지","노말","하드"],"윌":["이지","노말","하드"],"더스크":["노말","카오스"],"진힐라":["노말","하드"],"듄켈":["노말","하드"],"세렌":["노말","하드","익스트림"],"칼로스":["이지","노말","카오스","익스트림"],"대적자":["이지","노말","하드","익스트림"],"카링":["이지","노말","하드","익스트림"],"흉성":["노말","하드"],"벨로나":["이지","노말","하드"],"림보":["노말","하드"],"발드릭스":["노말","하드"],"유피테르":["노말","하드"],"검은 마법사":["하드","익스트림"]};
-var state={groups:[],people:[],rates:{}},plan={},owners=[],people=[],revision=0;
+var state={groups:[],people:[]},plan={},owners=[],people=[],revision=0;
+var pendingRates={},rateQueue={},rateSequence=0;
 var loaded=false,loading=false,dirty=false,saving=false,lastFetch=0,filter="recruiting",error="";
 var openIds=new Set();
 function esc(value){return String(value==null?"":value).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
@@ -22,7 +23,6 @@ function normalize(){
   if(!state||typeof state!=="object")state={};
   if(!Array.isArray(state.groups))state.groups=[];
   if(!Array.isArray(state.people))state.people=[];
-  if(!state.rates||typeof state.rates!=="object")state.rates={};
 }
 function buildPeople(){
   var all=[];
@@ -46,10 +46,36 @@ function buildPeople(){
 }
 function member(key){return people.find(function(p){return p.key===key})||{key:key,name:key.split("|").slice(-1)[0]||"알 수 없음",owner:"미등록",ownerKey:key}}
 function rateFor(boss,key){
-  var override=state.rates[boss]&&state.rates[boss][key];
-  if(Number(override)>0)return {value:Number(override),source:"모집"};
+  var pending=pendingRates[boss+"||"+key];
+  if(pending)return {value:pending.value,source:"저장 중"};
   var base=plan.multipliers&&plan.multipliers[boss]&&plan.multipliers[boss][key];
-  return {value:Math.max(0,Number(base)||0),source:"계획"};
+  return {value:Math.max(0,Number(base)||0),source:"공용"};
+}
+function setSharedRate(boss,key,value){
+  var ref=boss+"||"+key,seq=++rateSequence;
+  pendingRates[ref]={value:value,seq:seq};
+  var prior=rateQueue[ref]||Promise.resolve();
+  var next=prior.catch(function(){}).then(function(){
+    return api("boss-party-recruit",{action:"rate_set",boss:boss,key:key,value:value});
+  }).then(function(data){
+    if(!plan.multipliers)plan.multipliers={};
+    if(!plan.multipliers[boss])plan.multipliers[boss]={};
+    if(data.value>0)plan.multipliers[boss][key]=data.value;
+    else delete plan.multipliers[boss][key];
+    if(pendingRates[ref]&&pendingRates[ref].seq===seq){
+      delete pendingRates[ref];
+      notify("공용 배율을 저장했어요.");
+    }
+    render();
+  }).catch(function(e){
+    if(pendingRates[ref]&&pendingRates[ref].seq===seq){
+      delete pendingRates[ref];
+      notify("배율 저장 실패: "+(e.message||"연결 오류"));
+      render();
+    }
+  });
+  rateQueue[ref]=next;
+  return next;
 }
 function formatRate(n){return Number(n).toFixed(2).replace(/\.00$/,"").replace(/(\.\d)0$/,"$1")+"%"}
 function group(id){return state.groups.find(function(g){return g.id===id})}
@@ -67,7 +93,7 @@ function loadAll(force){
   ]).then(function(results){
     owners=Array.isArray(results[0].owners)?results[0].owners:[];
     plan=results[1].state||{};
-    state=results[2].state||{groups:[],people:[],rates:{}};
+    state=results[2].state||{groups:[],people:[]};
     revision=Number(results[2].revision)||0;
     normalize();buildPeople();loaded=true;dirty=false;lastFetch=Date.now();
   }).catch(function(e){error=e.message||"모집 정보를 불러오지 못했어요."}).finally(function(){loading=false;render()});
@@ -132,7 +158,7 @@ function groupHtml(g){
   html+='<div class="recruit-join-row"><input aria-label="외부 파티원 닉네임" data-r-manual-name="'+esc(g.id)+'" maxlength="30" placeholder="외부 파티원 닉네임"><button type="button" class="recruit-small-btn" data-r-action="add-manual" data-r-id="'+esc(g.id)+'">외부인 추가</button></div>';
   html+='</div>';
   if(members.length&&bosses.length){
-    html+='<div class="recruit-block"><div class="recruit-line"><strong>캐릭터별 배율</strong><span class="recruit-muted">계획 저장값 자동 불러오기</span></div>';
+    html+='<div class="recruit-block"><div class="recruit-line"><strong>캐릭터별 배율</strong><span class="recruit-muted">공용 배율 · 수정 즉시 저장</span></div>';
     html+='<div class="recruit-matrix-scroll"><table class="recruit-matrix"><thead><tr><th>캐릭터</th>';
     bosses.forEach(function(b){html+='<th>'+esc(b.difficulty)+' '+esc(b.boss)+'</th>'});
     html+='</tr></thead><tbody>';
@@ -168,7 +194,7 @@ function render(){
   html+='</div><span class="recruit-muted">모집 중 '+active+'팀</span></div>';
   if(shown.length){shown.forEach(function(g){html+=groupHtml(g)})}
   else html+='<div class="recruit-empty">표시할 파티가 없어요. <b>+ 파티 추가</b>로 시작해 보세요.</div>';
-  html+='<div class="recruit-footer"><div><strong>'+(dirty?"저장하지 않은 변경사항":saving?"저장 중…":"공용 저장됨")+'</strong><span>파티보스 계획의 배율은 읽기 전용으로 불러옵니다.</span></div>';
+  html+='<div class="recruit-footer"><div><strong>'+(dirty?"저장하지 않은 변경사항":saving?"저장 중…":"공용 저장됨")+'</strong><span>모집 정보는 저장 버튼 · 배율은 수정 즉시 파티보스 계획에 공유</span></div>';
   html+='<button type="button" class="recruit-small-btn" data-r-action="reload"'+(dirty||saving?' disabled':'')+'>새로고침</button>';
   html+='<button type="button" class="recruit-primary" data-r-action="save"'+(!dirty||saving?' disabled':'')+'>'+(saving?"저장 중…":"저장")+'</button></div>';
   if(error)html+='<p class="recruit-error">'+esc(error)+'</p>';
@@ -257,9 +283,12 @@ function change(e){
     else b.minRate=Math.max(0,Number(value)||0);
   }else if(field==="rate"){
     var boss=target.dataset.rBoss,key=target.dataset.rKey,v=Number(value);
-    if(!state.rates[boss])state.rates[boss]={};
-    if(value.trim()!==""&&Number.isFinite(v)&&v>0)state.rates[boss][key]=Math.min(100000,v);
-    else delete state.rates[boss][key];
+    if(value.trim()!==""&&(!Number.isFinite(v)||v<0||v>100000)){
+      notify("배율은 0~100000 사이로 입력해 주세요.");render();return;
+    }
+    setSharedRate(boss,key,value.trim()===""?0:v);
+    render();
+    return;
   }
   mark();
 }
