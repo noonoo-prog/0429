@@ -7,21 +7,76 @@ const TABS={rates:"배율 관리",plan:"파티 계획",recruit:"파티 모집"};
 const STORE_TAB="boss-party-workspace-tab-v1";
 const THEME_KEY="boss-board-theme-v1";
 const BOSSES=[
-  {name:"스우",diff:["익스트림"]},
-  {name:"세렌",diff:["하드","익스트림"]},
-  {name:"칼로스",diff:["이지","노말","카오스","익스트림"]},
-  {name:"대적자",diff:["이지","노말","하드","익스트림"]},
-  {name:"카링",diff:["이지","노말","하드","익스트림"]},
-  {name:"흉성",diff:["노말","하드"]},
-  {name:"벨로나",diff:["이지","노말","하드"]},
-  {name:"림보",diff:["노말","하드"]},
-  {name:"발드릭스",diff:["노말","하드"]},
-  {name:"유피테르",diff:["노말","하드"]},
-  {name:"검은 마법사",diff:["하드","익스트림"]}
+  {name:"발드릭스",diff:["익스트림","데스티니","하드","노말"]},
+  {name:"림보",diff:["익스트림","데스티니","하드","노말"]},
+  {name:"유피테르",diff:["하드","노말"]},
+  {name:"카링",diff:["익스트림","데스티니","하드","노말","이지"]},
+  {name:"대적자",diff:["익스트림","데스티니","하드","노말","이지"]},
+  {name:"칼로스",diff:["익스트림","데스티니","카오스","챔피언","노말","이지"]},
+  {name:"벨로나",diff:["하드","노말","이지"]},
+  {name:"흉성",diff:["하드","노말"]},
+  {name:"세렌",diff:["익스트림","데스티니","챔피언","하드","노말"]},
+  {name:"검은 마법사",diff:["익스트림","챔피언","하드"]},
+  {name:"스우",diff:["익스트림"]}
 ];
+/* Manual copy/paste template, checked against the 2026-11-05 boss-cut screenshots.
+   Order is row-major, from Extreme Baldrix through Normal Seren. */
+const IMPORT_ORDER=[
+  ["발드릭스","익스트림"],["림보","익스트림"],["유피테르","하드"],["카링","익스트림"],
+  ["대적자","익스트림"],["칼로스","익스트림"],["발드릭스","데스티니"],["발드릭스","하드"],
+  ["벨로나","하드"],["림보","데스티니"],["림보","하드"],["흉성","하드"],
+  ["유피테르","노말"],["대적자","데스티니"],["대적자","하드"],["발드릭스","노말"],
+  ["카링","하드"],["세렌","익스트림"],["검은 마법사","익스트림"],["카링","데스티니"],
+  ["림보","노말"],["칼로스","데스티니"],["칼로스","카오스"],["벨로나","노말"],
+  ["세렌","데스티니"],["카링","노말"],["흉성","노말"],["스우","익스트림"],
+  ["칼로스","챔피언"],["대적자","노말"],["칼로스","노말"],["벨로나","이지"],
+  ["세렌","챔피언"],["카링","이지"],["세렌","하드"],["대적자","이지"],
+  ["검은 마법사","챔피언"],["칼로스","이지"],["검은 마법사","하드"],["세렌","노말"]
+];
+
 let currentTab="rates",characters=[],selected="",rates={},legacy={};
 let initialLoaded=false,fetching=false,saving=false,lastLoaded=0,loadError="";
 let edits=new Map();
+let pasteText="",pasteMessage="",pasteIsError=false,pasteParsedCount=0;
+function parseBossCutCopy(text){
+  let source=String(text||"").replace(/[％﹪]/g,"%");
+  // Full-page copy includes many unrelated percentages; isolate the actual boss-cut list.
+  const marker=source.lastIndexOf("보스컷 관련 공지");
+  if(marker>=0)source=source.slice(marker+"보스컷 관련 공지".length);
+  const beforeTime=source.search(/보스 시간\s*(?:\(|\n|$)/);
+  if(beforeTime>=0)source=source.slice(0,beforeTime);
+  const matches=Array.from(source.matchAll(/(?:\[파티\]\s*)?(\d[\d,]*(?:\.\d+)?)\s*%/g));
+  const numbers=matches.map(m=>Number(m[1].replace(/,/g,"")));
+  const valid=numbers.every(x=>Number.isFinite(x)&&x>=0&&x<=100000);
+  return {numbers,valid,expected:IMPORT_ORDER.length};
+}
+function importBossCutText(text){
+  pasteText=String(text||"").slice(0,30000);
+  if(!selected){pasteMessage="캐릭터를 먼저 선택해 주세요.";pasteIsError=true;renderRates();return}
+  const match=pasteText.match(/Lv\.\s*\d+\s+([^\/\n\r]+)\s*\//);
+  if(match){
+    const pastedName=match[1].trim();
+    const char=characters.find(c=>c.key===selected);
+    if(char&&pastedName!==char.name){
+      pasteMessage="붙여넣은 캐릭터("+pastedName+")와 선택한 캐릭터("+char.name+")가 달라요. 먼저 선택을 바꿔 주세요.";
+      pasteIsError=true;pasteParsedCount=0;renderRates();return;
+    }
+  }
+  const parsed=parseBossCutCopy(pasteText);
+  if(!parsed.valid||parsed.numbers.length!==parsed.expected){
+    pasteMessage="배율 "+parsed.numbers.length+"개가 감지됐어요. 기준 순서 40개(익스트림 발드릭스 ~ 노말 세렌)가 모두 있어야 자동 입력해요. 기존 입력값은 변경하지 않았어요.";
+    pasteIsError=true;pasteParsedCount=parsed.numbers.length;renderRates();return;
+  }
+  IMPORT_ORDER.forEach(([boss,difficulty],i)=>{
+    const ref=makeKey(selected,boss,difficulty);
+    const value=String(parsed.numbers[i]),stored=readRate(selected,boss,difficulty);
+    if(value===stored)edits.delete(ref);
+    else edits.set(ref,value);
+  });
+  pasteMessage="40개 배율을 순서대로 채웠어요. 첫 항목 "+parsed.numbers[0]+"% · 마지막 항목 "+parsed.numbers[39]+"%. 아래 값을 확인한 뒤 ‘변경 저장’을 눌러 주세요.";
+  pasteIsError=false;pasteParsedCount=parsed.numbers.length;
+  renderRates();
+}
 const htmlEscape=x=>String(x==null?"":x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const panel=()=>document.getElementById("rateManagerPanel");
 function notify(message){
@@ -162,6 +217,13 @@ function renderRates(){
   if(lastOwner)code+='</optgroup>';
   code+='</select><span class="rate-char-meta">'+htmlEscape(chosen?chosen.owner:"선택 없음")+'</span></div>';
   code+='<div class="rate-hint"><b>하드 세렌 · 익스트림 스우 이상 중심</b>으로 관리합니다. 기존에 보스명만 저장된 배율은 난이도가 확인되지 않아 참고값으로만 표시합니다. <b>미입력은 빈칸, 0%는 숫자 0</b>으로 구분해 주세요.</div>';
+  if(chosen){
+    code+='<section class="rate-import"><div class="rate-import-head"><strong>환산주스탯 텍스트 붙여넣기</strong><span>익스트림 발드릭스 → 노말 세렌 · 40개 고정 순서</span></div>';
+    code+='<textarea id="ratePaste" rows="3" maxlength="30000" placeholder="환산주스탯의 보스컷 배율 부분을 복사해서 여기에 붙여넣으세요. 자동으로 40개 배율을 채웁니다." aria-label="환산주스탯 보스컷 텍스트 붙여넣기">'+htmlEscape(pasteText)+'</textarea>';
+    code+='<div class="rate-import-bottom"><span class="rate-import-note'+(pasteIsError?' error':'')+'">'+htmlEscape(pasteMessage||"붙여넣으면 자동 분석합니다. 40개가 아니면 저장하지 않아요.")+'</span>';
+    code+='<button type="button" class="rate-reload" id="rateAnalyze"'+(saving?' disabled':'')+'>순서대로 채우기</button></div>';
+    code+='</section>';
+  }
   if(!chosen){code+='<div class="rate-empty">등록된 캐릭터가 없어요. 보스 현황판에서 캐릭터를 추가해 주세요.</div>';}
   else {
     code+='<div class="rate-grid">';
@@ -242,15 +304,28 @@ document.addEventListener("DOMContentLoaded",()=>{
   root.addEventListener("change",e=>{
     if(e.target.id==="rateCharacter"){
       selected=e.target.value;
+      pasteText="";pasteMessage="";pasteParsedCount=0;pasteIsError=false;
       renderRates();
     }
   });
   root.addEventListener("input",e=>{
-    if(e.target.matches("[data-rate-boss]"))fieldChanged(e.target);
+    if(e.target.id==="ratePaste"){
+      pasteText=e.target.value;
+      // Pasted text is parsed on the paste event below. Manual edits use the analyze button.
+    }else if(e.target.matches("[data-rate-boss]"))fieldChanged(e.target);
+  });
+  root.addEventListener("paste",e=>{
+    if(e.target.id!=="ratePaste"||saving)return;
+    const raw=e.clipboardData&&e.clipboardData.getData("text/plain");
+    if(typeof raw==="string"&&raw){
+      e.preventDefault();
+      importBossCutText(raw);
+    }
   });
   root.addEventListener("click",e=>{
     if(e.target.id==="rateSave")saveChanges();
     else if(e.target.id==="rateRefresh")loadAll();
+    else if(e.target.id==="rateAnalyze")importBossCutText(pasteText);
   });
   const tabFromHash=location.hash.replace("#","");
   const preferred=TABS[tabFromHash]?tabFromHash:localStorage.getItem(STORE_TAB);
