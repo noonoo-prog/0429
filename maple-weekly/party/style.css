@@ -265,8 +265,8 @@
   background:var(--surface-soft);border:1px solid var(--line);line-height:1.5}
 .party-app .rate-edit-help b{color:var(--text)}
 .party-app .rate-grid{
-  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
-  gap:7px;align-items:start;
+  display:grid;grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:6px;align-items:start;
 }
 .party-app .rate-group{
   padding:8px 9px;border:1px solid var(--line);border-radius:9px;
@@ -294,10 +294,13 @@
 }
 .party-app .rate-unit{width:auto;font-size:10px}
 .party-app .rate-error{font-size:11px;color:#ba3e46;margin:9px 0}
-@media(max-width:1120px){
+@media(max-width:1160px){
+ .party-app .rate-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+}
+@media(max-width:990px){
  .party-app .rate-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
-@media(max-width:920px){
+@media(max-width:800px){
  .party-app .rate-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media(max-width:660px){
