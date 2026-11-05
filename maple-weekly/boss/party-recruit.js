@@ -67,6 +67,10 @@ function setSharedRate(boss,key,value){
       notify("공용 배율을 저장했어요.");
     }
     render();
+    var planPanel=document.getElementById("partyBossPanel");
+    if(planPanel&&!planPanel.hidden&&window.refreshPartyBossShared){
+      window.refreshPartyBossShared();
+    }
   }).catch(function(e){
     if(pendingRates[ref]&&pendingRates[ref].seq===seq){
       delete pendingRates[ref];
