@@ -8,7 +8,7 @@ function activeDifficulties(boss){if(boss==="스우")return ["익스트림"];ret
 function bossOptions(current){var list=BOSSES.slice();if(current&&list.indexOf(current)<0)list.push(current);return list}
 var DIFFS={"스우":["노말","하드","익스트림"],"데미안":["노말","하드"],"가엔슬":["노말","카오스"],"루시드":["이지","노말","하드"],"윌":["이지","노말","하드"],"더스크":["노말","카오스"],"진힐라":["노말","하드"],"듄켈":["노말","하드"],"세렌":["노말","하드","익스트림","데스티니","챔피언"],"칼로스":["이지","노말","카오스","익스트림","데스티니","챔피언"],"대적자":["이지","노말","하드","익스트림","데스티니"],"카링":["이지","노말","하드","익스트림","데스티니"],"흉성":["노말","하드"],"벨로나":["이지","노말","하드"],"림보":["노말","하드","익스트림","데스티니"],"발드릭스":["노말","하드","익스트림","데스티니"],"유피테르":["노말","하드"],"검은 마법사":["하드","익스트림","챔피언"]};
 var state={groups:[],people:[]},plan={},owners=[],people=[],revision=0;
-var loaded=false,loading=false,dirty=false,saving=false,lastFetch=0,filter="recruiting",error="";
+var loaded=false,loading=false,dirty=false,saving=false,lastFetch=0,filter="all",error="";
 var openIds=new Set();
 var planDraft=null;
 function esc(value){return String(value==null?"":value).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
@@ -36,7 +36,9 @@ function buildPeople(){
       all.push({key:String(o.id)+"|"+name,name:name,owner:String(o.name||""),ownerKey:String(o.id)});
     });
   });
-  (plan.guests||[]).forEach(function(g){
+  var allGuests=(Array.isArray(plan.guests)?plan.guests:[]).slice();
+  (Array.isArray(plan.savedSlots)?plan.savedSlots:[]).forEach(function(slot){if(slot&&Array.isArray(slot.guests))allGuests=allGuests.concat(slot.guests)});
+  allGuests.forEach(function(g){
     if(!g||!g.id)return;
     all.push({key:"guest|"+g.id,name:String(g.name||""),owner:String(g.owner||"외부"),ownerKey:"guest:"+(String(g.owner||"").toLowerCase()||g.id)});
   });
