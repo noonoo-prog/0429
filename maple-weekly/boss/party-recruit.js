@@ -108,7 +108,8 @@ function groupHtml(g){
   var html='<details class="recruit-card" data-r-card="'+esc(g.id)+'"'+(open?' open':'')+'>';
   html+='<summary><span class="recruit-card-title">'+esc(g.name||"새 파티")+'</span><span class="recruit-card-sub">'+bosses.map(function(b){return esc(b.difficulty+' '+b.boss)}).join(' · ')+' · '+members.length+'/'+g.capacity+'명';
   if(g.status==="recruiting")html+=' · '+(missing?missing+'명 모집':'인원 충족');
-  html+='</span>'+badgeFor(g.status)+'</summary>';
+  html+='</span>'+badgeFor(g.status);
+  html+='<button type="button" class="recruit-card-delete" data-r-action="delete-group" data-r-id="'+esc(g.id)+'" aria-label="'+esc(g.name||"파티")+' 삭제" title="모집 목록에서 삭제">삭제</button></summary>';
   html+='<div class="recruit-details">';
   html+='<div class="recruit-fields">';
   html+='<label>파티 이름<input data-r-edit="name" data-r-id="'+esc(g.id)+'" value="'+esc(g.name||"")+'" maxlength="40" placeholder="파티 이름"></label>';
@@ -254,6 +255,7 @@ function addToGroup(g,key){
 function click(e){
   var button=e.target.closest("[data-r-action]");if(!button)return;
   var action=button.dataset.rAction,groupId=button.dataset.rId,g=groupId&&group(groupId);
+  if(action==="delete-group"){e.preventDefault();e.stopPropagation()}
   if(action==="filter"){filter=button.dataset.rFilter;render();return}
   if(action==="add-group"){
     var newGroup={id:id(),name:"새 모집 파티",capacity:3,day:"",time:"",note:"",status:"recruiting",members:[],bosses:[{boss:"림보",difficulty:"하드",minRate:130}]};
