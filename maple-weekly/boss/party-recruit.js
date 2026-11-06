@@ -172,7 +172,7 @@ function render(){
   people.forEach(function(p){
     var rate=rateFor(selectedBoss,selectedDifficulty,p.key).value;
     var assigned=state.groups.find(function(g){return (g.members||[]).indexOf(p.key)>=0});
-    html+='<button type="button" class="direct-character-card" draggable="true" data-r-drag-key="'+esc(p.key)+'"><b>'+esc(p.name)+'</b><small>'+esc(p.owner)+'</small><strong>'+(rate?formatRate(rate):'미입력')+'</strong>'+(assigned?'<em>'+esc(assigned.name||'배정됨')+'</em>':'')+'</button>';
+    html+='<button type="button" class="direct-character-card" draggable="true" data-r-drag-key="'+esc(p.key)+'" data-r-drag-group="'+(assigned?esc(assigned.id):'')+'"><b>'+esc(p.name)+'</b><small>'+esc(p.owner)+'</small><strong>'+(rate?formatRate(rate):'미입력')+'</strong>'+(assigned?'<em>'+esc(assigned.name||'배정됨')+'</em>':'')+'</button>';
   });
   html+='</div></section>';
   html+='<div class="recruit-toolbar"><div class="recruit-filters">';
