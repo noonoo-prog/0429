@@ -96,7 +96,7 @@ function options(list,selected){
   return list.map(function(x){return '<option value="'+esc(x)+'"'+(x===selected?' selected':'')+'>'+esc(x)+'</option>'}).join("");
 }
 function badgeFor(status){
-  if(status==="confirmed")return '<span class="recruit-status confirmed">모집 완료</span>';
+  if(status==="confirmed")return '<span class="recruit-status confirmed">저장 완료</span>';
   if(status==="closed")return '<span class="recruit-status closed">종료</span>';
   return '<span class="recruit-status active">모집 중</span>';
 }
@@ -107,27 +107,23 @@ function groupHtml(g){
   var open=openIds.has(g.id);
   var html='<details class="recruit-card" data-r-card="'+esc(g.id)+'"'+(open?' open':'')+'>';
   html+='<summary><span class="recruit-card-title">'+esc(g.name||"새 파티")+'</span><span class="recruit-card-sub">'+bosses.map(function(b){return esc(b.difficulty+' '+b.boss)}).join(' · ')+' · '+members.length+'/'+g.capacity+'명';
-  if(g.status==="recruiting")html+=' · '+(missing?missing+'명 모집':'인원 충족');
-  html+='</span>'+badgeFor(g.status);
+  html+='</span>';
   html+='<button type="button" class="recruit-card-delete" data-r-action="delete-group" data-r-id="'+esc(g.id)+'" aria-label="'+esc(g.name||"파티")+' 삭제" title="모집 목록에서 삭제">삭제</button></summary>';
   html+='<div class="recruit-details">';
   html+='<div class="recruit-fields">';
   html+='<label>파티 이름<input data-r-edit="name" data-r-id="'+esc(g.id)+'" value="'+esc(g.name||"")+'" maxlength="40" placeholder="파티 이름"></label>';
   html+='<label>정원<select data-r-edit="capacity" data-r-id="'+esc(g.id)+'">'+options(["2","3","4","5","6"],String(g.capacity||3))+'</select></label>';
-  html+='<label>상태<select data-r-edit="status" data-r-id="'+esc(g.id)+'"><option value="recruiting"'+(g.status==="recruiting"?' selected':'')+'>모집 중</option><option value="confirmed"'+(g.status==="confirmed"?' selected':'')+'>모집 완료</option><option value="closed"'+(g.status==="closed"?' selected':'')+'>종료</option></select></label>';
-  html+='<label>요일<input data-r-edit="day" data-r-id="'+esc(g.id)+'" value="'+esc(g.day||"")+'" maxlength="30" placeholder="예: 토요일"></label>';
-  html+='<label>시간<input data-r-edit="time" data-r-id="'+esc(g.id)+'" value="'+esc(g.time||"")+'" maxlength="30" placeholder="예: 21:00"></label>';
   html+='</div>';
   html+='<div class="recruit-block"><div class="recruit-line"><strong>같이 갈 보스</strong><button type="button" class="recruit-small-btn" data-r-action="add-boss" data-r-id="'+esc(g.id)+'">+ 보스 추가</button></div>';
   bosses.forEach(function(b,i){
     html+='<div class="recruit-boss-row"><select aria-label="보스 선택" data-r-edit="boss" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">'+options(bossOptions(b.boss),b.boss)+'</select>';
     var choices=activeDifficulties(b.boss);if(choices.indexOf(b.difficulty)<0)choices.push(b.difficulty);
     html+='<select aria-label="난이도" data-r-edit="difficulty" data-difficulty="'+esc(b.difficulty)+'" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">'+options(choices,b.difficulty)+'</select>';
-    html+='<label class="recruit-rate-limit"><input aria-label="모집 희망 배율" type="number" min="0" step="0.01" data-r-edit="minRate" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'" value="'+esc(b.minRate)+'"><span>% 이상</span></label>';
+    html+='<span class="recruit-rate-limit direct-boss-total">합산 '+formatRate(members.reduce(function(sum,key){return sum+rateFor(b.boss,b.difficulty,key).value},0))+'</span>';
     html+='<button type="button" class="recruit-icon-btn" aria-label="보스 삭제" data-r-action="remove-boss" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">×</button></div>';
   });
   html+='</div>';
-  html+='<div class="recruit-block"><div class="recruit-line"><strong>파티원 '+members.length+'/'+g.capacity+'</strong><span class="recruit-muted">한 사람당 한 캐릭터</span></div>';
+  html+='<div class="recruit-block"><div class="recruit-line"><strong>배치 캐릭터 '+members.length+'/'+g.capacity+'</strong><span class="recruit-muted">같은 주인은 한 파티에 한 캐릭터</span></div>';
   html+='<div class="recruit-member-list">';
   members.forEach(function(key){
     var p=member(key);
@@ -137,7 +133,6 @@ function groupHtml(g){
   html+='</div><div class="recruit-join-row"><select aria-label="파티원 선택" data-r-member-select="'+esc(g.id)+'"><option value="">등록된 캐릭터 선택</option>';
   people.forEach(function(p){if(members.indexOf(p.key)<0)html+='<option value="'+esc(p.key)+'">'+esc(p.name)+' · '+esc(p.owner)+'</option>'});
   html+='</select><button type="button" class="recruit-small-btn" data-r-action="add-member" data-r-id="'+esc(g.id)+'">추가</button></div>';
-  html+='<div class="recruit-join-row"><input aria-label="외부 파티원 닉네임" data-r-manual-name="'+esc(g.id)+'" maxlength="30" placeholder="외부 파티원 닉네임"><button type="button" class="recruit-small-btn" data-r-action="add-manual" data-r-id="'+esc(g.id)+'">외부인 추가</button></div>';
   html+='</div>';
   if(members.length&&bosses.length){
     html+='<div class="recruit-block"><div class="recruit-line"><strong>캐릭터별 배율</strong><a href="#rates" class="recruit-rate-link">배율 관리에서 수정·수동 저장</a></div>';
@@ -153,7 +148,7 @@ function groupHtml(g){
       });
       html+='</tr>';
     });
-    html+='</tbody></table></div><p class="recruit-muted">배율은 보스별 개인 기록입니다. 파티 배율과 동일한 값으로 계산하지 않습니다.</p></div>';
+    html+='</tbody></table></div></div>';
   }
   html+='<div class="recruit-block"><label class="recruit-note">메모<input data-r-edit="note" data-r-id="'+esc(g.id)+'" value="'+esc(g.note||"")+'" maxlength="240" placeholder="연습/클리어 등"></label></div>';
   html+='<div class="recruit-actions"><button type="button" class="recruit-primary" data-r-action="copy" data-r-id="'+esc(g.id)+'">편성 공유</button><button type="button" class="recruit-delete" data-r-action="delete-group" data-r-id="'+esc(g.id)+'">파티 삭제</button></div>';
@@ -170,14 +165,14 @@ function render(){
   var active=state.groups.filter(function(g){return g.status==="recruiting"}).length;
   var html='<div class="recruit-shell"><div class="recruit-heading"><div><strong>직접 편성</strong><p>보스와 난이도를 고르고 캐릭터 배율을 보며 파티원을 직접 배치하세요.</p></div><button class="recruit-primary" type="button" data-r-action="add-group">+ 파티 편성</button></div>';
   html+='<div class="recruit-toolbar"><div class="recruit-filters">';
-  [["all","전체 "+state.groups.length],["recruiting","모집 중 "+active],["finished","완료·종료 "+(state.groups.length-active)]].forEach(function(f){
+  [["all","전체 "+state.groups.length],["recruiting","저장 "+active],["finished","완료·종료 "+(state.groups.length-active)]].forEach(function(f){
     html+='<button type="button" data-r-action="filter" data-r-filter="'+f[0]+'" class="'+(filter===f[0]?"selected":"")+'">'+f[1]+'</button>';
   });
-  html+='</div><span class="recruit-muted">저장된 파티 '+state.groups.length+'팀</span></div>';
+  html+='</div><span class="recruit-muted">저장한 편성 '+state.groups.length+'팀</span></div>';
   if(shown.length){
     var regular=shown.filter(function(g){return !/^grp-hist-/.test(g.id)});
     if(regular.length){
-      html+='<div class="recruit-collection-title"><strong>모집판에 저장한 파티</strong><span>'+regular.length+'팀</span></div>';
+      html+='<div class="recruit-collection-title"><strong>저장한 직접 편성</strong><span>'+regular.length+'팀</span></div>';
       regular.forEach(function(g){html+=groupHtml(g)});
     }
     var archiveGroups={};
@@ -289,7 +284,7 @@ function click(e){
   if(action==="remove-member"){g.members=g.members.filter(function(k){return k!==button.dataset.rKey});mark();return}
   if(action==="delete-group"){
     if(saving){notify("저장 중에는 파티를 삭제할 수 없어요.");return}
-    if(!window.confirm("["+g.name+"] 모집 파티를 삭제할까요?\n파티를 삭제하고 아래 ‘저장’을 눌러야 공용 DB에 반영됩니다.\n캐릭터 배율과 파티 계획은 그대로 유지됩니다."))return;
+    if(!window.confirm("["+g.name+"] 모집 편성을 삭제할까요?\n파티를 삭제하고 아래 ‘저장’을 눌러야 공용 DB에 반영됩니다.\n캐릭터 배율과 파티 계획은 그대로 유지됩니다."))return;
     state.groups=state.groups.filter(function(item){return item.id!==g.id});
     openIds.delete(g.id);
     mark(); // Explicit manual save persists deletion. Nothing is written automatically.
