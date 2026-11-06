@@ -117,7 +117,13 @@ function toggleTheme(){
 function applyThemeUI(){
   const dark=document.documentElement.getAttribute("data-theme")==="dark";
   const button=document.getElementById("partyThemeToggle");
-  if(button){button.textContent=dark?"☀ 라이트":"☾ 다크";button.setAttribute("aria-label",dark?"라이트모드 켜기":"다크모드 켜기")}
+  if(button){
+    const icon=button.querySelector(".theme-toggle-icon");
+    const label=button.querySelector(".theme-toggle-text");
+    if(icon)icon.textContent=dark?"☀":"☾";
+    if(label)label.textContent=dark?"라이트":"다크";
+    button.setAttribute("aria-label",dark?"라이트모드 켜기":"다크모드 켜기");
+  }
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta)meta.setAttribute("content",dark?"#22272e":"#f4f5f7");
 }
