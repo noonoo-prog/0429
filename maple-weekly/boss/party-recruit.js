@@ -151,7 +151,7 @@ function groupHtml(g){
     html+='</tbody></table></div></div>';
   }
   html+='<div class="recruit-block"><label class="recruit-note">메모<input data-r-edit="note" data-r-id="'+esc(g.id)+'" value="'+esc(g.note||"")+'" maxlength="240" placeholder="연습/클리어 등"></label></div>';
-  html+='<div class="recruit-actions"><button type="button" class="recruit-primary" data-r-action="copy" data-r-id="'+esc(g.id)+'">편성 공유</button><button type="button" class="recruit-delete" data-r-action="delete-group" data-r-id="'+esc(g.id)+'">파티 삭제</button></div>';
+  html+='<div class="recruit-actions"><button type="button" class="recruit-delete" data-r-action="delete-group" data-r-id="'+esc(g.id)+'">편성 삭제</button></div>';
   html+='</div></details>';
   return html;
 }
