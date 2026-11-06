@@ -373,7 +373,11 @@ function wire(){
   wired=true;
   el.addEventListener("click",click);
   el.addEventListener("change",change);
-  el.addEventListener("toggle",trackDetails,true);\n  el.addEventListener("dragstart",dragStart);\n  el.addEventListener("dragover",dragOver);\n  el.addEventListener("dragleave",dragLeave);\n  el.addEventListener("drop",dragDrop);
+  el.addEventListener("toggle",trackDetails,true);
+  el.addEventListener("dragstart",dragStart);
+  el.addEventListener("dragover",dragOver);
+  el.addEventListener("dragleave",dragLeave);
+  el.addEventListener("drop",dragDrop);
 }
 window.refreshPartyRecruitRates=function(){
   if(!loaded||loading)return;
