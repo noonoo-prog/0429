@@ -53,6 +53,24 @@ function buildPeople(){
   people=all.filter(function(p){if(found.has(p.key))return false;found.add(p.key);return true});
 }
 function member(key){return people.find(function(p){return p.key===key})||{key:key,name:key.split("|").slice(-1)[0]||"알 수 없음",owner:"미등록",ownerKey:key}}
+var OWNER_PASTELS={
+  "오똑":"#F4D2B8",
+  "츠죠":"#F3C9DC",
+  "피콕":"#E8D6F2",
+  "꿈품은":"#D3E9D8",
+  "달하늘의별을":"#D2E7F5",
+  "띵스":"#F2E4BD",
+  "황광석":"#DCE5EE",
+  "병캐":"#F4D8CE",
+  "외부":"#E4E2F5"
+};
+var FALLBACK_PASTELS=["#E8DDF5","#D9EAF3","#F5E2D2","#E2EEDB","#F6DCE7","#EDE5D3"];
+function ownerPastel(owner){
+  var name=String(owner||"외부");
+  if(OWNER_PASTELS[name])return OWNER_PASTELS[name];
+  var hash=0;for(var i=0;i<name.length;i++)hash=(hash*31+name.charCodeAt(i))|0;
+  return FALLBACK_PASTELS[Math.abs(hash)%FALLBACK_PASTELS.length];
+}
 function rateFor(boss,difficulty,key){
   var byBoss=DIFFICULTY_RATES[boss]&&DIFFICULTY_RATES[boss][difficulty];
   if(byBoss&&Object.prototype.hasOwnProperty.call(byBoss,key))return {value:Number(byBoss[key])||0,source:"저장값"};
@@ -121,7 +139,7 @@ function groupHtml(g){
   if(members.length){
     members.forEach(function(key){
       var p=member(key),rate=rateFor(selectedBoss,selectedDifficulty,key).value;
-      html+='<div class="direct-party-member"><span class="direct-party-member-name">'+esc(p.name)+'<small>'+esc(p.owner)+'</small></span><b>'+ (rate?formatRate(rate):'미입력') +'</b>';
+      html+='<div class="direct-party-member" style="--owner-color:'+ownerPastel(p.owner)+'"><span class="direct-party-member-name">'+esc(p.name)+'<small>'+esc(p.owner)+'</small></span><b>'+ (rate?formatRate(rate):'미입력') +'</b>';
       if(editing)html+='<button type="button" class="recruit-icon-btn" aria-label="'+esc(p.name)+' 제외" data-r-action="remove-member" data-r-id="'+esc(g.id)+'" data-r-key="'+esc(key)+'">×</button>';
       html+='</div>';
     });
@@ -159,7 +177,7 @@ function render(){
   people.forEach(function(p){
     var rate=rateFor(selectedBoss,selectedDifficulty,p.key).value;
     var assigned=state.groups.find(function(g){return (g.members||[]).indexOf(p.key)>=0});
-    html+='<button type="button" class="direct-character-card" draggable="true" data-r-drag-key="'+esc(p.key)+'" data-r-drag-group="'+(assigned?esc(assigned.id):'')+'"><b>'+esc(p.name)+'</b><small>'+esc(p.owner)+'</small><strong>'+(rate?formatRate(rate):'미입력')+'</strong>'+(assigned?'<em>'+esc(assigned.name||'배정됨')+'</em>':'')+'</button>';
+    html+='<button type="button" class="direct-character-card" style="--owner-color:'+ownerPastel(p.owner)+'" draggable="true" data-r-drag-key="'+esc(p.key)+'" data-r-drag-group="'+(assigned?esc(assigned.id):'')+'"><b>'+esc(p.name)+'</b><small>'+esc(p.owner)+'</small><strong>'+(rate?formatRate(rate):'미입력')+'</strong>'+(assigned?'<em>'+esc(assigned.name||'배정됨')+'</em>':'')+'</button>';
   });
   html+='</div></section>';
   html+='<div class="recruit-toolbar"><div class="recruit-filters">';
