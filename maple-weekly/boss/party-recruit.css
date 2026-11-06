@@ -128,3 +128,8 @@
  .direct-party-member-name{font-size:11px}
 }
 @media(max-width:370px){.direct-party-grid{grid-template-columns:minmax(0,1fr)}}
+
+.direct-party-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media(max-width:1000px){.direct-party-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.direct-party-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:370px){.direct-party-grid{grid-template-columns:minmax(0,1fr)}}
