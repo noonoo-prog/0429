@@ -11,6 +11,8 @@ var state={groups:[],people:[]},plan={},owners=[],people=[],revision=0;
 var loaded=false,loading=false,dirty=false,saving=false,lastFetch=0,filter="all",error="";
 var openIds=new Set();
 var planDraft=null;
+var selectedBoss=localStorage.getItem('direct-party-boss')||'검은 마법사';
+var selectedDifficulty=localStorage.getItem('direct-party-difficulty')||'익스트림';
 function esc(value){return String(value==null?"":value).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function id(){return "grp-"+(window.crypto&&crypto.randomUUID?crypto.randomUUID():""+Date.now()+"-"+Math.floor(Math.random()*100000))}
 function notify(msg){var toast=document.getElementById("toast");if(!toast)return;toast.textContent=msg;toast.classList.add("show");setTimeout(function(){toast.classList.remove("show")},2300)}
@@ -75,7 +77,7 @@ function loadAll(force){
     state=results[2].state||{groups:[],people:[]};
     DIFFICULTY_RATES=results[3].rates||{};
     revision=Number(results[2].revision)||0;
-    normalize();buildPeople();loaded=true;dirty=false;lastFetch=Date.now();
+    normalize();buildPeople();if(!loaded)state.groups.forEach(function(g){openIds.add(g.id)});loaded=true;dirty=false;lastFetch=Date.now();
   }).catch(function(e){error=e.message||"모집 정보를 불러오지 못했어요."}).finally(function(){loading=false;render()});
 }
 function refreshPlan(){
@@ -105,7 +107,7 @@ function groupHtml(g){
   var bosses=Array.isArray(g.bosses)?g.bosses:[];
   var missing=Math.max(0,(Number(g.capacity)||3)-members.length);
   var open=openIds.has(g.id);
-  var html='<details class="recruit-card" data-r-card="'+esc(g.id)+'"'+(open?' open':'')+'>';
+  var html='<details class="recruit-card direct-drop-party" data-r-card="'+esc(g.id)+'" data-r-drop-group="'+esc(g.id)+'"'+(open?' open':'')+'>';
   html+='<summary><span class="recruit-card-title">'+esc(g.name||"새 파티")+'</span><span class="recruit-card-sub">'+bosses.map(function(b){return esc(b.difficulty+' '+b.boss)}).join(' · ')+' · '+members.length+'/'+g.capacity+'명';
   html+='</span>';
   html+='<button type="button" class="recruit-card-delete" data-r-action="delete-group" data-r-id="'+esc(g.id)+'" aria-label="'+esc(g.name||"파티")+' 삭제" title="모집 목록에서 삭제">삭제</button></summary>';
@@ -127,7 +129,7 @@ function groupHtml(g){
   html+='<div class="recruit-member-list">';
   members.forEach(function(key){
     var p=member(key);
-    html+='<span class="recruit-member-chip"><b>'+esc(p.name)+'</b><small>'+esc(p.owner)+'</small><button type="button" aria-label="'+esc(p.name)+' 제외" data-r-action="remove-member" data-r-id="'+esc(g.id)+'" data-r-key="'+esc(key)+'">×</button></span>';
+    html+='<span class="recruit-member-chip direct-drag-member" draggable="true" data-r-drag-key="'+esc(key)+'" data-r-drag-group="'+esc(g.id)+'"><b>'+esc(p.name)+'</b><small>'+esc(p.owner)+'</small><button type="button" aria-label="'+esc(p.name)+' 제외" data-r-action="remove-member" data-r-id="'+esc(g.id)+'" data-r-key="'+esc(key)+'">×</button></span>';
   });
   if(!members.length)html+='<span class="recruit-muted">아직 확정된 파티원이 없어요.</span>';
   html+='</div><div class="recruit-join-row"><select aria-label="파티원 선택" data-r-member-select="'+esc(g.id)+'"><option value="">등록된 캐릭터 선택</option>';
@@ -163,7 +165,16 @@ function render(){
   }
   var shown=state.groups.filter(function(g){return filter==="all"||(filter==="recruiting"?g.status==="recruiting":g.status!=="recruiting")});
   var active=state.groups.filter(function(g){return g.status==="recruiting"}).length;
-  var html='<div class="recruit-shell"><div class="recruit-heading"><div><strong>직접 편성</strong><p>보스와 난이도를 고르고 캐릭터 배율을 보며 파티원을 직접 배치하세요.</p></div><button class="recruit-primary" type="button" data-r-action="add-group">+ 파티 편성</button></div>';
+  var difficulties=activeDifficulties(selectedBoss);if(difficulties.indexOf(selectedDifficulty)<0)selectedDifficulty=defaultDifficulty(selectedBoss);
+  var html='<div class="recruit-shell"><div class="recruit-heading"><div><strong>직접 편성</strong><p>보스와 난이도를 고르고 캐릭터를 파티 칸으로 끌어 놓으세요.</p></div><button class="recruit-primary" type="button" data-r-action="add-group">+ 파티 편성</button></div>';
+  html+='<div class="direct-boss-picker"><label>보스<select data-direct-boss="1">'+options(BOSSES,selectedBoss)+'</select></label><label>난이도<select data-direct-difficulty="1">'+options(difficulties,selectedDifficulty)+'</select></label></div>';
+  html+='<section class="direct-roster-panel"><div class="recruit-line"><strong>캐릭터 배율</strong><span class="recruit-muted">배율 카드를 파티로 드래그하세요</span></div><div class="direct-roster-grid">';
+  people.forEach(function(p){
+    var rate=rateFor(selectedBoss,selectedDifficulty,p.key).value;
+    var assigned=state.groups.find(function(g){return (g.members||[]).indexOf(p.key)>=0});
+    html+='<button type="button" class="direct-character-card" draggable="true" data-r-drag-key="'+esc(p.key)+'"><b>'+esc(p.name)+'</b><small>'+esc(p.owner)+'</small><strong>'+(rate?formatRate(rate):'미입력')+'</strong>'+(assigned?'<em>'+esc(assigned.name||'배정됨')+'</em>':'')+'</button>';
+  });
+  html+='</div></section>';
   html+='<div class="recruit-toolbar"><div class="recruit-filters">';
   [["all","전체 "+state.groups.length],["recruiting","저장 "+active],["finished","완료·종료 "+(state.groups.length-active)]].forEach(function(f){
     html+='<button type="button" data-r-action="filter" data-r-filter="'+f[0]+'" class="'+(filter===f[0]?"selected":"")+'">'+f[1]+'</button>';
@@ -253,7 +264,7 @@ function click(e){
   if(action==="delete-group"){e.preventDefault();e.stopPropagation()}
   if(action==="filter"){filter=button.dataset.rFilter;render();return}
   if(action==="add-group"){
-    var newGroup={id:id(),name:"새 모집 파티",capacity:3,day:"",time:"",note:"",status:"recruiting",members:[],bosses:[{boss:"림보",difficulty:"하드",minRate:130}]};
+    var newGroup={id:id(),name:"새 파티",capacity:6,day:"",time:"",note:"",status:"confirmed",members:[],bosses:[{boss:selectedBoss,difficulty:selectedDifficulty,minRate:0}]};
     state.groups.unshift(newGroup);openIds.add(newGroup.id);filter="all";mark();return;
   }
   if(action==="save"){save();return}
@@ -296,6 +307,14 @@ function click(e){
 function panel(){return document.getElementById("routePanel")}
 function change(e){
   var target=e.target,field=target.dataset.rEdit;
+  if(target.matches("[data-direct-boss]")){
+    selectedBoss=target.value;localStorage.setItem("direct-party-boss",selectedBoss);
+    var choices=activeDifficulties(selectedBoss);if(choices.indexOf(selectedDifficulty)<0)selectedDifficulty=defaultDifficulty(selectedBoss);
+    localStorage.setItem("direct-party-difficulty",selectedDifficulty);render();return;
+  }
+  if(target.matches("[data-direct-difficulty]")){
+    selectedDifficulty=target.value;localStorage.setItem("direct-party-difficulty",selectedDifficulty);render();return;
+  }
   if(!field)return;
   var g=group(target.dataset.rId);if(!g)return;
   openIds.add(g.id);
@@ -321,6 +340,32 @@ function trackDetails(e){
   var k=d.dataset.rCard;
   if(d.open)openIds.add(k);else openIds.delete(k);
 }
+function dragStart(e){
+  var item=e.target.closest&&e.target.closest("[data-r-drag-key]");if(!item)return;
+  e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",item.dataset.rDragKey);
+  e.dataTransfer.setData("application/x-direct-source",item.dataset.rDragGroup||"");
+}
+function dragOver(e){
+  var target=e.target.closest&&e.target.closest("[data-r-drop-group]");if(!target)return;
+  e.preventDefault();e.dataTransfer.dropEffect="move";target.classList.add("is-drop-target");
+}
+function dragLeave(e){
+  var target=e.target.closest&&e.target.closest("[data-r-drop-group]");
+  if(target&&!target.contains(e.relatedTarget))target.classList.remove("is-drop-target");
+}
+function dragDrop(e){
+  var target=e.target.closest&&e.target.closest("[data-r-drop-group]");if(!target)return;
+  e.preventDefault();target.classList.remove("is-drop-target");
+  var key=e.dataTransfer.getData("text/plain"),sourceId=e.dataTransfer.getData("application/x-direct-source");
+  var to=group(target.dataset.rDropGroup),from=sourceId&&group(sourceId);
+  if(!key||!to||from===to||to.members.indexOf(key)>=0)return;
+  if(to.members.length>=Number(to.capacity||3)){notify("파티 정원이 찼어요.");return}
+  var person=member(key);
+  if(to.members.some(function(existing){return member(existing).ownerKey===person.ownerKey})){notify("같은 주인의 캐릭터는 한 파티에 한 명만 넣을 수 있어요.");return}
+  if(from)from.members=from.members.filter(function(existing){return existing!==key});
+  to.bosses=[{boss:selectedBoss,difficulty:selectedDifficulty,minRate:0}];
+  to.members.push(key);openIds.add(to.id);if(from)openIds.add(from.id);mark();
+}
 var wired=false;
 function wire(){
   if(wired)return;
@@ -328,7 +373,7 @@ function wire(){
   wired=true;
   el.addEventListener("click",click);
   el.addEventListener("change",change);
-  el.addEventListener("toggle",trackDetails,true);
+  el.addEventListener("toggle",trackDetails,true);\n  el.addEventListener("dragstart",dragStart);\n  el.addEventListener("dragover",dragOver);\n  el.addEventListener("dragleave",dragLeave);\n  el.addEventListener("drop",dragDrop);
 }
 window.refreshPartyRecruitRates=function(){
   if(!loaded||loading)return;
