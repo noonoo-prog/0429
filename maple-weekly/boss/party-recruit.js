@@ -89,7 +89,7 @@ function save(){
   saving=true;render();
   api("boss-party-recruit",{action:"save",revision:revision,payload:state}).then(function(data){
     state=data.state;revision=Number(data.revision)||revision+1;
-    normalize();buildPeople();dirty=false;lastFetch=Date.now();notify("모집판을 공용으로 저장했어요.");
+    normalize();buildPeople();dirty=false;lastFetch=Date.now();notify("직접 편성을 공용으로 저장했어요.");
   }).catch(function(e){error=e.message;notify("저장 실패: "+e.message)}).finally(function(){saving=false;render()});
 }
 function options(list,selected){
@@ -156,7 +156,7 @@ function groupHtml(g){
     html+='</tbody></table></div><p class="recruit-muted">배율은 보스별 개인 기록입니다. 파티 배율과 동일한 값으로 계산하지 않습니다.</p></div>';
   }
   html+='<div class="recruit-block"><label class="recruit-note">메모<input data-r-edit="note" data-r-id="'+esc(g.id)+'" value="'+esc(g.note||"")+'" maxlength="240" placeholder="연습/클리어 등"></label></div>';
-  html+='<div class="recruit-actions"><button type="button" class="recruit-primary" data-r-action="copy" data-r-id="'+esc(g.id)+'">모집글 복사</button><button type="button" class="recruit-delete" data-r-action="delete-group" data-r-id="'+esc(g.id)+'">파티 삭제</button></div>';
+  html+='<div class="recruit-actions"><button type="button" class="recruit-primary" data-r-action="copy" data-r-id="'+esc(g.id)+'">편성 공유</button><button type="button" class="recruit-delete" data-r-action="delete-group" data-r-id="'+esc(g.id)+'">파티 삭제</button></div>';
   html+='</div></details>';
   return html;
 }
@@ -168,7 +168,7 @@ function render(){
   }
   var shown=state.groups.filter(function(g){return filter==="all"||(filter==="recruiting"?g.status==="recruiting":g.status!=="recruiting")});
   var active=state.groups.filter(function(g){return g.status==="recruiting"}).length;
-  var html='<div class="recruit-shell"><div class="recruit-heading"><div><strong>파티 모집</strong><p>이전에 저장한 파티도 함께 확인할 수 있어요.</p></div><button class="recruit-primary" type="button" data-r-action="add-group">+ 파티 추가</button></div>';
+  var html='<div class="recruit-shell"><div class="recruit-heading"><div><strong>직접 편성</strong><p>보스와 난이도를 고르고 캐릭터 배율을 보며 파티원을 직접 배치하세요.</p></div><button class="recruit-primary" type="button" data-r-action="add-group">+ 파티 편성</button></div>';
   html+='<div class="recruit-toolbar"><div class="recruit-filters">';
   [["all","전체 "+state.groups.length],["recruiting","모집 중 "+active],["finished","완료·종료 "+(state.groups.length-active)]].forEach(function(f){
     html+='<button type="button" data-r-action="filter" data-r-filter="'+f[0]+'" class="'+(filter===f[0]?"selected":"")+'">'+f[1]+'</button>';

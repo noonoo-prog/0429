@@ -3,7 +3,7 @@
 const SUPABASE="https://ibqpjcedzcllacbamrnu.supabase.co";
 const API_KEY="sb_publishable_s-EiUNh66D17Xd3JFGUyvA_aNEDNMKq";
 const API_ROOT=SUPABASE+"/functions/v1/";
-const TABS={rates:"배율 관리",plan:"파티 계획",recruit:"파티 모집"};
+const TABS={rates:"배율 관리",plan:"파티 계획",recruit:"직접 편성"};
 const STORE_TAB="boss-party-workspace-tab-v1";
 const THEME_KEY="boss-board-theme-v1";
 const BOSSES=[
@@ -149,7 +149,7 @@ function activateTab(tab,writeHash=true){
   if(description)description.textContent={
     rates:"캐릭터 · 보스 · 난이도별 배율을 한 번에 관리합니다.",
     plan:"저장된 배율로 파티를 편성하고 결과를 비교합니다.",
-    recruit:"여러 보스를 함께 갈 파티원을 모집합니다."
+    recruit:"캐릭터 배율을 보며 보스 파티를 직접 편성하고 저장합니다."
   }[tab];
   document.title=TABS[tab]+" | 파티";
   if(writeHash&&location.hash!=="#"+tab)history.replaceState(null,"","#"+tab);

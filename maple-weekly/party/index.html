@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f4f5f7">
 <title>파티 | 메이플 기록</title>
-<meta name="description" content="배율 관리, 파티 계획, 파티 모집을 한곳에서 관리합니다.">
+<meta name="description" content="배율 관리, 파티 계획, 캐릭터 배율을 보며 파티를 직접 편성하고 저장합니다.">
 <script>
 (function(){try{if(localStorage.getItem("boss-board-theme-v1")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();
 </script>
@@ -25,7 +25,7 @@
       <div>
         <span class="party-eyebrow">MAPLE RECORDS / 파티</span>
         <h1>파티</h1>
-        <p id="partyDescription">배율 관리 · 파티 계획 · 파티 모집</p>
+        <p id="partyDescription">배율 관리 · 파티 계획 · 직접 편성</p>
       </div>
       <span class="party-live-note">기존 보스 현황판 데이터와 연결</span>
     </div>
@@ -37,7 +37,7 @@
         <span>02</span> 파티 계획
       </button>
       <button type="button" class="party-tab" data-party-tab="recruit" aria-selected="false">
-        <span>03</span> 파티 모집
+        <span>03</span> 직접 편성
       </button>
     </nav>
   </header>
@@ -48,7 +48,7 @@
     <section class="party-boss-panel party-panel" id="partyBossPanel" aria-label="파티보스 계획" hidden>
       <div class="party-boss-empty">파티 계획 정보를 불러오는 중…</div>
     </section>
-    <section class="recruit-panel party-panel" id="routePanel" aria-label="파티보스 모집" hidden>
+    <section class="recruit-panel party-panel" id="routePanel" aria-label="직접 파티 편성" hidden>
       <div class="recruit-loading">모집 정보를 불러오는 중…</div>
     </section>
   </main>
@@ -57,7 +57,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <noscript><div class="rate-loading">JavaScript를 켜면 파티를 관리할 수 있습니다.</div></noscript>
 <script defer src="../boss/party-boss.js?v=party-potluck-v1-20261106"></script>
-<script defer src="../boss/party-recruit.js?v=show-saved-parties-v17-20261105"></script>
+<script defer src="../boss/party-recruit.js?v=direct-build-v1-20261106"></script>
 <script defer src="./app.js?v=theme-unified-v1-20261106"></script>
 </body>
 </html>
