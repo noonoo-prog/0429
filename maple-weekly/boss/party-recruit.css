@@ -79,3 +79,8 @@
  .recruit-footer span{display:none}
 }
 @media(max-width:370px){.recruit-boss-row{grid-template-columns:minmax(70px,1fr) minmax(63px,.8fr) minmax(85px,.9fr) 20px}.recruit-boss-row select{padding:4px 2px}}
+
+/* Direct party composition layout. */
+.recruit-shell .recruit-fields{grid-template-columns:minmax(160px,1fr) 100px}.recruit-shell .recruit-toolbar .recruit-filters{display:none}.recruit-shell .direct-boss-total{justify-content:center;padding:6px 4px;background:rgba(0,140,192,.08);color:#008cc0;font-weight:850}
+@media(max-width:850px){.recruit-shell .recruit-fields{grid-template-columns:minmax(140px,1fr) 90px}}
+@media(max-width:600px){.recruit-shell .recruit-fields{grid-template-columns:minmax(0,1fr) 82px}.recruit-shell .recruit-fields label:first-child{grid-column:auto}}
