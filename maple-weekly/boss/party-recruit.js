@@ -10,6 +10,7 @@ var DIFFS={"스우":["노말","하드","익스트림"],"데미안":["노말","�
 var state={groups:[],people:[]},plan={},owners=[],people=[],revision=0;
 var loaded=false,loading=false,dirty=false,saving=false,lastFetch=0,filter="all",error="";
 var openIds=new Set();
+var editIds=new Set();
 var planDraft=null;
 var selectedBoss=localStorage.getItem('direct-party-boss')||'검은 마법사';
 var selectedDifficulty=localStorage.getItem('direct-party-difficulty')||'익스트림';
@@ -102,59 +103,45 @@ function badgeFor(status){
   if(status==="closed")return '<span class="recruit-status closed">종료</span>';
   return '<span class="recruit-status active">모집 중</span>';
 }
+function partyTotal(g){
+  var members=Array.isArray(g.members)?g.members:[];
+  return members.reduce(function(sum,key){return sum+rateFor(selectedBoss,selectedDifficulty,key).value},0);
+}
 function groupHtml(g){
   var members=Array.isArray(g.members)?g.members:[];
   var bosses=Array.isArray(g.bosses)?g.bosses:[];
-  var missing=Math.max(0,(Number(g.capacity)||3)-members.length);
-  var open=openIds.has(g.id);
-  var html='<details class="recruit-card direct-drop-party" data-r-card="'+esc(g.id)+'" data-r-drop-group="'+esc(g.id)+'"'+(open?' open':'')+'>';
-  html+='<summary><span class="recruit-card-title">'+esc(g.name||"새 파티")+'</span><span class="recruit-card-sub">'+bosses.map(function(b){return esc(b.difficulty+' '+b.boss)}).join(' · ')+' · '+members.length+'/'+g.capacity+'명';
-  html+='</span>';
-  html+='<button type="button" class="recruit-card-delete" data-r-action="delete-group" data-r-id="'+esc(g.id)+'" aria-label="'+esc(g.name||"파티")+' 삭제" title="모집 목록에서 삭제">삭제</button></summary>';
-  html+='<div class="recruit-details">';
-  html+='<div class="recruit-fields">';
-  html+='<label>파티 이름<input data-r-edit="name" data-r-id="'+esc(g.id)+'" value="'+esc(g.name||"")+'" maxlength="40" placeholder="파티 이름"></label>';
-  html+='<label>정원<select data-r-edit="capacity" data-r-id="'+esc(g.id)+'">'+options(["2","3","4","5","6"],String(g.capacity||3))+'</select></label>';
-  html+='</div>';
-  html+='<div class="recruit-block"><div class="recruit-line"><strong>같이 갈 보스</strong><button type="button" class="recruit-small-btn" data-r-action="add-boss" data-r-id="'+esc(g.id)+'">+ 보스 추가</button></div>';
-  bosses.forEach(function(b,i){
-    html+='<div class="recruit-boss-row"><select aria-label="보스 선택" data-r-edit="boss" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">'+options(bossOptions(b.boss),b.boss)+'</select>';
-    var choices=activeDifficulties(b.boss);if(choices.indexOf(b.difficulty)<0)choices.push(b.difficulty);
-    html+='<select aria-label="난이도" data-r-edit="difficulty" data-difficulty="'+esc(b.difficulty)+'" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">'+options(choices,b.difficulty)+'</select>';
-    html+='<span class="recruit-rate-limit direct-boss-total">합산 '+formatRate(members.reduce(function(sum,key){return sum+rateFor(b.boss,b.difficulty,key).value},0))+'</span>';
-    html+='<button type="button" class="recruit-icon-btn" aria-label="보스 삭제" data-r-action="remove-boss" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">×</button></div>';
-  });
-  html+='</div>';
-  html+='<div class="recruit-block"><div class="recruit-line"><strong>배치 캐릭터 '+members.length+'/'+g.capacity+'</strong><span class="recruit-muted">같은 주인은 한 파티에 한 캐릭터</span></div>';
-  html+='<div class="recruit-member-list">';
-  members.forEach(function(key){
-    var p=member(key);
-    html+='<span class="recruit-member-chip direct-drag-member" draggable="true" data-r-drag-key="'+esc(key)+'" data-r-drag-group="'+esc(g.id)+'"><b>'+esc(p.name)+'</b><small>'+esc(p.owner)+'</small><button type="button" aria-label="'+esc(p.name)+' 제외" data-r-action="remove-member" data-r-id="'+esc(g.id)+'" data-r-key="'+esc(key)+'">×</button></span>';
-  });
-  if(!members.length)html+='<span class="recruit-muted">아직 확정된 파티원이 없어요.</span>';
-  html+='</div><div class="recruit-join-row"><select aria-label="파티원 선택" data-r-member-select="'+esc(g.id)+'"><option value="">등록된 캐릭터 선택</option>';
-  people.forEach(function(p){if(members.indexOf(p.key)<0)html+='<option value="'+esc(p.key)+'">'+esc(p.name)+' · '+esc(p.owner)+'</option>'});
-  html+='</select><button type="button" class="recruit-small-btn" data-r-action="add-member" data-r-id="'+esc(g.id)+'">추가</button></div>';
-  html+='</div>';
-  if(members.length&&bosses.length){
-    html+='<div class="recruit-block"><div class="recruit-line"><strong>캐릭터별 배율</strong><a href="#rates" class="recruit-rate-link">배율 관리에서 수정·수동 저장</a></div>';
-    html+='<div class="recruit-matrix-scroll"><table class="recruit-matrix"><thead><tr><th>캐릭터</th>';
-    bosses.forEach(function(b){html+='<th>'+esc(b.difficulty)+' '+esc(b.boss)+'</th>'});
-    html+='</tr></thead><tbody>';
+  var editing=editIds.has(g.id);
+  var total=partyTotal(g);
+  var html='<article class="direct-party-card direct-drop-party" data-r-card="'+esc(g.id)+'" data-r-drop-group="'+esc(g.id)+'">';
+  html+='<header class="direct-party-card-head"><div class="direct-party-title"><strong>'+esc(g.name||"새 파티")+'</strong><span>'+members.length+'/'+(Number(g.capacity)||3)+'명</span></div>';
+  html+='<div class="direct-party-total"><small>총 배율</small><b>'+formatRate(total)+'</b></div>';
+  html+='<div class="direct-party-boss">'+esc(selectedDifficulty)+' '+esc(selectedBoss)+'</div>';
+  html+='<button type="button" class="recruit-small-btn direct-party-edit-toggle" data-r-action="toggle-edit" data-r-id="'+esc(g.id)+'">'+(editing?'편집 닫기':'편집')+'</button></header>';
+  html+='<div class="direct-party-members">';
+  if(members.length){
     members.forEach(function(key){
-      var p=member(key);
-      html+='<tr><th>'+esc(p.name)+'</th>';
-      bosses.forEach(function(b){
-        var v=rateFor(b.boss,b.difficulty,key);
-        html+='<td><div class="recruit-rate-cell"><input type="number" min="0" max="100000" step="0.01" readonly inputmode="decimal" aria-label="'+esc(p.name)+' '+esc(b.boss)+' 배율 (읽기 전용)" title="배율 관리에서 수정 후 직접 저장" value="'+(v.value?esc(v.value):"")+'" placeholder="미입력"><span>% · '+esc(v.source)+'</span></div></td>';
-      });
-      html+='</tr>';
+      var p=member(key),rate=rateFor(selectedBoss,selectedDifficulty,key).value;
+      html+='<div class="direct-party-member"><span class="direct-party-member-name">'+esc(p.name)+'<small>'+esc(p.owner)+'</small></span><b>'+ (rate?formatRate(rate):'미입력') +'</b>';
+      if(editing)html+='<button type="button" class="recruit-icon-btn" aria-label="'+esc(p.name)+' 제외" data-r-action="remove-member" data-r-id="'+esc(g.id)+'" data-r-key="'+esc(key)+'">×</button>';
+      html+='</div>';
     });
-    html+='</tbody></table></div></div>';
+  }else html+='<div class="direct-party-drop-hint">캐릭터를 여기로 끌어 놓으세요</div>';
+  html+='</div>';
+  if(editing){
+    html+='<div class="direct-party-edit-panel">';
+    html+='<div class="recruit-fields"><label>파티 이름<input data-r-edit="name" data-r-id="'+esc(g.id)+'" value="'+esc(g.name||"")+'" maxlength="40" placeholder="파티 이름"></label><label>정원<select data-r-edit="capacity" data-r-id="'+esc(g.id)+'">'+options(["2","3","4","5","6"],String(g.capacity||3))+'</select></label></div>';
+    html+='<div class="recruit-block"><div class="recruit-line"><strong>보스와 난이도</strong><button type="button" class="recruit-small-btn" data-r-action="add-boss" data-r-id="'+esc(g.id)+'">+ 보스</button></div>';
+    bosses.forEach(function(b,i){
+      var choices=activeDifficulties(b.boss);if(choices.indexOf(b.difficulty)<0)choices.push(b.difficulty);
+      html+='<div class="recruit-boss-row"><select aria-label="보스 선택" data-r-edit="boss" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">'+options(bossOptions(b.boss),b.boss)+'</select><select aria-label="난이도" data-r-edit="difficulty" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">'+options(choices,b.difficulty)+'</select><span class="recruit-rate-limit direct-boss-total">합산 '+formatRate(members.reduce(function(sum,key){return sum+rateFor(b.boss,b.difficulty,key).value},0))+'</span><button type="button" class="recruit-icon-btn" aria-label="보스 삭제" data-r-action="remove-boss" data-r-id="'+esc(g.id)+'" data-r-i="'+i+'">×</button></div>';
+    });
+    html+='</div><div class="recruit-join-row"><select aria-label="파티원 선택" data-r-member-select="'+esc(g.id)+'"><option value="">등록된 캐릭터 선택</option>';
+    people.forEach(function(p){if(members.indexOf(p.key)<0)html+='<option value="'+esc(p.key)+'">'+esc(p.name)+' · '+esc(p.owner)+'</option>'});
+    html+='</select><button type="button" class="recruit-small-btn" data-r-action="add-member" data-r-id="'+esc(g.id)+'">추가</button></div>';
+    html+='<label class="recruit-note direct-party-note">메모<input data-r-edit="note" data-r-id="'+esc(g.id)+'" value="'+esc(g.note||"")+'" maxlength="240" placeholder="메모"></label>';
+    html+='<button type="button" class="recruit-delete" data-r-action="delete-group" data-r-id="'+esc(g.id)+'">파티 삭제</button></div>';
   }
-  html+='<div class="recruit-block"><label class="recruit-note">메모<input data-r-edit="note" data-r-id="'+esc(g.id)+'" value="'+esc(g.note||"")+'" maxlength="240" placeholder="연습/클리어 등"></label></div>';
-  html+='<div class="recruit-actions"><button type="button" class="recruit-delete" data-r-action="delete-group" data-r-id="'+esc(g.id)+'">편성 삭제</button></div>';
-  html+='</div></details>';
+  html+='</article>';
   return html;
 }
 function render(){
@@ -184,7 +171,9 @@ function render(){
     var regular=shown.filter(function(g){return !/^grp-hist-/.test(g.id)});
     if(regular.length){
       html+='<div class="recruit-collection-title"><strong>저장한 직접 편성</strong><span>'+regular.length+'팀</span></div>';
+      html+='<div class="direct-party-grid">';
       regular.forEach(function(g){html+=groupHtml(g)});
+      html+='</div>';
     }
     var archiveGroups={};
     shown.filter(function(g){return /^grp-hist-/.test(g.id)}).forEach(function(g){
@@ -194,9 +183,9 @@ function render(){
     });
     Object.keys(archiveGroups).forEach(function(label){
       var list=archiveGroups[label];
-      html+='<section class="recruit-history-group"><div class="recruit-collection-title"><strong>'+esc(label)+'</strong><span>파티 계획 저장본 · '+list.length+'팀</span></div>';
+      html+='<section class="recruit-history-group"><div class="recruit-collection-title"><strong>'+esc(label)+'</strong><span>파티 계획 저장본 · '+list.length+'팀</span></div><div class="direct-party-grid">';
       list.forEach(function(g){html+=groupHtml(g)});
-      html+='</section>';
+      html+='</div></section>';
     });
   }else html+='<div class="recruit-empty">표시할 파티가 없어요. 전체 보기에서 다른 파티를 확인해 주세요.</div>';
   html+='<div class="recruit-footer"><div><strong>'+(dirty?"미저장 변경사항":saving?"저장 중…":"저장된 상태")+'</strong><span>모집 변경은 아래 저장 버튼 · 배율 변경은 배율 관리에서 수동 저장</span></div>';
@@ -263,6 +252,10 @@ function click(e){
   var action=button.dataset.rAction,groupId=button.dataset.rId,g=groupId&&group(groupId);
   if(action==="delete-group"){e.preventDefault();e.stopPropagation()}
   if(action==="filter"){filter=button.dataset.rFilter;render();return}
+  if(action==="toggle-edit"){
+    if(editIds.has(groupId))editIds.delete(groupId);else editIds.add(groupId);
+    render();return;
+  }
   if(action==="add-group"){
     var newGroup={id:id(),name:"새 파티",capacity:6,day:"",time:"",note:"",status:"confirmed",members:[],bosses:[{boss:selectedBoss,difficulty:selectedDifficulty,minRate:0}]};
     state.groups.unshift(newGroup);openIds.add(newGroup.id);filter="all";mark();return;
