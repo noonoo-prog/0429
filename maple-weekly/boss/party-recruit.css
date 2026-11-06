@@ -133,3 +133,19 @@
 @media(max-width:1000px){.direct-party-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.direct-party-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:370px){.direct-party-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Owner palette: one calm pastel tint follows each character into its party. */
+.direct-character-card{
+  background:var(--rec-soft);
+  background:color-mix(in srgb,var(--owner-color,#e4e8ee) 40%,var(--surface,#fff));
+  border-color:color-mix(in srgb,var(--owner-color,#e4e8ee) 65%,var(--rec-line));
+  border-inline-start:3px solid var(--owner-color,#cbd5e1);
+}
+.direct-party-member{
+  padding:7px 7px;
+  border-bottom-color:color-mix(in srgb,var(--owner-color,#e4e8ee) 28%,var(--rec-line));
+  border-inline-start:3px solid var(--owner-color,#cbd5e1);
+  border-radius:6px;
+  background:color-mix(in srgb,var(--owner-color,#e4e8ee) 25%,var(--surface,#fff));
+}
+.direct-party-member+.direct-party-member{margin-top:4px}
