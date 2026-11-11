@@ -2368,9 +2368,9 @@ function bindCharacterReorder(root,enabled){
 }
 
 function desktopRowColumns(total){
-  var w=Math.min(window.innerWidth||1600,1600);
-  var maxCols=w>=960?6:3;
-  return Math.max(1,Math.min(total,maxCols));
+  // Reserve six equal character tracks on desktop even for one or two characters.
+  // Grid auto-placement keeps additional characters on the next six-column row.
+  return 6;
 }
 
 function renderDesktop(){
