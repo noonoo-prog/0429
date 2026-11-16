@@ -5062,3 +5062,14 @@ html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day-total{color
     padding:0;margin-top:5px;line-height:1.2
   }
 }
+/* Keep the active date numeral legible even for pale owner theme accents. */
+#checklistPanel .monthly-calendar .month-day.selected .month-day-date,
+#checklistPanel .monthly-calendar .month-day.selected:has(.month-day-runs em:not(.more)) .month-day-date{
+  background:color-mix(in srgb,var(--owner-accent,#526b87) 40%,#24364e);
+  color:#fff;
+}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day.selected .month-day-date,
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day.selected:has(.month-day-runs em:not(.more)) .month-day-date{
+  background:color-mix(in srgb,var(--owner-accent,#7a91ab) 32%,#344b65);
+  color:#fff;
+}
