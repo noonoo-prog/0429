@@ -4840,3 +4840,79 @@ html[data-theme="dark"] .board-check-save-status.status-locked{color:#ff9ba6}
 .workspace-theme{margin-left:0}
 .party-app .workspace-actions{margin-bottom:22px}
 @media(max-width:700px){.workspace-actions{gap:7px;margin-bottom:10px}.workspace-nav-link{min-height:34px;font-size:11px}.party-app .workspace-actions{margin-bottom:16px}}
+/* Day-specific checklist completion: selected date vs an earlier/later run date.
+   Only styling changes; weekly/monthly persisted completion semantics stay intact. */
+.month-day-complete-count{
+  position:absolute;top:7px;right:6px;
+  padding:2px 5px;border-radius:6px;
+  background:#dcf6e9;color:#0a704e;
+  font-size:9px;font-weight:950;line-height:1.2;
+}
+.month-day-runs em.month-day-checked{color:#176849;font-weight:850}
+.month-day-runs em.month-day-checked .month-day-checkmark{
+  color:#128b5a;font-style:normal;font-weight:950;
+}
+.month-day-runs em.month-day-checked.is-pending,
+.month-day-runs em.month-day-checked.is-pending .month-day-checkmark{color:#ab7017}
+.picked-day-count{color:#08784d;font-weight:950}
+.picked-day-pending{color:#a66b10;font-weight:950}
+.selected-day-panel .boss-run-row.done-on-picked-date{
+  background:#e7f7ed;
+  box-shadow:inset 3px 0 0 #13875b;
+}
+.selected-day-panel .boss-run-row.done-on-picked-date .boss-run-check{
+  border-color:#13875b;background:#13875b;color:#fff;
+}
+.selected-day-panel .boss-run-row.done-on-picked-date .boss-run-name strong{
+  color:#12603e;
+}
+.selected-day-panel .boss-run-row.done-on-picked-date .boss-run-name small{
+  color:#19764f;
+}
+.selected-day-panel .boss-run-row.done-other-date{
+  background:#f2f3f5;
+}
+.selected-day-panel .boss-run-row.done-other-date .boss-run-check{
+  border-color:#8b94a3;background:#8b94a3;color:#fff;
+}
+.selected-day-panel .boss-run-row.done-other-date .boss-run-name small{color:#6b7481}
+.selected-day-panel .boss-run-row.pending-day-check{
+  outline:1px dashed #d49b47;
+  outline-offset:-2px;
+}
+html[data-theme="dark"] .month-day-complete-count{
+  background:#194b38;color:#85e6b5;
+}
+html[data-theme="dark"] .month-day-runs em.month-day-checked,
+html[data-theme="dark"] .month-day-runs em.month-day-checked .month-day-checkmark{color:#73dfab}
+html[data-theme="dark"] .month-day-runs em.month-day-checked.is-pending,
+html[data-theme="dark"] .month-day-runs em.month-day-checked.is-pending .month-day-checkmark{color:#ffce7a}
+html[data-theme="dark"] .picked-day-count{color:#75dda9}
+html[data-theme="dark"] .picked-day-pending{color:#f7c372}
+html[data-theme="dark"] .selected-day-panel .boss-run-row.done-on-picked-date{
+  background:#213d31;box-shadow:inset 3px 0 0 #58c88e;
+}
+html[data-theme="dark"] .selected-day-panel .boss-run-row.done-on-picked-date .boss-run-check{
+  background:#247b56;border-color:#58c88e;color:#fff;
+}
+html[data-theme="dark"] .selected-day-panel .boss-run-row.done-on-picked-date .boss-run-name strong{
+  color:#9ceac1;
+}
+html[data-theme="dark"] .selected-day-panel .boss-run-row.done-on-picked-date .boss-run-name small{
+  color:#86d8ad;
+}
+html[data-theme="dark"] .selected-day-panel .boss-run-row.done-other-date{background:#292f37}
+html[data-theme="dark"] .selected-day-panel .boss-run-row.done-other-date .boss-run-check{
+  border-color:#626f7e;background:#4d5a69;color:#e9edf2;
+}
+html[data-theme="dark"] .selected-day-panel .boss-run-row.done-other-date .boss-run-name small{
+  color:#b3bfcc;
+}
+html[data-theme="dark"] .selected-day-panel .boss-run-row.pending-day-check{
+  outline-color:#a97633;
+}
+@media(max-width:959px){
+  .month-day-complete-count{top:4px;right:3px;font-size:8px;padding:1px 3px}
+  .month-day-runs em.month-day-checked .month-day-checkmark{font-size:10px}
+  .picked-day-count,.picked-day-pending{font-size:10px}
+}
