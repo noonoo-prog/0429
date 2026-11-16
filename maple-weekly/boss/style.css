@@ -4920,3 +4920,145 @@ html[data-theme="dark"] .selected-day-panel .boss-run-row.pending-day-check{
   .month-day-runs em.month-day-checked .month-day-checkmark{font-size:10px}
   .picked-day-count,.picked-day-pending{font-size:10px}
 }
+
+/* 2026-11-17 calendar UI: clear typography, restrained status, no V icons */
+#checklistPanel .monthly-calendar .month-weekdays,
+#checklistPanel .monthly-calendar .month-calendar-grid{margin-left:12px;margin-right:12px}
+#checklistPanel .monthly-calendar .month-weekdays{
+  border:1px solid var(--line,#dfe3e8);border-bottom:0;border-radius:11px 11px 0 0;
+  overflow:hidden;background:#f1f4f7
+}
+#checklistPanel .monthly-calendar .month-calendar-grid{
+  border-top:0;border-left:1px solid var(--line,#dfe3e8);background:var(--surface,#fff)
+}
+#checklistPanel .monthly-calendar .month-day{
+  display:flex;flex-direction:column;align-items:stretch;gap:0;
+  position:relative;min-height:118px;padding:10px 8px 9px;
+  border:0;border-right:1px solid var(--line,#dfe3e8);border-bottom:1px solid var(--line,#dfe3e8);
+  background:var(--surface,#fff);box-shadow:none;transition:background .15s ease
+}
+#checklistPanel .monthly-calendar .month-day.has-runs,
+#checklistPanel .monthly-calendar .month-day:has(.month-day-runs em:not(.more)){
+  background:#fafbfc;box-shadow:none
+}
+#checklistPanel .monthly-calendar .month-day:hover:not(:disabled){background:#f2f6fa}
+#checklistPanel .monthly-calendar .month-day.selected,
+#checklistPanel .monthly-calendar .month-day.has-runs.selected,
+#checklistPanel .monthly-calendar .month-day:has(.month-day-runs em:not(.more)).selected{
+  z-index:1;background:color-mix(in srgb,var(--owner-accent,#526b87) 7%,#fff);
+  box-shadow:inset 0 0 0 2px var(--owner-accent,#526b87)
+}
+#checklistPanel .monthly-calendar .month-day.outside{background:#f7f8fa}
+#checklistPanel .monthly-calendar .month-day.outside .month-day-runs,
+#checklistPanel .monthly-calendar .month-day.outside .month-day-total{opacity:.55}
+#checklistPanel .monthly-calendar .month-day.disabled{opacity:.36}
+#checklistPanel .monthly-calendar .month-day:focus-visible{
+  outline:2px solid var(--owner-accent,#526b87);outline-offset:-3px;z-index:2
+}
+#checklistPanel .monthly-calendar .month-day-top{
+  display:flex;align-items:center;justify-content:space-between;gap:3px;min-width:0
+}
+#checklistPanel .monthly-calendar .month-day-date,
+#checklistPanel .monthly-calendar .month-day:has(.month-day-runs em:not(.more)) .month-day-date{
+  display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  min-width:25px;height:25px;padding:0 4px;border-radius:8px;
+  color:#293443;font-size:14px;line-height:1;font-weight:850
+}
+#checklistPanel .monthly-calendar .month-day.saturday .month-day-date{color:#3574c4}
+#checklistPanel .monthly-calendar .month-day.sunday .month-day-date{color:#d5627e}
+#checklistPanel .monthly-calendar .month-day.selected .month-day-date{
+  background:var(--owner-accent,#526b87);color:#fff
+}
+#checklistPanel .monthly-calendar .month-day-complete-count{
+  position:static;display:inline-flex;align-items:center;flex:0 0 auto;
+  margin:0;padding:3px 6px;border-radius:7px;background:#e9eef4;
+  color:#516174;font-size:10px;font-weight:850;line-height:1.2;white-space:nowrap
+}
+#checklistPanel .monthly-calendar .month-day-complete-count.is-pending{
+  background:#fff1d9;color:#935e1a
+}
+#checklistPanel .monthly-calendar .month-day-runs{
+  display:flex;flex-direction:column;gap:5px;margin-top:10px;min-height:0
+}
+#checklistPanel .monthly-calendar .month-day-runs em.month-day-entry{
+  display:flex;align-items:center;gap:5px;min-width:0;width:100%;overflow:hidden;
+  color:#384b5f;font-size:10px;font-style:normal;font-weight:650;line-height:1.4;white-space:nowrap
+}
+#checklistPanel .monthly-calendar .month-day-entry::before{
+  content:"";width:5px;height:5px;flex:0 0 5px;border-radius:50%;background:#79a4be
+}
+#checklistPanel .monthly-calendar .month-day-entry.is-pending::before{background:#d6a24e}
+#checklistPanel .monthly-calendar .month-day-entry i{
+  display:inline-block;flex:0 1 auto;max-width:44px;overflow:hidden;
+  color:#677789;font-style:normal;font-size:10px;font-weight:800;
+  text-overflow:ellipsis;white-space:nowrap
+}
+#checklistPanel .monthly-calendar .month-day-entry span{
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+#checklistPanel .monthly-calendar .month-day-runs em.more{
+  font-size:10px;color:#65778a;font-weight:800;line-height:1.25
+}
+#checklistPanel .monthly-calendar .month-day-total{
+  display:block;min-width:0;margin-top:auto;padding-top:8px;border-top:0;
+  color:#334c67;font-size:11px;font-weight:900;line-height:1.35;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis
+}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-weekdays{background:#292f38}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day,
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day.has-runs,
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day:has(.month-day-runs em:not(.more)){
+  background:var(--surface,#22272e)
+}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day:hover:not(:disabled){background:#303842}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day.selected,
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day.has-runs.selected,
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day:has(.month-day-runs em:not(.more)).selected{
+  background:color-mix(in srgb,var(--owner-accent,#7a91ab) 13%,#22272e);
+  box-shadow:inset 0 0 0 2px var(--owner-accent,#7a91ab)
+}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day.outside{background:#22262d}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day-date,
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day:has(.month-day-runs em:not(.more)) .month-day-date{
+  color:#dbe1e8
+}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day.saturday .month-day-date{color:#8cb9f1}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day.sunday .month-day-date{color:#f0a0b3}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day.selected .month-day-date{color:#fff}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day-complete-count{
+  background:#333d48;color:#d4e0ed
+}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day-complete-count.is-pending{
+  background:#463b29;color:#ffcc83
+}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day-runs em.month-day-entry{color:#c2cfdb}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day-entry i{color:#9fb2c6}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day-entry::before{background:#759aaf}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day-entry.is-pending::before{background:#e3aa51}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day-runs em.more{color:#9bb0c7}
+html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day-total{color:#d5e6f6}
+@media(max-width:959px){
+  #checklistPanel .monthly-calendar .month-weekdays,
+  #checklistPanel .monthly-calendar .month-calendar-grid{margin-left:5px;margin-right:5px}
+  #checklistPanel .monthly-calendar .month-day{min-height:91px;padding:7px 5px}
+  #checklistPanel .monthly-calendar .month-day-date{min-width:22px;height:22px;font-size:12px}
+  #checklistPanel .monthly-calendar .month-day-complete-count{font-size:9px;padding:2px 4px}
+  #checklistPanel .monthly-calendar .month-day-runs{margin-top:7px;gap:3px}
+  #checklistPanel .monthly-calendar .month-day-runs em.month-day-entry{font-size:9px}
+  #checklistPanel .monthly-calendar .month-day-entry i{font-size:9px;max-width:28px}
+  #checklistPanel .monthly-calendar .month-day-runs em.more{font-size:9px}
+  #checklistPanel .monthly-calendar .month-day-total{font-size:9px;padding-top:4px}
+}
+@media(max-width:699px){
+  #checklistPanel .monthly-calendar .month-day{min-height:67px;padding:6px 3px 5px}
+  #checklistPanel .monthly-calendar .month-day-top{
+    flex-direction:column;align-items:center;justify-content:flex-start;gap:3px
+  }
+  #checklistPanel .monthly-calendar .month-day-date{min-width:20px;height:20px;font-size:12px}
+  #checklistPanel .monthly-calendar .month-day-complete-count{font-size:8px;padding:2px 4px}
+  #checklistPanel .monthly-calendar .month-day-runs{display:none}
+  #checklistPanel .monthly-calendar .month-day-total{
+    max-width:100%;text-align:center;font-size:8px;
+    padding:0;margin-top:5px;line-height:1.2
+  }
+}

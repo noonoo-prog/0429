@@ -876,21 +876,25 @@ function renderChecklist(){
     var day=d.getUTCDay();
     var weekendClass=day===6?" saturday":(day===0?" sunday":"");
     var selected=dateKey===pickedDate;
+    var hasRuns=dayData.entries.length>0;
 
-    h+='<button type="button" class="month-day'+weekendClass+(outside?" outside":"")+(disabled?" disabled":"")+(selected?" selected":"")+'" data-month-date="'+dateKey+'" '+(disabled?"disabled":"")+'>'+
-      '<span class="month-day-date">'+formatShortDate(d)+'</span>'+
-      (dayData.entries.length?'<span class="month-day-complete-count" title="해당 날짜 완료 내역">✓ '+dayData.entries.length+'</span>':"")+
-      '<span class="month-day-runs">';
+    h+='<button type="button" class="month-day'+weekendClass+(hasRuns?" has-runs":"")+
+      (outside?" outside":"")+(disabled?" disabled":"")+(selected?" selected":"")+
+      '" data-month-date="'+dateKey+'" aria-label="'+esc(dateKey+" · "+dayData.entries.length+"건"+
+      (dayData.total>0?" · "+formatEok(dayData.total):""))+'" aria-pressed="'+(selected?"true":"false")+'" '+
+      (disabled?"disabled":"")+'>'+
+      '<span class="month-day-top">'+
+        '<span class="month-day-date">'+d.getUTCDate()+'</span>'+
+        (hasRuns?'<span class="month-day-complete-count'+(dayData.pending?" is-pending":"")+'">'+dayData.entries.length+'건</span>':"")+
+      '</span><span class="month-day-runs">';
 
-    dayData.entries.slice(0,4).forEach(function(entry){
-      h+='<em class="month-day-checked'+(entry.pending?" is-pending":"")+'" title="'+(entry.pending?"저장 전 변경":"해당 날짜에 완료")+'">'+
-        '<span class="month-day-checkmark" aria-hidden="true">'+(entry.pending?"●":"✓")+'</span> '+
-        '<i>'+esc(entry.character)+'</i> '+esc(entry.boss)+' <strong>'+formatEok(entry.meso)+'</strong></em>';
+    dayData.entries.slice(0,2).forEach(function(entry){
+      h+='<em class="month-day-entry'+(entry.pending?" is-pending":"")+'" title="'+esc(entry.character+" · "+entry.boss+(entry.pending?" · 저장 전":""))+'">'+
+        '<i>'+esc(entry.character)+'</i><span>'+esc(entry.boss)+'</span></em>';
     });
-    if(dayData.entries.length>4)h+='<em class="more">+'+(dayData.entries.length-4)+'개</em>';
+    if(dayData.entries.length>2)h+='<em class="more">외 '+(dayData.entries.length-2)+'건</em>';
 
-    h+='</span>'+
-      (dayData.total>0?'<span class="month-day-total">총 '+formatEok(dayData.total)+'</span>':'')+
+    h+='</span>'+(dayData.total>0?'<span class="month-day-total">'+formatEok(dayData.total)+'</span>':"")+
     '</button>';
   });
 
