@@ -4912,7 +4912,11 @@ html[data-theme="dark"] .selected-day-panel .boss-run-row.pending-day-check{
   outline-color:#a97633;
 }
 @media(max-width:959px){
-  .month-day-complete-count{top:4px;right:3px;font-size:8px;padding:1px 3px}
+  /* Mobile calendar cells are narrow: keep completion count below the date, not on top of it. */
+  .month-day-complete-count{
+    position:static;display:inline-block;margin-top:3px;
+    font-size:8px;padding:1px 3px;
+  }
   .month-day-runs em.month-day-checked .month-day-checkmark{font-size:10px}
   .picked-day-count,.picked-day-pending{font-size:10px}
 }
