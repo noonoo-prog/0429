@@ -2302,9 +2302,28 @@ var boardRatesVisible=false,boardRates=null,boardRatesLoading=false;
 function boardRateHtml(b,c,pi){
   if(!boardRatesVisible||!boardRates||!planned(c))return "";
   var rates=(boardRates[b]||{})[c.difficulty]||{};
-  var key=owner().id+"|"+String(state().players[pi]).trim();
-  var value=rates[key];
-  return '<small class="board-character-rate">배율 '+(value!=null&&value!==""&&Number.isFinite(Number(value))?Number(value)+"%":"미등록")+'</small>';
+  var self=String(state().players[pi]).trim();
+  function rateFor(memberOwner,name){
+    var raw=rates[memberOwner.id+"|"+name];
+    return raw!=null&&String(raw).trim()!==""&&Number.isFinite(Number(raw))?Number(raw):null;
+  }
+  var ownRate=rateFor(owner(),self);
+  var labels=ownRate===null?[]:["배율 "+ownRate+"%"];
+  var count=effectivePartyCount(b,c);
+  if(count>1){
+    var names=new Set([self]);
+    var total=ownRate||0,registered=ownRate===null?0:1;
+    (c.names||[]).slice(0,count-1).forEach(function(raw){
+      var name=String(raw||"").trim();
+      if(!name||name==="미정"||names.has(name))return;
+      names.add(name);
+      var memberOwner=characterOwner(name);
+      var rate=memberOwner?rateFor(memberOwner,name):null;
+      if(rate!==null){total+=rate;registered++}
+    });
+    if(registered===count)labels.push("총배율 "+Number(total.toFixed(2))+"%");
+  }
+  return labels.length?'<small class="board-character-rate">'+labels.join(" · ")+'</small>':"";
 }
 async function toggleBoardRates(){
   var button=document.getElementById("boardRateToggle");
