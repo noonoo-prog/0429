@@ -2298,6 +2298,41 @@ function remainingBossesHtml(pi){
   }).length;
   return '<div class="character-remaining" title="이번 주에 설정한 주간 보스 중 아직 잡지 않은 수 · 월간 보스 제외">남은 보스 <strong>'+count+'</strong></div>';
 }
+var boardRatesVisible=false,boardRates=null,boardRatesLoading=false;
+function boardRateHtml(b,c,pi){
+  if(!boardRatesVisible||!boardRates||!planned(c))return "";
+  var rates=(boardRates[b]||{})[c.difficulty]||{};
+  var key=owner().id+"|"+String(state().players[pi]).trim();
+  var value=rates[key];
+  return '<small class="board-character-rate">배율 '+(value!=null&&value!==""&&Number.isFinite(Number(value))?Number(value)+"%":"미등록")+'</small>';
+}
+async function toggleBoardRates(){
+  var button=document.getElementById("boardRateToggle");
+  boardRatesVisible=!boardRatesVisible;
+  button.classList.toggle("active",boardRatesVisible);
+  button.setAttribute("aria-pressed",String(boardRatesVisible));
+  function update(){
+    button.textContent=boardRatesVisible?(boardRatesLoading?"배율 불러오는 중…":"배율 숨기기"):"배율 보기";
+    renderDesktop();
+    renderMobile();
+  }
+  if(!boardRatesVisible||boardRatesLoading){update();return}
+  boardRatesLoading=true;
+  boardRates=null;
+  update();
+  try{
+    var response=await fetch(SUPABASE_URL+"/functions/v1/boss-party-recruit",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},body:JSON.stringify({action:"rate_get"})});
+    if(!response.ok)throw Error();
+    var data=await response.json();
+    if(!data.rates||data.ok===false)throw Error();
+    boardRates=data.rates;
+  }catch(e){
+    if(boardRatesVisible)toast("배율을 불러오지 못했어요. 배율 보기를 다시 눌러 주세요.");
+    boardRatesVisible=false;
+    button.classList.remove("active");
+    button.setAttribute("aria-pressed","false");
+  }finally{boardRatesLoading=false;update()}
+}
 function compactBossCard(b,bi,c,pi,unlocked){
   var auto=!!c._sync,editable=unlocked&&!auto,mon=MONTHLY.has(b);
   var checkable=!unlocked&&planned(c),checked=planned(c)&&boardBossChecked(b,pi);
@@ -2318,7 +2353,7 @@ function compactBossCard(b,bi,c,pi,unlocked){
   return '<article class="compact-boss-card '+(planned(c)?"is-set ":"is-empty ")+(auto?"is-sync ":"")+(mon?"is-monthly ":"")+(checkable?"is-checkable ":"")+(checked?"is-cleared":"")+'" '+(checkable?'data-board-check-bi="'+bi+'" data-board-check-pi="'+pi+'" aria-pressed="'+(checked?"true":"false")+'" title="클릭해서 이번 주 보스 체크"':"")+'>'+
     '<div class="compact-main">'+
       compactDifficultySelect(c,editable,bi,pi)+
-      '<div class="compact-name-wrap"><div class="compact-title-line"><strong class="compact-boss-name">'+esc(b)+'</strong>'+compactCountSelect(c,editable,bi,pi)+'</div>'+sync+saveBadge+'</div>'+
+      '<div class="compact-name-wrap"><div class="compact-title-line"><strong class="compact-boss-name">'+esc(b)+'</strong>'+compactCountSelect(c,editable,bi,pi)+'</div>'+boardRateHtml(b,c,pi)+sync+saveBadge+'</div>'+
       income+
     '</div>'+
     compactPartyMembers(c,bi,pi,editable)+
@@ -2746,6 +2781,7 @@ Array.prototype.forEach.call(document.querySelectorAll("[data-page-view]"),funct
   btn.onclick=function(){setPageView(btn.dataset.pageView)};
 });
 
+document.getElementById("boardRateToggle").onclick=toggleBoardRates;
 document.getElementById("remainingBossFilter").onclick=function(){
   REMAINING_ONLY=!REMAINING_ONLY;
   localStorage.setItem("boss-board-remaining-only-v1",String(REMAINING_ONLY?1:0));

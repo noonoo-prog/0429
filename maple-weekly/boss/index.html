@@ -23,7 +23,7 @@
 <link rel="icon" type="image/png" sizes="48x48" href="./favicon-48.png?v=bear-20260927">
 <link rel="icon" type="image/png" sizes="192x192" href="./favicon-192.png?v=bear-20260927">
 <link rel="apple-touch-icon" sizes="180x180" href="./favicon-180.png?v=bear-20260927">
-<link rel="stylesheet" href="./style.css?v=boss-calendar-clean-v47-20261117">
+<link rel="stylesheet" href="./style.css?v=board-rates-v1">
 </head>
 <body>
 <div class="app-shell">
@@ -71,11 +71,12 @@
       </details>
     </div>
 
-    <div class="party-filter-row" id="partyFilterRow" role="group" aria-label="보스 인원별 보기">
+    <div class="party-filter-row" id="partyFilterRow" role="group" aria-label="보스 표시 설정">
       <button class="party-filter-btn active" type="button" data-party-filter="all" aria-pressed="true">전체 보기</button>
       <button class="party-filter-btn" type="button" data-party-filter="solo" aria-pressed="false">1인만 보기</button>
       <button class="party-filter-btn" type="button" data-party-filter="multi" aria-pressed="false">2인 이상만 보기</button>
       <button class="party-filter-btn remaining-filter" id="remainingBossFilter" type="button" aria-pressed="false">남은 보스만</button>
+      <button class="party-filter-btn" id="boardRateToggle" type="button" aria-pressed="false">배율 보기</button>
     </div>
   </header>
 
@@ -121,6 +122,6 @@
 
 <div class="toast" id="toast"></div>
 <noscript><div style="padding:24px;font-family:sans-serif">JavaScript를 켜야 보스 현황판을 사용할 수 있어요.</div></noscript>
-<script defer src="./app.js?v=boss-calendar-clean-v46-20261117"></script>
+<script defer src="./app.js?v=board-rates-v1"></script>
 </body>
 </html>

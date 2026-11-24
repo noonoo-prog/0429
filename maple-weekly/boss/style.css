@@ -5073,3 +5073,5 @@ html[data-theme="dark"] #checklistPanel .monthly-calendar .month-day.selected:ha
   background:color-mix(in srgb,var(--owner-accent,#7a91ab) 32%,#344b65);
   color:#fff;
 }
+
+.board-character-rate{display:block;color:var(--muted);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
