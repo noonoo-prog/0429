@@ -33,6 +33,18 @@ jobs:
         with:
           name: github-pages-${{ github.run_attempt }}
           path: "./maple-weekly"
+      - name: Wait for Pages artifact registration
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: github-pages-${{ github.run_attempt }}
+        run: |
+          for attempt in {1..24}; do
+            if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '.artifacts[].name' | grep -Fxq "$ARTIFACT_NAME"; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
