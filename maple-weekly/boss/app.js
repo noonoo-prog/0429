@@ -2308,7 +2308,7 @@ function boardRateHtml(b,c,pi){
     return raw!=null&&String(raw).trim()!==""&&Number.isFinite(Number(raw))?Number(raw):null;
   }
   var ownRate=rateFor(owner(),self);
-  var labels=ownRate===null?[]:['<span class="owner-themed" data-theme="'+esc(ownerTheme(owner().name))+'" style="color:var(--owner-accent)" title="개인 배율">'+ownRate+'%</span>'];
+  var labels=ownRate===null?[]:['<span class="owner-themed" data-theme="'+esc(ownerTheme(owner().name))+'" style="color:var(--owner-accent)" title="개인 배율">'+Math.round(ownRate)+'%</span>'];
   var count=effectivePartyCount(b,c);
   if(count>1){
     var names=new Set([self]);
@@ -2321,7 +2321,7 @@ function boardRateHtml(b,c,pi){
       var rate=memberOwner?rateFor(memberOwner,name):null;
       if(rate!==null){total+=rate;registered++}
     });
-    if(registered===count)labels.push('<span title="파티 총배율" style="color:var(--muted)">'+Number(total.toFixed(2))+'%</span>');
+    if(registered===count)labels.push('<span title="파티 총배율" style="color:var(--muted)">'+Math.round(total)+'%</span>');
   }
   return labels.length?'<small class="board-character-rate">'+labels.join(" &nbsp;")+'</small>':"";
 }
