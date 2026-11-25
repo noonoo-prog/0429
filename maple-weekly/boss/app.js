@@ -516,10 +516,14 @@ function stageChecklistBossRun(weekStart,runDate,characterName,bossName,pi,compl
     ?"weeklyparty|"+weekStart+"|"+bossName+"|"+targets.map(function(t){return t.ownerId+":"+t.characterName}).sort().join(",")
     :"";
 
+  var alreadySaved=targets.every(function(t){
+    var base=bossRunItem(t.ownerId,weekStart,t.characterName,bossName);
+    return !!base.completed===!!completed && (!completed || String(base.runDate||"")===runDate);
+  });
   targets.forEach(function(t){
     var base=bossRunItem(t.ownerId,weekStart,t.characterName,bossName);
     var key=checklistDraftKey("weekly",t.ownerId,weekStart,t.characterName,bossName);
-    if(!!base.completed===!!completed && (!completed || String(base.runDate||"")===String(runDate))){
+    if(alreadySaved){
       delete CHECKLIST_DRAFTS[key];
     }else{
       CHECKLIST_DRAFTS[key]={
@@ -530,7 +534,7 @@ function stageChecklistBossRun(weekStart,runDate,characterName,bossName,pi,compl
         characterName:t.characterName,
         bossName:bossName,
         completed:!!completed,
-        meso:completed?t.payout:0,
+        meso:completed?(base.completed?base.meso:t.payout):0,
         partyGroup:partyGroup,
         sourceOwnerId:o.id,
         sourceCharacterName:characterName
@@ -668,7 +672,7 @@ function saveChecklistDrafts(){
     results.forEach(function(result){
       if(!result.ok){failed+=result.group.keys.length;return}
       var g=result.group;
-      if(result.data.locked){
+      if(result.data.locked || (result.data.joinedExistingParty && result.data.lockedRunDate!==g.runDate)){
         locked+=result.group.keys.length;
         lockMessage=(result.data.lockedByCharacterName||"먼저 체크한 파티원")+"가 "+
           (result.data.lockedRunDate?formatShortDate(parseDateUTC(result.data.lockedRunDate)):"먼저")+"에 체크한 기록이 고정돼 있어요.";
@@ -940,11 +944,11 @@ function renderChecklist(){
         var payout=checked?Math.max(0,Number(item.meso)||0):Math.round(bossWeeklyIncome(b,c));
         var saveKey=o.id+"|"+pickedWeek+"|"+characterName+"|"+b;
         var saving=!!CHECKLIST_SAVING;
-        var runLabel=checked&&item.runDate?formatShortDate(parseDateUTC(item.runDate))+(doneOnPickedDay?" · 선택일 완료":" · 다른 날짜 완료"):formatShortDate(parseDateUTC(pickedDate))+"에 체크";
+        var runLabel=checked&&item.runDate?formatShortDate(parseDateUTC(item.runDate))+(doneOnPickedDay?" · 선택일 완료":" 완료 · "+formatShortDate(parseDateUTC(pickedDate))+"로 이동"):formatShortDate(parseDateUTC(pickedDate))+"에 체크";
 
         h+='<label class="boss-run-row '+(checked?(doneOnPickedDay?"done done-on-picked-date":"done done-other-date"):"")+(pendingDayCheck?" pending-day-check":"")+'">'+
-          '<input class="boss-run-checkbox" type="checkbox" data-week="'+pickedWeek+'" data-run-date="'+pickedDate+'" data-character="'+esc(characterName)+'" data-pi="'+pi+'" data-boss="'+esc(b)+'" '+(checked?"checked":"")+' '+(saving?"disabled":"")+'>'+
-          '<span class="boss-run-check">'+(checked?"✓":"")+'</span>'+
+          '<input class="boss-run-checkbox" type="checkbox" data-week="'+pickedWeek+'" data-run-date="'+pickedDate+'" data-character="'+esc(characterName)+'" data-pi="'+pi+'" data-boss="'+esc(b)+'" '+(doneOnPickedDay?"checked":"")+' '+(saving?"disabled":"")+'>'+
+          '<span class="boss-run-check">'+(doneOnPickedDay?"✓":"")+'</span>'+
           '<span class="boss-run-name"><strong>'+esc(b)+'</strong><small>'+esc(c.difficulty||"")+' · '+runLabel+'</small></span>'+
           '<span class="boss-run-meso"><small>'+(checked?"획득":"예상")+'</small><b>'+formatEok(payout)+'</b></span>'+
         '</label>';
